@@ -34,7 +34,7 @@ export default function Oracle() {
     setIsLoading(true);
 
     try {
-      const { data } = await base44.functions.invoke('askOracle', { message: userMessage });
+      const { data } = await base44.functions.invoke('askOracle', { message: userMessage, address: account });
       setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
 
     } catch (error) {

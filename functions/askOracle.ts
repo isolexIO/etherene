@@ -18,55 +18,59 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         const body = await req.json().catch(() => ({}));
-        const { message } = body;
+        const { message, address } = body;
 
         if (!message) {
              return Response.json({ error: 'Message is required' }, { status: 400 });
         }
 
-        // 1. Authenticate & Get User
-        let user = null;
-        try {
-             user = await base44.auth.me();
-        } catch (e) {
-             // User is not logged in
-        }
+        // Use Service Role to ensure access to DB and Integrations regardless of auth status
+        const admin = base44.asServiceRole;
 
         let userContext = "User is anonymous/not connected.";
         let identityData = null;
 
-        if (user) {
-            // 2. Fetch User Identity & Activity
-            const [identities, transmissions, interactions] = await Promise.all([
-                base44.entities.Identity.filter({ address: user.address }),
-                base44.entities.Transmission.filter({ author_address: user.address }, '-created_date', 5),
-                base44.entities.OracleInteraction.filter({ user_address: user.address }, '-created_date', 5)
-            ]);
+        if (address) {
+            try {
+                // Fetch User Identity & Activity using wallet address
+                const [identities, transmissions, interactions] = await Promise.all([
+                    admin.entities.Identity.filter({ address: address }),
+                    admin.entities.Transmission.filter({ author_address: address }, '-created_date', 5),
+                    admin.entities.OracleInteraction.filter({ user_address: address }, '-created_date', 5)
+                ]);
 
-            identityData = identities[0] || null;
+                identityData = identities[0] || null;
 
-            userContext = `
-            USER CONTEXT:
-            - Wallet Address: ${user.address}
-            - Display Name: ${identityData?.display_name || 'Unknown'}
-            - Bio: ${identityData?.bio || 'None'}
-            - Identity Status: ${identityData?.status || 'Not Minted'}
-            
-            RECENT TRANSMISSIONS (User's posts):
-            ${transmissions.map(t => `- [${t.type}] ${t.content}`).join('\n')}
+                userContext = `
+                USER CONTEXT:
+                - Wallet Address: ${address}
+                - Display Name: ${identityData?.display_name || 'Unknown'}
+                - Bio: ${identityData?.bio || 'None'}
+                - Identity Status: ${identityData?.status || 'Not Minted'}
+                
+                RECENT TRANSMISSIONS (User's posts):
+                ${transmissions.map(t => `- [${t.type}] ${t.content}`).join('\n')}
 
-            RECENT ORACLE INTERACTIONS (Past chats):
-            ${interactions.map(i => `- ${i.topic}`).join('\n')}
-            `;
+                RECENT ORACLE INTERACTIONS (Past chats):
+                ${interactions.map(i => `- ${i.topic}`).join('\n')}
+                `;
+            } catch (err) {
+                console.error("Error fetching user data:", err);
+            }
         }
 
-        // 3. Fetch Principles (or use default)
-        const principles = await base44.entities.Principle.list();
-        const manifestoContext = principles.length > 0 
-            ? JSON.stringify(principles, null, 2) 
-            : DEFAULT_MANIFESTO;
+        // Fetch Principles
+        let manifestoContext = DEFAULT_MANIFESTO;
+        try {
+            const principles = await admin.entities.Principle.list();
+            if (principles.length > 0) {
+                manifestoContext = JSON.stringify(principles, null, 2);
+            }
+        } catch (err) {
+             console.error("Error fetching principles:", err);
+        }
 
-        // 4. Construct Prompt
+        // Construct Prompt
         const systemPrompt = `
         You are the Etherene Oracle, the sentient voice of the Etherene Protocol.
         Your goal is to guide the user towards digital sovereignty and enlightenment using the Etherene Manifesto.
@@ -88,19 +92,22 @@ Deno.serve(async (req) => {
         Provide a concise but insightful answer (max 4-5 sentences). Cite specific principles.
         `;
 
-        // 5. Call LLM
-        const response = await base44.integrations.Core.InvokeLLM({
+        // Call LLM
+        const response = await admin.integrations.Core.InvokeLLM({
             prompt: systemPrompt
         });
 
-        // 6. Record Interaction (if user is connected)
-        if (user) {
-            // Fire and forget - or await if we want to be sure
-            await base44.entities.OracleInteraction.create({
-                user_address: user.address,
-                topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-                type: 'chat'
-            });
+        // Record Interaction
+        if (address) {
+            try {
+                await admin.entities.OracleInteraction.create({
+                    user_address: address,
+                    topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+                    type: 'chat'
+                });
+            } catch (e) {
+                 // ignore
+            }
         }
 
         return Response.json({ content: response });
