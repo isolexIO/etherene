@@ -22,7 +22,9 @@ Since I cannot deploy to the blockchain directly, follow these simple steps to d
    - You will see input fields for the `constructor` arguments:
      - `name`: "Etherene Identity"
      - `symbol`: "EID"
-     - `baseTokenURI_`: "https://your-metadata-url.com/" (You can leave this empty `""` for now if you don't have one).
+     - `baseTokenURI_`: "https://[YOUR-APP-ID].base44.app/functions/nftMetadata?id="
+       - *Note: Replace [YOUR-APP-ID] with your actual app ID from the URL bar.*
+       - *Important: Include the `?id=` at the end so the contract appends the token ID correctly.*
 4. Click **Transact** (or "Deploy").
 5. Confirm the transaction in MetaMask.
 

@@ -114,11 +114,18 @@ export default function Profile() {
          
          // Persist to DB
          const { base44 } = await import('@/api/base44Client');
+
+         // Generate a simulated Token ID (in a real app, this comes from the contract event)
+         // We'll just use a timestamp-based ID or count for simulation
+         const existingCount = (await base44.entities.Identity.list()).length;
+         const nextTokenId = existingCount + 1;
+
          await base44.entities.Identity.create({
              address: account,
              soul_hash: soulHash || '0x' + Math.random().toString(16).slice(2),
              network: chainId ? chainId.toString() : '1',
-             status: 'minted'
+             status: 'minted',
+             token_id: nextTokenId
          });
       }
 
