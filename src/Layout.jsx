@@ -29,8 +29,9 @@ export default function Layout({ children, currentPageName }) {
     setError(null);
     try {
       if (typeof window.ethereum !== 'undefined') {
-        const { ethers } = await import('ethers');
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        if (!window.ethers) throw new Error("Ethers.js library not loaded yet. Please wait a moment.");
+        
+        const provider = new window.ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_requestAccounts", []);
         const network = await provider.getNetwork();
         
@@ -52,20 +53,41 @@ export default function Layout({ children, currentPageName }) {
   };
 
   useEffect(() => {
+    // Load ethers from CDN
+    const script = document.createElement('script');
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js";
+    script.async = true;
+    document.body.appendChild(script);
+
     // Check if already connected
     const checkConnection = async () => {
       if (typeof window.ethereum !== 'undefined') {
-        const { ethers } = await import('ethers');
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.listAccounts();
-        if (accounts.length > 0) {
-            setAccount(accounts[0].address);
-            const network = await provider.getNetwork();
-            setChainId(network.chainId);
+        // Wait for ethers to load if needed
+        let attempts = 0;
+        while (!window.ethers && attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+        
+        if (window.ethers) {
+          const provider = new window.ethers.BrowserProvider(window.ethereum);
+          const accounts = await provider.listAccounts();
+          if (accounts.length > 0) {
+              setAccount(accounts[0].address);
+              const network = await provider.getNetwork();
+              setChainId(network.chainId);
+          }
         }
       }
     };
-    checkConnection().catch(console.error);
+    
+    script.onload = checkConnection;
+    
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
   }, []);
 
   const navItems = [
