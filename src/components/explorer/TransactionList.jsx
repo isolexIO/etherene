@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
+
+const MOCK_TXS = [
+  { hash: "0x71c...9a23", from: "0xab1...23cd", to: "0xef4...56gh", type: "Declaration", age: "12 secs ago", status: "Success" },
+  { hash: "0x3b2...1c4d", from: "0x890...12kl", to: "Contract: Identity", type: "Mint Identity", age: "45 secs ago", status: "Success" },
+  { hash: "0x9d1...8e2f", from: "0x345...67mn", to: "0xab1...23cd", type: "Transfer", age: "1 min ago", status: "Success" },
+  { hash: "0x1a2...3b4c", from: "0x678...90op", to: "Contract: Oracle", type: "Query", age: "2 mins ago", status: "Pending" },
+  { hash: "0x5e6...7f8g", from: "0x123...45qr", to: "0xef4...56gh", type: "Vote", age: "5 mins ago", status: "Success" },
+  { hash: "0x9h0...1i2j", from: "0xab1...23cd", to: "Contract: Governance", type: "Proposal", age: "8 mins ago", status: "Success" },
+  { hash: "0x3k4...5l6m", from: "0x789...01st", to: "0x345...67mn", type: "Transfer", age: "12 mins ago", status: "Failed" },
+];
+
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 
@@ -14,65 +25,64 @@ export default function TransactionList({ transactions, searchTerm, watchedAddre
   const isWatched = (address) => watchedAddresses.includes(address);
 
   return (
-    <div className="bg-slate-900/40 rounded-2xl border border-slate-800 backdrop-blur-sm overflow-hidden shadow-lg">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-slate-900/50 border-b border-slate-800">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4 font-semibold text-slate-400 text-sm">Tx Hash</th>
-              <th className="px-6 py-4 font-semibold text-slate-400 text-sm">Type</th>
-              <th className="px-6 py-4 font-semibold text-slate-400 text-sm">From / To</th>
-              <th className="px-6 py-4 font-semibold text-slate-400 text-sm">Age</th>
-              <th className="px-6 py-4 font-semibold text-slate-400 text-sm">Status</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tx Hash</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">From / To</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Age</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/50">
+          <tbody className="divide-y divide-slate-100">
             <AnimatePresence initial={false}>
-              {filteredTxs.map((tx, i) => (
+              {filteredTxs.map((tx) => (
                 <motion.tr 
                   key={tx.hash}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="hover:bg-indigo-500/5 transition-colors"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="hover:bg-slate-50/50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Link 
                       to={`${createPageUrl('Transaction')}?hash=${tx.hash}`}
-                      className="flex items-center gap-2 text-indigo-400 font-mono text-sm hover:text-indigo-300 hover:underline decoration-indigo-400/50"
+                      className="flex items-center gap-2 text-indigo-600 font-mono text-sm hover:underline"
                     >
-                      <FileText className="w-4 h-4 text-slate-600" />
+                      <FileText className="w-4 h-4 text-slate-400" />
                       {tx.hash}
                     </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
                       {tx.type}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <span className={`font-mono ${isWatched(tx.from) ? "bg-amber-900/30 px-1 rounded text-amber-200 border border-amber-500/30" : ""}`}>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <span className={`font-mono ${isWatched(tx.from) ? "bg-amber-100 px-1 rounded text-amber-800 font-bold" : ""}`}>
                         {tx.from}
                       </span>
-                      <ArrowRight className="w-3 h-3 text-slate-600" />
-                      <span className={`font-mono ${isWatched(tx.to) ? "bg-amber-900/30 px-1 rounded text-amber-200 border border-amber-500/30" : ""}`}>
+                      <ArrowRight className="w-3 h-3 text-slate-400" />
+                      <span className={`font-mono ${isWatched(tx.to) ? "bg-amber-100 px-1 rounded text-amber-800 font-bold" : ""}`}>
                         {tx.to}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    <div className="flex items-center gap-1">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1 text-sm text-slate-500">
                       <Clock className="w-3 h-3" />
                       {tx.age}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border ${
-                      tx.status === 'Success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                      tx.status === 'Pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
-                      'bg-red-500/10 text-red-400 border-red-500/20'
+                    <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full w-fit ${
+                      tx.status === 'Success' ? 'bg-green-50 text-green-600' : 
+                      tx.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 
+                      'bg-red-50 text-red-600'
                     }`}>
                       {tx.status === 'Success' && <CheckCircle2 className="w-3 h-3" />}
                       {tx.status}

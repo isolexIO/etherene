@@ -39,26 +39,26 @@ export default function Sanctum() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="mb-8 relative"
         >
-          <div className="absolute inset-0 bg-indigo-500/30 blur-3xl rounded-full" />
-          <Hexagon className="w-24 h-24 text-indigo-400 relative z-10 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]" strokeWidth={1} />
+          <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full" />
+          <Hexagon className="w-24 h-24 text-indigo-600 relative z-10" strokeWidth={1} />
         </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6"
+          className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-6"
         >
-          Enter the <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 drop-shadow-[0_0_10px_rgba(129,140,248,0.3)]">Sanctum</span>
+          Enter the <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Sanctum</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-xl text-slate-400 max-w-2xl mb-10"
+          className="text-xl text-slate-600 max-w-2xl mb-10"
         >
-          A sacred space for digital sovereignty and immutable truth.
+          Etherene is a decentralized spiritual-tech protocol designed to empower self-sovereign individuals through cryptographically verifiable truth.
         </motion.p>
 
         <motion.div
@@ -70,21 +70,21 @@ export default function Sanctum() {
           {!account ? (
             <button
               onClick={connectWallet}
-              className="px-8 py-4 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition-all hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 border border-indigo-500/50"
+              className="px-8 py-4 rounded-full bg-slate-900 text-white font-medium hover:bg-slate-800 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
             >
               Connect Wallet <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <Link
               to={createPageUrl('Profile')}
-              className="px-8 py-4 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition-all hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 border border-indigo-500/50"
+              className="px-8 py-4 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all hover:shadow-xl hover:shadow-indigo-200 hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
             >
-              Enter Inner Sanctum <ArrowRight className="w-4 h-4" />
+              View Identity <ArrowRight className="w-4 h-4" />
             </Link>
           )}
           <Link
             to={createPageUrl('Whitepaper')}
-            className="px-8 py-4 rounded-full bg-slate-900/50 text-slate-200 border border-slate-700 font-medium hover:bg-slate-800 transition-all hover:border-slate-500 flex items-center justify-center backdrop-blur-sm"
+            className="px-8 py-4 rounded-full bg-white text-slate-900 border border-slate-200 font-medium hover:bg-slate-50 transition-all hover:border-slate-300 flex items-center justify-center"
           >
             Read White Paper
           </Link>
@@ -97,61 +97,37 @@ export default function Sanctum() {
           
           {/* Features Grid */}
           <div className="flex-1 grid md:grid-cols-2 gap-8">
+            {features.map((feature, index) => (
             <motion.div
+              key={index}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-slate-900/40 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-lg hover:shadow-indigo-900/20 hover:border-indigo-500/30 transition-all duration-300"
+              transition={{ delay: index * 0.2 }}
+              className="bg-white/60 backdrop-blur-sm p-8 rounded-3xl border border-white/50 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/20">
-                <Shield className="w-6 h-6 text-indigo-400" />
+              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
+                <feature.icon className="w-6 h-6 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-100 mb-3">Sovereign Identity</h3>
-              <p className="text-slate-400 leading-relaxed">Your keys, your data. Claim your immutable identity on the Etherene network.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+              <p className="text-slate-600 leading-relaxed">{feature.description}</p>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="bg-slate-900/40 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-lg hover:shadow-indigo-900/20 hover:border-indigo-500/30 transition-all duration-300"
-            >
-              <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/20">
-                <Zap className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-100 mb-3">Consensus Mechanism</h3>
-              <p className="text-slate-400 leading-relaxed">Participate in the decentralized governance of the protocol through direct voting.</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="bg-slate-900/40 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-lg hover:shadow-indigo-900/20 hover:border-indigo-500/30 transition-all duration-300"
-            >
-              <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/20">
-                <Globe className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-100 mb-3">Universal State</h3>
-              <p className="text-slate-400 leading-relaxed">Access a synchronized global ledger of truth, verifiable by any node.</p>
-            </motion.div>
+          ))}
           </div>
 
           {/* Sidebar Feed */}
           <div className="lg:w-96 flex flex-col gap-8">
             <ActivityFeed />
             
-            <div className="bg-indigo-600/20 border border-indigo-500/30 rounded-3xl p-8 text-white relative overflow-hidden backdrop-blur-md">
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
               <div className="relative z-10">
                 <h3 className="text-xl font-bold mb-2">Join the Network</h3>
-                <p className="text-indigo-200 mb-6 text-sm">Validating truth requires participation.</p>
-                <button className="w-full py-3 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-indigo-900/20">
+                <p className="text-indigo-100 mb-6 text-sm">Validating truth requires participation.</p>
+                <button className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors">
                   Start Validation
                 </button>
               </div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl translate-x-10 -translate-y-10" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-10 -translate-y-10" />
             </div>
           </div>
 
