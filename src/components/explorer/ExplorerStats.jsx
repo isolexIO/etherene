@@ -4,9 +4,9 @@ import { Box, Activity, Shield, Zap } from 'lucide-react';
 
 export default function ExplorerStats({ globalStats }) {
   const stats = [
-    { label: "Total Blocks", value: globalStats.blocks.toLocaleString(), icon: Box, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Active Nodes", value: globalStats.nodes.toLocaleString(), icon: Activity, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Verified Identities", value: globalStats.identities.toLocaleString(), icon: Shield, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { label: "Total Blocks", value: globalStats.blocks.toLocaleString(), icon: Box, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+    { label: "Active Nodes", value: globalStats.nodes.toLocaleString(), icon: Activity, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
+    { label: "Verified Identities", value: globalStats.identities.toLocaleString(), icon: Shield, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" },
   ];
 
   return (
@@ -17,16 +17,20 @@ export default function ExplorerStats({ globalStats }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
+          className="bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-lg hover:bg-slate-800/50 transition-colors"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-xl ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl border ${stat.bg} ${stat.color}`}>
+              <stat.icon className="w-6 h-6" />
             </div>
-            <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-full">Live</span>
+            <div>
+              <p className="text-sm font-medium text-slate-400">{stat.label}</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-2xl font-bold text-slate-100">{stat.value}</h3>
+                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+              </div>
+            </div>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900">{stat.value}</h3>
-          <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
         </motion.div>
       ))}
     </div>
