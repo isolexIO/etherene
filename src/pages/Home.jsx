@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Hexagon, Shield, Zap, Globe } from 'lucide-react';
+import ActivityFeed from '../components/ActivityFeed';
 import { useWeb3 } from '../Layout';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -90,10 +91,13 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* Features Grid */}
+      {/* Activity & Features Section */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
-        <div className="grid md:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
+        <div className="flex flex-col lg:flex-row gap-12">
+          
+          {/* Features Grid */}
+          <div className="flex-1 grid md:grid-cols-2 gap-8">
+            {features.map((feature, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
@@ -109,6 +113,24 @@ export default function Home() {
               <p className="text-slate-600 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
+          </div>
+
+          {/* Sidebar Feed */}
+          <div className="lg:w-96 flex flex-col gap-8">
+            <ActivityFeed />
+            
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-xl font-bold mb-2">Join the Network</h3>
+                <p className="text-indigo-100 mb-6 text-sm">Validating truth requires participation.</p>
+                <button className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors">
+                  Start Validation
+                </button>
+              </div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-10 -translate-y-10" />
+            </div>
+          </div>
+
         </div>
       </section>
 
