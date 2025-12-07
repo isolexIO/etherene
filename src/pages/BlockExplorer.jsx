@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Wifi } from 'lucide-react';
 import TransactionList from '../components/explorer/TransactionList';
@@ -12,13 +12,12 @@ const INITIAL_STATS = {
   blocks: 14205921,
   nodes: 8432,
   identities: 128940,
-  gasPrice: 12
 };
 
 const INITIAL_TXS = [
   { hash: "0x71c...9a23", from: "0xab1...23cd", to: "0xef4...56gh", type: "Declaration", age: "12 secs ago", status: "Success" },
   { hash: "0x3b2...1c4d", from: "0x890...12kl", to: "Contract: Identity", type: "Mint Identity", age: "45 secs ago", status: "Success" },
-  { hash: "0x9d1...8e2f", from: "0x345...67mn", to: "0xab1...23cd", type: "Transfer", age: "1 min ago", status: "Success" },
+  { hash: "0x9d1...8e2f", from: "0x345...67mn", to: "0xab1...23cd", type: "Oracle Interaction", age: "1 min ago", status: "Success" },
 ];
 
 export default function BlockExplorer() {
@@ -33,6 +32,9 @@ export default function BlockExplorer() {
     const saved = localStorage.getItem('etherene_watchlist');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Refs for simulation state to avoid closure staleness
+  const txSinceLastBlock = useRef(0);
 
   // Save watchlist
   useEffect(() => {
@@ -50,26 +52,39 @@ export default function BlockExplorer() {
     setGraphData(initialGraph);
 
     const interval = setInterval(() => {
-      // Update Stats
-      setStats(prev => ({
-        blocks: prev.blocks + 1,
-        nodes: prev.nodes + (Math.random() > 0.8 ? (Math.random() > 0.5 ? 1 : -1) : 0),
-        identities: prev.identities + (Math.random() > 0.7 ? 1 : 0),
-        gasPrice: Math.max(5, Math.min(100, prev.gasPrice + (Math.random() - 0.5) * 2)).toFixed(1)
-      }));
-
-      // New Transaction
+      // 1. Generate New Transaction
       const newTx = {
         hash: `0x${Math.random().toString(16).substr(2, 10)}...`,
         from: `0x${Math.random().toString(16).substr(2, 8)}...`,
         to: Math.random() > 0.7 ? "Contract: Identity" : `0x${Math.random().toString(16).substr(2, 8)}...`,
-        type: ["Declaration", "Mint Identity", "Transfer", "Vote", "Proposal"][Math.floor(Math.random() * 5)],
+        type: ["Declaration", "Mint Identity", "Oracle Interaction"][Math.floor(Math.random() * 3)],
         age: "Just now",
         status: "Success"
       };
+      
       setTransactions(prev => [newTx, ...prev.slice(0, 14)]);
+      
+      // Increment transaction counter
+      txSinceLastBlock.current += 1;
 
-      // Update Graph
+      // 2. Update Stats & Check for Block Generation
+      setStats(prev => {
+        let newBlockCount = prev.blocks;
+        
+        // Every 10 transactions, mine a new block
+        if (txSinceLastBlock.current >= 10) {
+          newBlockCount += 1;
+          txSinceLastBlock.current = 0; // Reset counter
+        }
+
+        return {
+          blocks: newBlockCount,
+          nodes: prev.nodes + (Math.random() > 0.9 ? (Math.random() > 0.5 ? 1 : -1) : 0),
+          identities: prev.identities + (newTx.type === "Mint Identity" ? 1 : 0),
+        };
+      });
+
+      // 3. Update Graph
       setGraphData(prev => {
         const newData = [...prev.slice(1), {
           time: new Date().toLocaleTimeString(),
@@ -78,7 +93,7 @@ export default function BlockExplorer() {
         return newData;
       });
 
-    }, 3000);
+    }, 2000); // Faster interval to demonstrate block generation
 
     return () => clearInterval(interval);
   }, []);
