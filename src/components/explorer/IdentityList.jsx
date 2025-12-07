@@ -58,10 +58,10 @@ export default function IdentityList({ searchTerm }) {
             
             <div>
               <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Address</label>
-              <div className="flex items-center gap-2 text-sm font-mono text-slate-600 bg-slate-50 px-3 py-2 rounded-lg truncate">
-                <Hash className="w-3 h-3 text-slate-400 flex-shrink-0" />
+              <Link to={`${createPageUrl('Profile')}?address=${identity.address}`} className="flex items-center gap-2 text-sm font-mono text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg truncate hover:underline">
+                <Hash className="w-3 h-3 text-indigo-400 flex-shrink-0" />
                 <span className="truncate">{identity.address}</span>
-              </div>
+              </Link>
             </div>
 
             <div className="pt-4 border-t border-slate-50 flex items-center gap-2 text-xs text-slate-400">

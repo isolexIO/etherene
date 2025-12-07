@@ -22,9 +22,12 @@ export default function CustomizeProfile() {
     bio: '',
     avatar_url: '',
     avatar_cid: '',
-    bio_cid: ''
+    bio_cid: '',
+    cover_image: '',
+    socials: '{}'
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [socialInputs, setSocialInputs] = useState({ twitter: '', website: '', farcaster: '', lens: '' });
 
   // Fetch existing identity
   const { data: identity, isLoading } = useQuery({
@@ -44,10 +47,24 @@ export default function CustomizeProfile() {
         bio: identity.bio || '',
         avatar_url: identity.avatar_url || '',
         avatar_cid: identity.avatar_cid || '',
-        bio_cid: identity.bio_cid || ''
+        bio_cid: identity.bio_cid || '',
+        cover_image: identity.cover_image || '',
+        socials: identity.socials || '{}'
       });
+      
+      try {
+          const parsed = JSON.parse(identity.socials || '{}');
+          setSocialInputs(prev => ({ ...prev, ...parsed }));
+      } catch (e) {
+          console.error("Failed to parse socials", e);
+      }
     }
   }, [identity]);
+
+  // Sync socials to formData
+  useEffect(() => {
+      setFormData(prev => ({ ...prev, socials: JSON.stringify(socialInputs) }));
+  }, [socialInputs]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data) => {
@@ -86,32 +103,31 @@ export default function CustomizeProfile() {
     }
   });
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      // 1. Upload to temporary storage for immediate display
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       
-      // 2. Upload to IPFS via backend
-      let cid = '';
-      try {
-        const ipfsRes = await base44.functions.invoke('uploadToIpfs', { 
-            type: 'file', 
-            fileUrl: file_url 
-        });
-        if (ipfsRes.data.cid) {
-            cid = ipfsRes.data.cid;
-            toast.success("Avatar pinned to IPFS!");
+      if (field === 'avatar') {
+        let cid = '';
+        try {
+            const ipfsRes = await base44.functions.invoke('uploadToIpfs', { type: 'file', fileUrl: file_url });
+            if (ipfsRes.data.cid) {
+                cid = ipfsRes.data.cid;
+                toast.success("Avatar pinned to IPFS!");
+            }
+        } catch (ipfsError) {
+            console.error("IPFS Upload failed:", ipfsError);
+            toast.warning("Could not pin to IPFS, saved locally.");
         }
-      } catch (ipfsError) {
-          console.error("IPFS Upload failed:", ipfsError);
-          toast.warning("Could not pin to IPFS (Check PINATA_JWT), but saved locally.");
+        setFormData(prev => ({ ...prev, avatar_url: file_url, avatar_cid: cid }));
+      } else if (field === 'cover') {
+        setFormData(prev => ({ ...prev, cover_image: file_url }));
       }
 
-      setFormData(prev => ({ ...prev, avatar_url: file_url, avatar_cid: cid }));
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Failed to upload image.");
@@ -183,8 +199,24 @@ export default function CustomizeProfile() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* Avatar Section */}
-          <div className="flex flex-col items-center mb-8">
+          {/* Cover Image */}
+          <div className="relative h-48 w-full rounded-2xl bg-slate-100 overflow-hidden mb-8 group">
+             {formData.cover_image ? (
+                 <img src={formData.cover_image} alt="Cover" className="w-full h-full object-cover" />
+             ) : (
+                 <div className="w-full h-full flex items-center justify-center text-slate-400">
+                     <p>No Cover Image</p>
+                 </div>
+             )}
+             <label className="absolute bottom-4 right-4 px-4 py-2 bg-black/50 text-white rounded-lg cursor-pointer hover:bg-black/70 transition-colors backdrop-blur-sm flex items-center gap-2">
+                 <Camera className="w-4 h-4" />
+                 <span>Change Cover</span>
+                 <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'cover')} disabled={isUploading} />
+             </label>
+          </div>
+
+          {/* Avatar Section - Negative Margin to overlap cover */}
+          <div className="flex flex-col items-center mb-8 -mt-20 relative z-10">
             <div className="relative group">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-slate-50">
                 {formData.avatar_url ? (
@@ -201,7 +233,7 @@ export default function CustomizeProfile() {
               </div>
               <label className="absolute bottom-0 right-0 p-2 bg-indigo-600 rounded-full text-white cursor-pointer hover:bg-indigo-700 transition-colors shadow-md">
                 <Camera className="w-4 h-4" />
-                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={isUploading} />
+                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'avatar')} disabled={isUploading} />
               </label>
             </div>
             {isUploading && <p className="text-sm text-indigo-600 mt-2">Uploading...</p>}
@@ -227,6 +259,49 @@ export default function CustomizeProfile() {
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               className="bg-slate-50 border-slate-200 min-h-[100px]"
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="twitter">Twitter / X</Label>
+                <Input
+                  id="twitter"
+                  placeholder="@username"
+                  value={socialInputs.twitter}
+                  onChange={(e) => setSocialInputs({ ...socialInputs, twitter: e.target.value })}
+                  className="bg-slate-50 border-slate-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  placeholder="https://..."
+                  value={socialInputs.website}
+                  onChange={(e) => setSocialInputs({ ...socialInputs, website: e.target.value })}
+                  className="bg-slate-50 border-slate-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="farcaster">Farcaster</Label>
+                <Input
+                  id="farcaster"
+                  placeholder="username"
+                  value={socialInputs.farcaster}
+                  onChange={(e) => setSocialInputs({ ...socialInputs, farcaster: e.target.value })}
+                  className="bg-slate-50 border-slate-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lens">Lens</Label>
+                <Input
+                  id="lens"
+                  placeholder="@handle"
+                  value={socialInputs.lens}
+                  onChange={(e) => setSocialInputs({ ...socialInputs, lens: e.target.value })}
+                  className="bg-slate-50 border-slate-200"
+                />
+              </div>
           </div>
 
           {(formData.avatar_cid || formData.bio_cid) && (

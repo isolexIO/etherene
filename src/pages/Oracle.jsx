@@ -116,6 +116,20 @@ export default function Oracle() {
       });
 
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+
+      // Record interaction
+      if (account) {
+          try {
+              await base44.entities.OracleInteraction.create({
+                  user_address: account,
+                  topic: userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : ''),
+                  type: 'chat'
+              });
+          } catch (e) {
+              console.error("Failed to record oracle interaction", e);
+          }
+      }
+
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'assistant', content: "My connection to the ether is disrupted. Please try again." }]);
