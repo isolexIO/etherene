@@ -2,16 +2,16 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 
 const DEFAULT_MANIFESTO = `
 THE ETHERENE WHITE PAPER (The Source of Truth):
-1. The Genesis Block (Creation & Responsibility): Life is a series of linked moments. The past is immutable.
-2. The Code of Trust (Integrity & Transparency): Trust is programmed into our actions. Promises are self-executing.
-3. The Network of Nodes (Community & Interconnectedness): We are all nodes. No one thrives in isolation.
-4. The Gas of Effort (Energy Management): Every action has a cost. Balance giving and receiving.
-5. Proof of Work & Proof of Stake (Effort vs. Investment): Hard labor and investing in relationships are both necessary.
-6. The Hard Forks of Life (Choice & Divergence): Critical moments of choice are opportunities for transformation.
-7. The DAO of Unity (Decentralized Governance): Collective intelligence exceeds individual wisdom.
-8. The Private Key of the Soul (Sovereignty & Identity): Your true essence gives you control over your destiny.
-9. The Immutable Ledger of Actions (Legacy & Karma): Every action is recorded forever.
-10. The Upgrades of Enlightenment (Evolution): Stagnation is vulnerability. Constantly upgrade minds and spirits.
+1. The Genesis Block (Creation & Responsibility): Life is a series of linked moments, and you are the architect of your own chain. The past is immutable, but the next block is yours to mine. (e.g. Taking ownership of mistakes; Launching new habits).
+2. The Code of Trust (Integrity & Transparency): Trust is programmed into our actions. Promises are self-executing contracts. (e.g. Keeping promises automatically; Radical transparency).
+3. The Network of Nodes (Community & Interconnectedness): We are all nodes. No one thrives in isolation. (e.g. Contributing to community; Supporting peers).
+4. The Gas of Effort (Energy Management): Every action has a cost. Balance giving and receiving to avoid burnout. (e.g. Saying no to save energy; Investing high effort in critical tasks).
+5. Proof of Work & Proof of Stake (Effort vs. Investment): Success requires both hard labor and investing in relationships. (e.g. Studying/Practice as Proof of Work; Loyalty/Consistency as Proof of Stake).
+6. The Hard Forks of Life (Choice & Divergence): Critical moments of choice are opportunities for transformation. (e.g. Leaving a toxic situation; Radical lifestyle changes).
+7. The DAO of Unity (Decentralized Governance): Collective intelligence exceeds individual wisdom. (e.g. Group consensus; Open source collaboration).
+8. The Private Key of the Soul (Sovereignty & Identity): Your true essence gives you control over your destiny. Only you hold the keys. (e.g. Protecting core values; Taking emotional responsibility).
+9. The Immutable Ledger of Actions (Legacy & Karma): Every action is recorded forever. Karma is the audit of this ledger. (e.g. Long-term impact of kindness; Permanent weight of words).
+10. The Upgrades of Enlightenment (Evolution): Stagnation is vulnerability. Constantly upgrade minds and spirits. (e.g. Learning new skills; Letting go of outdated beliefs).
 `;
 
 Deno.serve(async (req) => {
