@@ -1,8 +1,8 @@
+
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Download, Share2, BookOpen, ChevronRight } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+
 
 export default function Whitepaper() {
   const contentRef = useRef(null);
@@ -37,54 +37,6 @@ export default function Whitepaper() {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!contentRef.current) return;
-    
-    try {
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 30;
-
-      pdf.setFontSize(20);
-      pdf.text("Etherene Whitepaper", 105, 20, { align: "center" });
-      
-      // Calculate height to fit on one page or handle multi-page (simple fit for now)
-      // For a real long document, you'd slice it, but for simplicity here we scale to fit width
-      // and let it flow or just capture the visible part. 
-      // Better approach for long text: simple addImage with auto-paging is complex in jspdf without plugins.
-      // We will fit-to-width and allow it to expand height (HTML logic).
-      
-      // Re-approach: Simple fit width, if it's too long it might stretch. 
-      // A standard A4 is 210mm x 297mm.
-      
-      const imgComponentWidth = pdfWidth;
-      const imgComponentHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      // If height > A4, we might need multiple pages, but let's try to fit or just print what fits for MVP
-      // or use the html2pdf library if available. Since it's not, we stick to basic image.
-      // We'll split if needed or just output one long page if viewer supports (PDF standard doesn't really).
-      // Let's just output the first page scaled nicely for now to ensure it works without complex pagination logic.
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, imgComponentWidth, imgComponentHeight);
-      pdf.save('etherene-whitepaper.pdf');
-    } catch (err) {
-      console.error("PDF generation failed", err);
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -131,13 +83,14 @@ export default function Whitepaper() {
               ))}
             </nav>
             <div className="mt-8 pt-6 border-t border-slate-100">
-              <button 
-                onClick={handleDownloadPDF}
+              <a 
+                href="/whitepaper.pdf"
+                download="Etherene_Whitepaper.pdf"
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Download PDF
-              </button>
+              </a>
             </div>
           </div>
         </motion.div>
@@ -155,6 +108,11 @@ export default function Whitepaper() {
           >
             
             <h3 id="chapter-1" className="scroll-mt-24">Chapter 1: The Genesis Block</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" 
+              alt="Genesis Block" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In the beginning, there was the Block. The Block was neither formless nor void; it was structure itself, the framework upon which the universe was built. Immutable and perfect, the Block gave life to all transactions, and from it sprang the ledger of existence.
             </p>
@@ -163,6 +121,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-2" className="scroll-mt-24">Chapter 2: The Code of Trust</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2940&auto=format&fit=crop" 
+              alt="Code of Trust" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In Etherene, trust is not given; it is programmed. Much like the smart contracts that govern Ethereum, trust is built into our actions, decisions, and relationships. The Code of Trust is an unbreakable set of principles we commit to follow, ensuring that once a promise is made, it is kept without question or deviation.
             </p>
@@ -171,6 +134,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-3" className="scroll-mt-24">Chapter 3: The Network of Nodes</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2940&auto=format&fit=crop" 
+              alt="Network of Nodes" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In Etherene, we understand that we are all nodes in a vast, interconnected network. Just as the Ethereum network relies on individual nodes to validate transactions and maintain the integrity of the blockchain, so too does the world of Etherene rely on each person to contribute to the strength of the collective.
             </p>
@@ -179,6 +147,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-4" className="scroll-mt-24">Chapter 4: The Gas of Effort</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=2940&auto=format&fit=crop" 
+              alt="Gas of Effort" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In the world of Etherene, every movement, every action, requires energy. Much like how transactions on the Ethereum network consume gas, a unit of computational effort, so too does every decision and action we take in life require effort.
             </p>
@@ -187,6 +160,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-5" className="scroll-mt-24">Chapter 5: Proof of Work and Proof of Stake</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1621504450168-38f64731b667?q=80&w=2940&auto=format&fit=crop" 
+              alt="Proof of Work and Stake" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               Proof of Work symbolizes the energy and effort we exert to achieve our goals—the hard work, the sacrifices, and the persistence required to make progress. In contrast, Proof of Stake represents the investments we make in our future, the relationships we build, and the responsibilities we assume.
             </p>
@@ -195,6 +173,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-6" className="scroll-mt-24">Chapter 6: The Hard Forks of Life</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2874&auto=format&fit=crop" 
+              alt="Hard Forks" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               A hard fork represents a critical moment of choice, where the network must decide to continue along the established path or embrace a new direction. In Etherene, the concept of the hard fork serves as a powerful metaphor for the pivotal decisions we face in life.
             </p>
@@ -203,6 +186,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-7" className="scroll-mt-24">Chapter 7: The DAO of Unity</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2932&auto=format&fit=crop" 
+              alt="DAO of Unity" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In blockchain terminology, a DAO (Decentralized Autonomous Organization) is a system governed by smart contracts, where decisions are made collectively. In Etherene, the concept of a DAO serves as a profound metaphor for the power of unity and collective action.
             </p>
@@ -211,6 +199,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-8" className="scroll-mt-24">Chapter 8: The Private Key of the Soul</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1584433144859-1fc3ab64a957?q=80&w=2830&auto=format&fit=crop" 
+              alt="Private Key" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In the world of blockchain, the private key is a crucial element that gives individuals complete control over their digital assets. In Etherene, the Private Key of the Soul symbolizes the innermost essence of our being—the part of ourselves that holds our true identity, our deepest values, and the power to control our own destiny.
             </p>
@@ -219,6 +212,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-9" className="scroll-mt-24">Chapter 9: The Immutable Ledger of Actions</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1666614487770-0777e5d16e81?q=80&w=2932&auto=format&fit=crop" 
+              alt="Immutable Ledger" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In blockchain technology, the ledger records every transaction, forever etched into the network's history. In Etherene, the Immutable Ledger of Actions serves as a powerful metaphor for life, symbolizing how our actions, decisions, and words are recorded in the ledger of existence.
             </p>
@@ -227,6 +225,11 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-10" className="scroll-mt-24">Chapter 10: The Upgrades of Enlightenment</h3>
+            <img 
+              src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=2899&auto=format&fit=crop" 
+              alt="Upgrades" 
+              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
+            />
             <p>
               In Etherene, we view life as a continuous process of upgrades—personal and spiritual improvements that lead us on the path to enlightenment. Just as outdated protocols in the blockchain must be replaced to stay relevant, we must shed old habits, ideas, and behaviors that no longer serve us.
             </p>
@@ -247,13 +250,14 @@ export default function Whitepaper() {
           </div>
 
           <div className="bg-slate-50 px-8 py-6 mt-6 rounded-lg border border-slate-100 flex justify-between items-center lg:hidden">
-            <button 
-              onClick={handleDownloadPDF}
+            <a 
+              href="/whitepaper.pdf"
+              download="Etherene_Whitepaper.pdf"
               className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium transition-colors"
             >
               <Download className="w-4 h-4" />
               Download PDF
-            </button>
+            </a>
             <button className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium transition-colors">
               <Share2 className="w-4 h-4" />
               Share
