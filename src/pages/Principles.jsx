@@ -15,7 +15,7 @@ const icons = {
 export default function Principles() {
   const { data: principles, isLoading } = useQuery({
     queryKey: ['principles'],
-    queryFn: () => base44.entities.Principle.list({ sort: { order: 1 } }),
+    queryFn: () => base44.entities.Principle.list('order', 50),
     initialData: []
   });
 
