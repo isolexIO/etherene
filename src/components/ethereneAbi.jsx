@@ -7,9 +7,16 @@ export const ETHERENE_NFT_ABI = [
 ];
 
 export const CONTRACT_ADDRESSES = {
-  1: "0x...", // Mainnet
-  5: "0x...", // Goerli
+  // Mainnets
+  1: "0x...", // Ethereum Mainnet
+  137: "0x...", // Polygon Mainnet
+  8453: "0x...", // Base Mainnet
+  
+  // Testnets (Recommended for testing)
+  84532: "0x...", // Base Sepolia
+  80002: "0x...", // Polygon Amoy
   11155111: "0x...", // Sepolia
-  137: "0xPolygonIdentityContractAddress", // Polygon
-  8453: "0xBaseIdentityContractAddress" // Base
+  
+  // Upcoming / Custom
+  10143: "0x..." // Monad (Placeholder)
 };

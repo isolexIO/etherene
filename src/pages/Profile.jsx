@@ -40,6 +40,44 @@ export default function Profile() {
             }
           };
           
+          const networks = {
+            137: {
+              chainId: "0x89",
+              chainName: "Polygon Mainnet",
+              nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
+              rpcUrls: ["https://polygon-rpc.com/"],
+              blockExplorerUrls: ["https://polygonscan.com/"]
+            },
+            80002: {
+              chainId: "0x13882",
+              chainName: "Polygon Amoy",
+              nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
+              rpcUrls: ["https://rpc-amoy.polygon.technology/"],
+              blockExplorerUrls: ["https://amoy.polygonscan.com/"]
+            },
+            8453: {
+              chainId: "0x2105",
+              chainName: "Base",
+              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://mainnet.base.org"],
+              blockExplorerUrls: ["https://basescan.org"]
+            },
+            84532: {
+              chainId: "0x14a34",
+              chainName: "Base Sepolia",
+              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://sepolia.base.org"],
+              blockExplorerUrls: ["https://sepolia-explorer.base.org"]
+            },
+            10143: {
+              chainId: "0x279f",
+              chainName: "Monad Devnet",
+              nativeCurrency: { name: "DMON", symbol: "DMON", decimals: 18 },
+              rpcUrls: ["https://rpc-devnet.monadinfra.com/rpc"], // Placeholder RPC
+              blockExplorerUrls: ["https://explorer.monad.xyz"]
+            }
+          };
+
           if (networks[targetChainId]) {
              await window.ethereum.request({
               method: 'wallet_addEthereumChain',
@@ -209,20 +247,41 @@ export default function Profile() {
         </div>
         
         {/* Network Switcher */}
-        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
           <button 
             onClick={() => switchNetwork(8453)}
             disabled={switching}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${Number(chainId) === 8453 ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 8453 ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
           >
             Base
+          </button>
+           <button 
+            onClick={() => switchNetwork(84532)}
+            disabled={switching}
+            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 84532 ? 'bg-blue-400 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            Base Sepolia
           </button>
           <button 
             onClick={() => switchNetwork(137)}
             disabled={switching}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${Number(chainId) === 137 ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 137 ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
           >
             Polygon
+          </button>
+           <button 
+            onClick={() => switchNetwork(80002)}
+            disabled={switching}
+            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 80002 ? 'bg-purple-400 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            Amoy
+          </button>
+          <button 
+            onClick={() => switchNetwork(10143)}
+            disabled={switching}
+            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 10143 ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            Monad
           </button>
         </div>
       </div>
