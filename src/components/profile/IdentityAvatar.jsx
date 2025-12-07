@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 
-// Simple pseudo-random number generator seeded by string
+// Pseudo-random number generator
 const seededRandom = (seed) => {
   let h = 0x811c9dc5;
   for (let i = 0; i < seed.length; i++) {
@@ -18,116 +18,121 @@ const seededRandom = (seed) => {
 export default function IdentityAvatar({ address, soulHash, size = 200, chainId }) {
   const seed = (address || '') + (soulHash || '');
   
-  const { colors, shapes, traits } = useMemo(() => {
+  const { layers, colors, glowColor, coreType } = useMemo(() => {
     const rng = seededRandom(seed);
-    const chainColor = chainId === 137 ? '#8b5cf6' : (chainId === 8453 ? '#2563eb' : '#4f46e5');
     
-    // Generate color palette based on address/hash
-    const hue = Math.floor(rng() * 360);
-    const secondaryHue = (hue + 180) % 360;
+    // Theme Colors based on chain but with Etherene aesthetic (Indigo/Purple/Gold/Cyan)
+    const baseHue = chainId === 137 ? 270 : (chainId === 8453 ? 210 : 240); // Purple for Poly, Blue for Base, Indigo for ETH
+    const primaryColor = `hsl(${baseHue}, 80%, 60%)`;
+    const secondaryColor = `hsl(${(baseHue + 180) % 360}, 70%, 50%)`;
+    const accentColor = `hsl(${(baseHue + 60) % 360}, 90%, 70%)`;
+    const glowColor = `hsla(${baseHue}, 100%, 70%, 0.6)`;
     
-    const palette = [
-      chainColor,
-      `hsl(${hue}, 70%, 60%)`,
-      `hsl(${secondaryHue}, 60%, 50%)`,
-      `hsl(${(hue + 60) % 360}, 80%, 70%)`
-    ];
+    const palette = [primaryColor, secondaryColor, accentColor, '#ffffff'];
 
-    // Generate shapes
-    const numShapes = 5 + Math.floor(rng() * 5);
-    const generatedShapes = Array.from({ length: numShapes }).map((_, i) => ({
-      type: rng() > 0.5 ? 'circle' : 'rect',
-      x: rng() * 100,
-      y: rng() * 100,
-      size: 10 + rng() * 40,
-      rotation: rng() * 360,
-      color: palette[Math.floor(rng() * palette.length)],
-      opacity: 0.3 + rng() * 0.5
-    }));
+    // Generate Layers for the Mandala
+    const numLayers = 3 + Math.floor(rng() * 3);
+    const layers = [];
+    
+    for (let i = 0; i < numLayers; i++) {
+        const shapeType = rng() > 0.5 ? 'hexagon' : 'circle';
+        const pointCount = shapeType === 'hexagon' ? 6 : (8 + Math.floor(rng() * 8));
+        const radius = 30 + (i * 15);
+        const rotationSpeed = (rng() - 0.5) * 20; // Animation prop
+        
+        layers.push({
+            type: shapeType,
+            points: pointCount,
+            radius: radius,
+            stroke: palette[Math.floor(rng() * palette.length)],
+            strokeWidth: 0.5 + rng() * 1.5,
+            rotation: rng() * 360,
+            rotationSpeed,
+            opacity: 0.4 + rng() * 0.6,
+            filled: rng() > 0.8
+        });
+    }
 
-    // Derived "History" Traits
-    const traits = [
-      { label: 'Origin', value: 'Block ' + Math.floor(rng() * 15000000) },
-      { label: 'Resonance', value: (rng() * 100).toFixed(2) + '%' },
-      { label: 'Archetype', value: ['Guardian', 'Seeker', 'Validator', 'Architect'][Math.floor(rng() * 4)] }
-    ];
+    const coreType = rng() > 0.5 ? 'crystal' : 'star';
 
-    return { colors: palette, shapes: generatedShapes, traits };
+    return { layers, colors: palette, glowColor, coreType };
   }, [seed, chainId]);
 
-  return (
-    <div className="relative group" style={{ width: size, height: size }}>
-      {/* Avatar SVG */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full h-full rounded-2xl overflow-hidden bg-slate-900 relative shadow-inner border-4 border-white/10"
-      >
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-            <defs>
-                <filter id="glow">
-                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-                    <feMerge>
-                        <feMergeNode in="coloredBlur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                </filter>
-            </defs>
-            <rect width="100" height="100" fill={colors[0]} opacity="0.1" />
-            
-            {shapes.map((shape, i) => (
-                <motion.g 
-                    key={i}
-                    initial={{ scale: 0, rotate: 0 }}
-                    animate={{ scale: 1, rotate: shape.rotation }}
-                    transition={{ delay: i * 0.1, duration: 0.5 }}
-                    style={{ transformOrigin: `${shape.x}% ${shape.y}%` }}
-                >
-                    {shape.type === 'circle' ? (
-                        <circle 
-                            cx={shape.x} 
-                            cy={shape.y} 
-                            r={shape.size / 2} 
-                            fill={shape.color} 
-                            fillOpacity={shape.opacity}
-                            filter="url(#glow)"
-                        />
-                    ) : (
-                        <rect 
-                            x={shape.x - shape.size/2} 
-                            y={shape.y - shape.size/2} 
-                            width={shape.size} 
-                            height={shape.size} 
-                            fill={shape.color} 
-                            fillOpacity={shape.opacity}
-                            filter="url(#glow)"
-                        />
-                    )}
-                </motion.g>
-            ))}
-            
-            {/* Overlay Grid */}
-            <path d="M0 0 L100 100 M100 0 L0 100" stroke="white" strokeOpacity="0.1" strokeWidth="0.5" />
-        </svg>
-        
-        {/* Chain Badge */}
-        <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-[10px] text-white font-mono border border-white/20">
-            {chainId === 137 ? 'POLYGON' : (chainId === 8453 ? 'BASE' : 'ETH')}
-        </div>
-      </motion.div>
+  // Helper to create polygon points
+  const createPolygon = (r, sides, rotation = 0) => {
+    let points = "";
+    for (let i = 0; i < sides; i++) {
+        const angle = (i * 2 * Math.PI / sides) - (Math.PI / 2) + (rotation * Math.PI / 180);
+        const x = 50 + r * Math.cos(angle);
+        const y = 50 + r * Math.sin(angle);
+        points += `${x},${y} `;
+    }
+    return points;
+  };
 
-      {/* Traits Tooltip */}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-48 bg-white/90 backdrop-blur-md rounded-xl p-3 shadow-xl border border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-        <h4 className="text-xs font-bold text-slate-900 mb-2 uppercase tracking-wider">Soul Traits</h4>
-        <div className="space-y-1">
-            {traits.map((trait, i) => (
-                <div key={i} className="flex justify-between text-xs">
-                    <span className="text-slate-500">{trait.label}</span>
-                    <span className="font-mono text-indigo-600">{trait.value}</span>
-                </div>
-            ))}
-        </div>
-      </div>
+  return (
+    <div className="relative group overflow-hidden rounded-full shadow-2xl bg-slate-950 border-4 border-slate-900" style={{ width: size, height: size }}>
+      
+      {/* Dynamic Sacred Geometry SVG */}
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <defs>
+            <radialGradient id="soulGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                <stop offset="0%" stopColor={glowColor} stopOpacity="0.8" />
+                <stop offset="100%" stopColor={colors[0]} stopOpacity="0" />
+            </radialGradient>
+            <filter id="bloom">
+                <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        
+        {/* Background Glow */}
+        <circle cx="50" cy="50" r="45" fill="url(#soulGlow)" opacity="0.4" />
+
+        {/* Core Identity */}
+        <motion.circle 
+            cx="50" cy="50" r="5" 
+            fill={colors[2]} 
+            initial={{ scale: 0 }}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            filter="url(#bloom)"
+        />
+
+        {/* Layers */}
+        {layers.map((layer, i) => (
+            <motion.g 
+                key={i}
+                initial={{ opacity: 0, rotate: layer.rotation }}
+                animate={{ opacity: layer.opacity, rotate: layer.rotation + 360 }}
+                transition={{ duration: 20 + Math.abs(100/layer.rotationSpeed), repeat: Infinity, ease: "linear" }}
+                style={{ transformOrigin: "50px 50px" }}
+            >
+                {layer.type === 'hexagon' || layer.type === 'circle' ? ( // Actually reusing polygon logic for both sort of
+                    <polygon 
+                        points={createPolygon(layer.radius, layer.type === 'hexagon' ? 6 : layer.points)}
+                        fill={layer.filled ? layer.stroke : 'none'}
+                        fillOpacity={layer.filled ? 0.1 : 0}
+                        stroke={layer.stroke}
+                        strokeWidth={layer.strokeWidth}
+                        filter="url(#bloom)"
+                    />
+                ) : null}
+                
+                {/* Connecting Lines for decorative purpose if complex */}
+                {!layer.filled && (
+                    <circle cx="50" cy="50" r={layer.radius * 0.8} stroke={layer.stroke} strokeWidth="0.2" opacity="0.5" strokeDasharray="2 2" />
+                )}
+            </motion.g>
+        ))}
+
+        {/* Overlay Tech Lines */}
+        <path d="M50 0 L50 10 M50 90 L50 100 M0 50 L10 50 M90 50 L100 50" stroke="white" strokeWidth="0.5" opacity="0.3" />
+        <circle cx="50" cy="50" r="48" stroke="white" strokeWidth="0.5" opacity="0.2" strokeDasharray="10 5" />
+      </svg>
     </div>
   );
 }

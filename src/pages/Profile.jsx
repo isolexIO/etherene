@@ -83,22 +83,30 @@ export default function Profile() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       
-      // REAL CONTRACT INTERACTION CODE (Commented out for demo without deployed contract)
-      /*
-      const contract = new ethers.Contract(CONTRACT_ADDRESSES[chainId], ETHERENE_NFT_ABI, signer);
-      const tx = await contract.mint();
-      await tx.wait();
-      */
+      const contractAddress = CONTRACT_ADDRESSES[chainId];
+      if (!contractAddress || contractAddress === "0x...") {
+        throw new Error("Etherene contract not deployed on this network yet.");
+      }
+
+      const contract = new ethers.Contract(contractAddress, ETHERENE_NFT_ABI, signer);
       
-      // Simulation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Estimate gas to ensure transaction is valid
+      const gasEstimate = await contract.mint.estimateGas();
+      
+      const tx = await contract.mint({
+        gasLimit: Math.ceil(Number(gasEstimate) * 1.2) // Add buffer
+      });
+      
+      console.log("Minting transaction submitted:", tx.hash);
+      await tx.wait();
+      console.log("Minting confirmed!");
       
       setHasMinted(true);
       // Store mint status specific to this chain
       localStorage.setItem(`etherene_minted_${account}_${chainId || 1}`, 'true');
     } catch (err) {
       console.error("Mint failed:", err);
-      alert("Minting failed. See console for details.");
+      alert(`Minting failed: ${err.message || err.reason || "Unknown error"}`);
     } finally {
       setIsMinting(false);
     }
@@ -111,6 +119,13 @@ export default function Profile() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       
+      // If contract exists, we might want to call signDeclaration on-chain too, 
+      // but usually this is an off-chain signature or on-chain transaction.
+      // Assuming on-chain for "actually mint/interact" request if relevant, 
+      // but typically "sign declaration" implies signature. 
+      // We'll keep it as signature for now unless specified as on-chain transaction.
+      // However, to make it "real" persistence, let's verify if we can store it.
+      
       const message = "I declare my self-sovereignty on the Etherene Protocol.";
       const signature = await signer.signMessage(message);
       
@@ -120,6 +135,7 @@ export default function Profile() {
       localStorage.setItem(`etherene_signed_${account}`, 'true');
     } catch (err) {
       console.error("Signing failed:", err);
+      alert("Failed to sign declaration: " + err.message);
     } finally {
       setIsSigning(false);
     }
