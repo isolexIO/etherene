@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
 import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy } from 'lucide-react';
+import IdentityAvatar from '../components/profile/IdentityAvatar';
 // import { ethers } from 'ethers'; // Dynamic import used instead
 
 export default function Profile() {
@@ -64,12 +65,16 @@ export default function Profile() {
   useEffect(() => {
     if (account) {
       // In a real app, you'd fetch this from the contract
-      const localMinted = localStorage.getItem(`etherene_minted_${account}`);
+      // We check mint status per chain + account
+      const localMinted = localStorage.getItem(`etherene_minted_${account}_${chainId || 1}`);
       const localSigned = localStorage.getItem(`etherene_signed_${account}`);
-      if (localMinted) setHasMinted(true);
+      
+      // Reset mint status when switching chains if not minted on that chain
+      setHasMinted(!!localMinted);
+      
       if (localSigned) setHasSigned(true);
     }
-  }, [account]);
+  }, [account, chainId]);
 
   const handleMint = async () => {
     setIsMinting(true);
@@ -89,7 +94,8 @@ export default function Profile() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setHasMinted(true);
-      localStorage.setItem(`etherene_minted_${account}`, 'true');
+      // Store mint status specific to this chain
+      localStorage.setItem(`etherene_minted_${account}_${chainId || 1}`, 'true');
     } catch (err) {
       console.error("Mint failed:", err);
       alert("Minting failed. See console for details.");
@@ -217,24 +223,36 @@ export default function Profile() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-900">Etherene Identity NFT</h3>
-                <p className="text-slate-500 text-sm">Mint your unique soul badge on-chain.</p>
+                <p className="text-slate-500 text-sm">Mint your unique soul badge on {Number(chainId) === 137 ? 'Polygon' : (Number(chainId) === 8453 ? 'Base' : 'Chain')}.</p>
               </div>
             </div>
 
             {hasMinted ? (
-              <div className="relative z-10">
-                <div className="aspect-square bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
-                  <Fingerprint className="w-32 h-32 text-white/20" />
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="mb-6 relative">
+                  <IdentityAvatar 
+                    address={account} 
+                    soulHash={soulHash} 
+                    size={200}
+                    chainId={Number(chainId)} 
+                  />
                 </div>
-                <div className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+                <div className="flex items-center justify-center gap-2 text-indigo-600 font-medium bg-indigo-50 px-4 py-2 rounded-full">
                   <CheckCircle2 className="w-5 h-5" />
-                  Owned
+                  Identity Minted on {Number(chainId) === 137 ? 'Polygon' : (Number(chainId) === 8453 ? 'Base' : 'Network')}
                 </div>
               </div>
             ) : (
               <div className="relative z-10">
-                <div className="aspect-square bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border-2 border-dashed border-slate-200">
+                <div className="aspect-square bg-slate-50 rounded-2xl flex flex-col items-center justify-center mb-6 border-2 border-dashed border-slate-200 p-6 text-center">
+                  <Fingerprint className="w-16 h-16 text-slate-300 mb-4" />
                   <p className="text-slate-400 font-medium">No Identity Found</p>
+                  <p className="text-slate-400 text-xs mt-2">Generate your Soul Hash to preview your unique avatar.</p>
+                  {soulHash && (
+                    <div className="mt-4 p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+                       <p className="text-xs text-indigo-500 font-mono">Soul Hash Ready</p>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handleMint}
@@ -242,7 +260,7 @@ export default function Profile() {
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {isMinting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Mint Identity (Free)
+                  Mint Identity on {Number(chainId) === 137 ? 'Polygon' : (Number(chainId) === 8453 ? 'Base' : 'Network')}
                 </button>
               </div>
             )}
