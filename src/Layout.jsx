@@ -104,6 +104,7 @@ export default function Layout({ children, currentPageName }) {
 
   const navItems = [
     { name: 'Sanctum', path: 'Sanctum' },
+    { name: 'Lessons', path: 'Lessons' },
     { name: 'Principles', path: 'Principles' },
     { name: 'Oracle', path: 'Oracle' },
     { name: 'Agora', path: 'Agora' },
