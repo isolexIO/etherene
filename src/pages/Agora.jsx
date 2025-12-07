@@ -8,6 +8,7 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../components/utils';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
+import NFTGate from '../components/shared/NFTGate';
 
 export default function Agora() {
   const { data: activeIdentities } = useQuery({
@@ -70,7 +71,9 @@ export default function Agora() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
+            <NFTGate>
               <CreateTransmission />
+            </NFTGate>
           </motion.div>
 
           {/* Feed Filter (Visual only for now) */}
@@ -87,7 +90,9 @@ export default function Agora() {
           </div>
 
           {/* Feed */}
-          <TransmissionFeed />
+          <div className="opacity-90">
+             <TransmissionFeed />
+          </div>
         </div>
 
         {/* Sidebar (Right) - Active Identities */}
