@@ -2,6 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Menu, X, Hexagon, Sparkles } from 'lucide-react';
+import { Toaster } from 'sonner';
 import { createPageUrl } from './components/utils';
 
 // Web3 Context
@@ -84,6 +85,7 @@ export default function Layout({ children, currentPageName }) {
   return (
     <Web3Context.Provider value={{ account, chainId, connectWallet, isConnecting, error }}>
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+        <Toaster position="top-center" richColors />
         
         {/* Sacred Geometry Background */}
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">

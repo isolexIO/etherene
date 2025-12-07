@@ -4,7 +4,8 @@ import { useWeb3 } from '../Layout';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../components/utils';
-import { User, Camera, Save, ArrowLeft, Loader2 } from 'lucide-react';
+import { User, Camera, Save, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -53,8 +54,13 @@ export default function CustomizeProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['identity', account]);
-      navigate(createPageUrl('Profile'));
+      toast.success("Profile updated successfully!");
+      setTimeout(() => navigate(createPageUrl('Profile')), 1000);
     },
+    onError: (error) => {
+      console.error("Profile update failed:", error);
+      toast.error(error.message || "Failed to update profile");
+    }
   });
 
   const handleFileChange = async (e) => {
@@ -92,6 +98,26 @@ export default function CustomizeProfile() {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (!identity) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">Identity Not Found</h2>
+        <p className="text-slate-500 mb-6 max-w-md">
+          We couldn't find your Etherene Identity. You need to mint your identity before you can customize your profile.
+        </p>
+        <button 
+          onClick={() => navigate(createPageUrl('Profile'))}
+          className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+        >
+          Go to Profile to Mint
+        </button>
       </div>
     );
   }
