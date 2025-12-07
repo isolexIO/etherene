@@ -9,5 +9,7 @@ export const ETHERENE_NFT_ABI = [
 export const CONTRACT_ADDRESSES = {
   1: "0x...", // Mainnet
   5: "0x...", // Goerli
-  11155111: "0x..." // Sepolia
+  11155111: "0x...", // Sepolia
+  8453: "0x...", // Base
+  137: "0x..." // Polygon
 };

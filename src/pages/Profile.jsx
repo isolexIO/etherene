@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Globe } from 'lucide-react';
 // import { ethers } from 'ethers'; // Dynamic import used instead
 
 export default function Profile() {
@@ -13,6 +13,7 @@ export default function Profile() {
   const [hasSigned, setHasSigned] = useState(false);
   const [soulText, setSoulText] = useState('');
   const [soulHash, setSoulHash] = useState(null);
+  const [selectedNetwork, setSelectedNetwork] = useState(null);
   
   // Mock fetching existing state
   useEffect(() => {
@@ -26,24 +27,48 @@ export default function Profile() {
   }, [account]);
 
   const handleMint = async () => {
+    if (!selectedNetwork) return;
+    
     setIsMinting(true);
     try {
+      // Check network switch (Simulation)
+      if (chainId !== selectedNetwork) {
+        if (window.ethereum) {
+          try {
+             await window.ethereum.request({
+               method: 'wallet_switchEthereumChain',
+               params: [{ chainId: `0x${selectedNetwork.toString(16)}` }],
+             });
+          } catch (switchError) {
+             // This error code indicates that the chain has not been added to MetaMask.
+             if (switchError.code === 4902) {
+                console.log("Chain not added, please add it manually");
+             }
+             // For simulation purposes, we proceed after a delay if switching fails or in mock env
+             await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+
       const { ethers } = await import('ethers');
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      
-      // REAL CONTRACT INTERACTION CODE (Commented out for demo without deployed contract)
-      /*
-      const contract = new ethers.Contract(CONTRACT_ADDRESSES[chainId], ETHERENE_NFT_ABI, signer);
-      const tx = await contract.mint();
-      await tx.wait();
-      */
+      if (window.ethereum) {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          
+          // REAL CONTRACT INTERACTION CODE (Commented out for demo without deployed contract)
+          /*
+          const contract = new ethers.Contract(CONTRACT_ADDRESSES[selectedNetwork], ETHERENE_NFT_ABI, signer);
+          const tx = await contract.mint();
+          await tx.wait();
+          */
+      }
       
       // Simulation
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setHasMinted(true);
       localStorage.setItem(`etherene_minted_${account}`, 'true');
+      localStorage.setItem(`etherene_minted_network_${account}`, selectedNetwork);
     } catch (err) {
       console.error("Mint failed:", err);
       alert("Minting failed. See console for details.");
@@ -167,16 +192,33 @@ export default function Profile() {
               </div>
             ) : (
               <div className="relative z-10">
-                <div className="aspect-square bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border-2 border-dashed border-slate-200">
-                  <p className="text-slate-400 font-medium">No Identity Found</p>
+                <div className="aspect-square bg-slate-50 rounded-2xl flex flex-col items-center justify-center mb-6 border-2 border-dashed border-slate-200 p-4">
+                <p className="text-slate-400 font-medium mb-4">No Identity Found</p>
+
+                <div className="w-full grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setSelectedNetwork(8453)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${selectedNetwork === 8453 ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-indigo-300 text-slate-600'}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-blue-600 mb-2 flex items-center justify-center text-white font-bold text-xs">B</div>
+                    <span className="text-xs font-medium">Base</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedNetwork(137)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${selectedNetwork === 137 ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-slate-200 hover:border-purple-300 text-slate-600'}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-purple-600 mb-2 flex items-center justify-center text-white font-bold text-xs">P</div>
+                    <span className="text-xs font-medium">Polygon</span>
+                  </button>
+                </div>
                 </div>
                 <button
-                  onClick={handleMint}
-                  disabled={isMinting}
-                  className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                onClick={handleMint}
+                disabled={isMinting || !selectedNetwork}
+                className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:bg-slate-300 transition-colors flex items-center justify-center gap-2"
                 >
-                  {isMinting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Mint Identity (Free)
+                {isMinting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isMinting ? 'Minting...' : selectedNetwork ? 'Mint Identity (Free)' : 'Select Network'}
                 </button>
               </div>
             )}
