@@ -4,7 +4,7 @@ import { ArrowRight, Hexagon, Shield, Zap, Globe } from 'lucide-react';
 import ActivityFeed from '../components/ActivityFeed';
 import { useWeb3 } from '../Layout';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '../utils';
+import { createPageUrl } from '../components/utils';
 
 export default function Home() {
   const { account, connectWallet } = useWeb3();

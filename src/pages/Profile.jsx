@@ -5,7 +5,7 @@ import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
 import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
-import { createPageUrl } from '../utils';
+import { createPageUrl } from '../components/utils';
 // import { ethers } from 'ethers'; // Dynamic import used instead
 
 export default function Profile() {

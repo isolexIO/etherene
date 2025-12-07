@@ -2,7 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Menu, X, Hexagon, Sparkles } from 'lucide-react';
-import { createPageUrl } from './utils';
+import { createPageUrl } from './components/utils';
 
 // Web3 Context
 const Web3Context = createContext({
