@@ -49,7 +49,7 @@ export default function Sanctum() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-6"
         >
-          The Future is <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Immutable</span>
+          Enter the <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Sanctum</span>
         </motion.h1>
 
         <motion.p

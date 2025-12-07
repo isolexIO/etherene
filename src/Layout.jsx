@@ -113,7 +113,7 @@ export default function Layout({ children, currentPageName }) {
                 {navItems.map((item) => (
                   <Link
                     key={item.name}
-                    to={createPageUrl(item.name)}
+                    to={createPageUrl(item.path)}
                     className={`text-sm font-medium transition-colors hover:text-indigo-600 ${
                       currentPageName === item.path ? 'text-indigo-600' : 'text-slate-600'
                     }`}
@@ -160,7 +160,7 @@ export default function Layout({ children, currentPageName }) {
                   {navItems.map((item) => (
                     <Link
                       key={item.name}
-                      to={createPageUrl(item.name)}
+                      to={createPageUrl(item.path)}
                       onClick={() => setIsMenuOpen(false)}
                       className={`block text-base font-medium px-2 py-1 ${
                         currentPageName === item.path ? 'text-indigo-600' : 'text-slate-600'
