@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, ShieldCheck } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 // import { ethers } from 'ethers'; // Dynamic import used instead
@@ -239,7 +239,15 @@ export default function Profile() {
           <div className="flex flex-col gap-1 mt-2">
             <p className="text-slate-500 font-mono text-sm">{account}</p>
             {profileData?.display_name && (
-              <p className="text-lg font-medium text-indigo-600">{profileData.display_name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-medium text-indigo-600">{profileData.display_name}</p>
+                {profileData.verification_status === 'verified' && (
+                  <div className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold border border-green-200" title="Verified Identity">
+                    <ShieldCheck className="w-3 h-3" />
+                    VERIFIED
+                  </div>
+                )}
+              </div>
             )}
             {profileData?.bio && (
                <p className="text-slate-600 text-sm max-w-md">{profileData.bio}</p>

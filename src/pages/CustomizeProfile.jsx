@@ -4,7 +4,7 @@ import { useWeb3 } from '../Layout';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../components/utils';
-import { User, Camera, Save, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { User, Camera, Save, ArrowLeft, Loader2, AlertCircle, FileText, CheckCircle2, XCircle, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,9 +20,11 @@ export default function CustomizeProfile() {
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
-    avatar_url: ''
+    avatar_url: '',
+    id_document_url: ''
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Fetch existing identity
   const { data: identity, isLoading } = useQuery({
@@ -40,7 +42,8 @@ export default function CustomizeProfile() {
       setFormData({
         display_name: identity.display_name || '',
         bio: identity.bio || '',
-        avatar_url: identity.avatar_url || ''
+        avatar_url: identity.avatar_url || '',
+        id_document_url: identity.id_document_url || ''
       });
     }
   }, [identity]);
@@ -63,19 +66,45 @@ export default function CustomizeProfile() {
     }
   });
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setFormData(prev => ({ ...prev, avatar_url: file_url }));
+      setFormData(prev => ({ ...prev, [field]: file_url }));
+      toast.success(`${field === 'avatar_url' ? 'Avatar' : 'Document'} uploaded!`);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Failed to upload image.");
+      toast.error("Failed to upload image.");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleVerification = async () => {
+    if (!identity || !formData.id_document_url) return;
+    
+    // Save first to ensure the URL is in the DB
+    await updateProfileMutation.mutateAsync(formData);
+
+    setIsVerifying(true);
+    try {
+      toast.info("Analyzing document with AI...");
+      const response = await base44.functions.invoke('verifyIdentity', { identityId: identity.id });
+      
+      if (response.data.status === 'verified') {
+        toast.success("Identity Verified Successfully!");
+      } else {
+        toast.error(`Verification Rejected: ${response.data.reason}`);
+      }
+      queryClient.invalidateQueries(['identity', account]);
+    } catch (error) {
+      console.error("Verification failed:", error);
+      toast.error("Verification process failed. Please try again.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -160,10 +189,9 @@ export default function CustomizeProfile() {
               </div>
               <label className="absolute bottom-0 right-0 p-2 bg-indigo-600 rounded-full text-white cursor-pointer hover:bg-indigo-700 transition-colors shadow-md">
                 <Camera className="w-4 h-4" />
-                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={isUploading} />
+                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'avatar_url')} disabled={isUploading} />
               </label>
             </div>
-            {isUploading && <p className="text-sm text-indigo-600 mt-2">Uploading...</p>}
           </div>
 
           <div className="space-y-2">
@@ -186,6 +214,77 @@ export default function CustomizeProfile() {
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               className="bg-slate-50 border-slate-200 min-h-[100px]"
             />
+          </div>
+
+          <div className="pt-6 border-t border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-indigo-600" />
+              Identity Verification
+            </h3>
+            
+            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+              <div className="mb-4">
+                <Label className="mb-2 block">Government ID Upload</Label>
+                <div className="flex items-center gap-4">
+                  {formData.id_document_url ? (
+                    <div className="relative w-full h-32 bg-white rounded-lg border border-slate-200 overflow-hidden group">
+                      <img src={formData.id_document_url} alt="ID Document" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <label className="cursor-pointer text-white font-medium hover:underline">
+                          Change
+                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'id_document_url')} disabled={isUploading || identity?.verification_status === 'verified'} />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex-1 flex flex-col items-center justify-center h-32 bg-white border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                      <FileText className="w-8 h-8 text-slate-400 mb-2" />
+                      <span className="text-sm text-slate-500">Upload ID Document</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'id_document_url')} disabled={isUploading} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {identity?.verification_status === 'verified' ? (
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg border border-green-100">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-medium">Identity Verified</span>
+                </div>
+              ) : identity?.verification_status === 'rejected' ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                    <XCircle className="w-5 h-5 mt-0.5" />
+                    <div>
+                      <span className="font-medium block">Verification Rejected</span>
+                      <span className="text-sm opacity-90">{identity.verification_feedback}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={handleVerification}
+                    disabled={isVerifying || !formData.id_document_url}
+                    className="w-full bg-slate-900 text-white"
+                  >
+                    {isVerifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Retry Verification"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-500">
+                    Upload a valid government ID to verify your identity. This will add a verification badge to your profile.
+                  </p>
+                  <Button 
+                    type="button"
+                    onClick={handleVerification}
+                    disabled={isVerifying || !formData.id_document_url}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    {isVerifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Verify Identity"}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           <Button 
