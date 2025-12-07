@@ -35,17 +35,67 @@ export default function Oracle() {
 
     try {
       const WHITE_PAPER_CONTEXT = `
-      THE ETHERENE MANIFESTO (The Source of Truth):
-      1. The Genesis Block: Life is a series of linked moments. The past is immutable (The Block). We shape the future by mining each block with intention.
-      2. The Code of Trust: Trust is programmed, not given. Promises must be kept without deviation. Reliability builds the network.
-      3. The Network of Nodes: We are interconnected nodes. Individual actions impact the collective. Diversity makes the network resilient.
-      4. The Gas of Effort: Energy is a precious resource. Manage it with intention. Know when to give, rest, and redirect.
-      5. Proof of Work & Stake: Proof of Work is the effort/struggle we exert. Proof of Stake is the investment/relationships we build. Balance both.
-      6. The Hard Forks of Life: Critical moments of choice. Decisions redefine our future. Embrace the fork to become who you are meant to be.
-      7. The DAO of Unity: Unity unlocks potential. Collective decisions. Value each individual's contribution.
-      8. The Private Key of the Soul: Your innermost essence and true identity. Protect it. It gives you control over your destiny.
-      9. The Immutable Ledger of Actions: Every action is recorded in the ledger of existence. Contribute to the greater good.
-      10. Upgrades of Enlightenment: Life is a continuous process of upgrades. Shed old habits. Commit to lifelong learning.
+      THE ETHERENE WHITE PAPER (The Source of Truth):
+
+      1. The Genesis Block (Creation & Responsibility):
+      - Life is a series of linked moments, starting from a Genesis Block.
+      - The past is immutable; actions are irreversible. "Once a block is mined, it is forever recorded."
+      - We must live with accountability. Every decision creates a ripple effect.
+      - Parable: The First Miner created trust through integrity and labor.
+
+      2. The Code of Trust (Integrity & Transparency):
+      - Trust is not given; it is programmed into our actions (Smart Contracts of the soul).
+      - Promises are self-executing and unbreakable. "Our word is our bond."
+      - Transparency eliminates the need for external enforcement.
+      - Parable: The Unseen Enforcer ensures fairness without intermediaries.
+
+      3. The Network of Nodes (Community & Interconnectedness):
+      - We are all nodes in a vast network. No one thrives in isolation (Ubuntu: "I am because we are").
+      - Diversity strengthens the network (resilience).
+      - We must validate and support each other.
+      - Parable: The Forgotten Node withered in isolation but thrived when reconnected.
+
+      4. The Gas of Effort (Energy Management):
+      - Every action has a cost ("Gas"). Energy is finite.
+      - Balance giving and receiving to avoid burnout (The Golden Mean).
+      - Rest is necessary to replenish gas.
+      - Parable: The Farmer who worked until he had nothing left to give.
+
+      5. Proof of Work & Proof of Stake (Effort vs. Investment):
+      - Proof of Work: Hard labor, struggle, and persistence build character.
+      - Proof of Stake: Investing in relationships, community, and the future builds stability.
+      - Both are necessary for success.
+      - Parable: The Two Builders (one worked hard, one invested in others; both succeeded differently).
+
+      6. The Hard Forks of Life (Choice & Divergence):
+      - Hard Forks are critical moments of choice where paths diverge.
+      - They are opportunities for transformation, not failure.
+      - Embrace uncertainty. Letting go of the old chain is necessary for growth.
+      - Parable: The Diverging Roads (the rocky road led to strength).
+
+      7. The DAO of Unity (Decentralized Governance):
+      - Collective intelligence exceeds individual wisdom.
+      - Decentralization empowers every voice; decisions should be shared.
+      - Unity through diversity creates resilience.
+      - Parable: The Builder's Circle (working together accomplished what individuals could not).
+
+      8. The Private Key of the Soul (Sovereignty & Identity):
+      - Your Private Key is your true self/essence. It gives you control over your destiny.
+      - Protect it from manipulation. Never give away your power.
+      - Balance privacy (protection) with public sharing (authenticity).
+      - Parable: The Lost Key (wisdom was internal, not external).
+
+      9. The Immutable Ledger of Actions (Legacy & Karma):
+      - Every action is recorded forever in the Ledger of Life.
+      - You cannot erase the past, but you can write new entries (Redemption).
+      - Live with intention; you are writing your legacy daily.
+      - Parable: The Unchangeable Scroll.
+
+      10. The Upgrades of Enlightenment (Evolution):
+      - Stagnation is vulnerability. We must constantly upgrade our minds and spirits.
+      - Shed obsolete beliefs and habits.
+      - Balance Knowledge (Head) with Compassion (Heart).
+      - Parable: The Outdated Map (clinging to the old leads to being lost).
       `;
 
       const response = await base44.integrations.Core.InvokeLLM({
