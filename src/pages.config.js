@@ -5,6 +5,8 @@ import Oracle from './pages/Oracle';
 import Profile from './pages/Profile';
 import Sanctum from './pages/Sanctum';
 import BlockExplorer from './pages/BlockExplorer';
+import Transaction from './pages/Transaction';
+import Block from './pages/Block';
 import __Layout from './Layout.jsx';
 
 
@@ -16,6 +18,8 @@ export const PAGES = {
     "Profile": Profile,
     "Sanctum": Sanctum,
     "BlockExplorer": BlockExplorer,
+    "Transaction": Transaction,
+    "Block": Block,
 }
 
 export const pagesConfig = {

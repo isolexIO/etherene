@@ -12,30 +12,17 @@ const MOCK_TXS = [
   { hash: "0x3k4...5l6m", from: "0x789...01st", to: "0x345...67mn", type: "Transfer", age: "12 mins ago", status: "Failed" },
 ];
 
-export default function TransactionList({ searchTerm }) {
-  const [transactions, setTransactions] = useState(MOCK_TXS);
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '../../utils';
 
-  // Simulate live feed
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newTx = {
-        hash: `0x${Math.random().toString(16).substr(2, 10)}...`,
-        from: `0x${Math.random().toString(16).substr(2, 8)}...`,
-        to: Math.random() > 0.7 ? "Contract: Identity" : `0x${Math.random().toString(16).substr(2, 8)}...`,
-        type: ["Declaration", "Mint Identity", "Transfer", "Vote"][Math.floor(Math.random() * 4)],
-        age: "Just now",
-        status: "Success"
-      };
-      setTransactions(prev => [newTx, ...prev.slice(0, 9)]);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
+export default function TransactionList({ transactions, searchTerm, watchedAddresses }) {
   const filteredTxs = transactions.filter(tx => 
     tx.hash.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tx.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tx.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const isWatched = (address) => watchedAddresses.includes(address);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -61,10 +48,13 @@ export default function TransactionList({ searchTerm }) {
                   className="hover:bg-slate-50/50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 text-indigo-600 font-mono text-sm">
+                    <Link 
+                      to={`${createPageUrl('Transaction')}?hash=${tx.hash}`}
+                      className="flex items-center gap-2 text-indigo-600 font-mono text-sm hover:underline"
+                    >
                       <FileText className="w-4 h-4 text-slate-400" />
                       {tx.hash}
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
@@ -73,9 +63,13 @@ export default function TransactionList({ searchTerm }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <span className="font-mono">{tx.from}</span>
+                      <span className={`font-mono ${isWatched(tx.from) ? "bg-amber-100 px-1 rounded text-amber-800 font-bold" : ""}`}>
+                        {tx.from}
+                      </span>
                       <ArrowRight className="w-3 h-3 text-slate-400" />
-                      <span className="font-mono">{tx.to}</span>
+                      <span className={`font-mono ${isWatched(tx.to) ? "bg-amber-100 px-1 rounded text-amber-800 font-bold" : ""}`}>
+                        {tx.to}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

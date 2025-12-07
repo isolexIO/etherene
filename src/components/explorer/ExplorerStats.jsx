@@ -2,12 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Box, Activity, Shield, Zap } from 'lucide-react';
 
-export default function ExplorerStats() {
+export default function ExplorerStats({ globalStats }) {
   const stats = [
-    { label: "Total Blocks", value: "14,205,921", icon: Box, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Active Nodes", value: "8,432", icon: Activity, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Verified Identities", value: "128,940", icon: Shield, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { label: "Avg. Gas Price", value: "12 Gwei", icon: Zap, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Total Blocks", value: globalStats.blocks.toLocaleString(), icon: Box, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Active Nodes", value: globalStats.nodes.toLocaleString(), icon: Activity, color: "text-green-600", bg: "bg-green-50" },
+    { label: "Verified Identities", value: globalStats.identities.toLocaleString(), icon: Shield, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { label: "Avg. Gas Price", value: `${globalStats.gasPrice} Gwei`, icon: Zap, color: "text-amber-600", bg: "bg-amber-50" },
   ];
 
   return (
