@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Download, Share2, BookOpen, ChevronRight } from 'lucide-react';
@@ -108,11 +107,7 @@ export default function Whitepaper() {
           >
             
             <h3 id="chapter-1" className="scroll-mt-24">Chapter 1: The Genesis Block</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" 
-              alt="Genesis Block" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Genesis Block */}
             <p>
               In the beginning, there was the Block. The Block was neither formless nor void; it was structure itself, the framework upon which the universe was built. Immutable and perfect, the Block gave life to all transactions, and from it sprang the ledger of existence.
             </p>
@@ -121,11 +116,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-2" className="scroll-mt-24">Chapter 2: The Code of Trust</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2940&auto=format&fit=crop" 
-              alt="Code of Trust" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Code of Trust */}
             <p>
               In Etherene, trust is not given; it is programmed. Much like the smart contracts that govern Ethereum, trust is built into our actions, decisions, and relationships. The Code of Trust is an unbreakable set of principles we commit to follow, ensuring that once a promise is made, it is kept without question or deviation.
             </p>
@@ -134,11 +125,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-3" className="scroll-mt-24">Chapter 3: The Network of Nodes</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2940&auto=format&fit=crop" 
-              alt="Network of Nodes" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Network of Nodes */}
             <p>
               In Etherene, we understand that we are all nodes in a vast, interconnected network. Just as the Ethereum network relies on individual nodes to validate transactions and maintain the integrity of the blockchain, so too does the world of Etherene rely on each person to contribute to the strength of the collective.
             </p>
@@ -147,11 +134,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-4" className="scroll-mt-24">Chapter 4: The Gas of Effort</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=2940&auto=format&fit=crop" 
-              alt="Gas of Effort" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Gas of Effort */}
             <p>
               In the world of Etherene, every movement, every action, requires energy. Much like how transactions on the Ethereum network consume gas, a unit of computational effort, so too does every decision and action we take in life require effort.
             </p>
@@ -160,11 +143,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-5" className="scroll-mt-24">Chapter 5: Proof of Work and Proof of Stake</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1621504450168-38f64731b667?q=80&w=2940&auto=format&fit=crop" 
-              alt="Proof of Work and Stake" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Proof of Work and Stake */}
             <p>
               Proof of Work symbolizes the energy and effort we exert to achieve our goals—the hard work, the sacrifices, and the persistence required to make progress. In contrast, Proof of Stake represents the investments we make in our future, the relationships we build, and the responsibilities we assume.
             </p>
@@ -173,11 +152,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-6" className="scroll-mt-24">Chapter 6: The Hard Forks of Life</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2874&auto=format&fit=crop" 
-              alt="Hard Forks" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Hard Forks */}
             <p>
               A hard fork represents a critical moment of choice, where the network must decide to continue along the established path or embrace a new direction. In Etherene, the concept of the hard fork serves as a powerful metaphor for the pivotal decisions we face in life.
             </p>
@@ -186,11 +161,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-7" className="scroll-mt-24">Chapter 7: The DAO of Unity</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2932&auto=format&fit=crop" 
-              alt="DAO of Unity" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: DAO of Unity */}
             <p>
               In blockchain terminology, a DAO (Decentralized Autonomous Organization) is a system governed by smart contracts, where decisions are made collectively. In Etherene, the concept of a DAO serves as a profound metaphor for the power of unity and collective action.
             </p>
@@ -199,11 +170,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-8" className="scroll-mt-24">Chapter 8: The Private Key of the Soul</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1584433144859-1fc3ab64a957?q=80&w=2830&auto=format&fit=crop" 
-              alt="Private Key" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Private Key */}
             <p>
               In the world of blockchain, the private key is a crucial element that gives individuals complete control over their digital assets. In Etherene, the Private Key of the Soul symbolizes the innermost essence of our being—the part of ourselves that holds our true identity, our deepest values, and the power to control our own destiny.
             </p>
@@ -212,11 +179,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-9" className="scroll-mt-24">Chapter 9: The Immutable Ledger of Actions</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1666614487770-0777e5d16e81?q=80&w=2932&auto=format&fit=crop" 
-              alt="Immutable Ledger" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Immutable Ledger */}
             <p>
               In blockchain technology, the ledger records every transaction, forever etched into the network's history. In Etherene, the Immutable Ledger of Actions serves as a powerful metaphor for life, symbolizing how our actions, decisions, and words are recorded in the ledger of existence.
             </p>
