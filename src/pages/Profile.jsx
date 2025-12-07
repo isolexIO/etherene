@@ -23,22 +23,7 @@ export default function Profile() {
       // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
         try {
-          const networks = {
-            137: {
-              chainId: "0x89",
-              chainName: "Polygon Mainnet",
-              nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
-              rpcUrls: ["https://polygon-rpc.com/"],
-              blockExplorerUrls: ["https://polygonscan.com/"]
-            },
-            8453: {
-              chainId: "0x2105",
-              chainName: "Base",
-              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-              rpcUrls: ["https://mainnet.base.org"],
-              blockExplorerUrls: ["https://basescan.org"]
-            }
-          };
+
           
           const networks = {
             137: {
