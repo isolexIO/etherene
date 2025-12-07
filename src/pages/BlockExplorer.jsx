@@ -115,23 +115,23 @@ export default function BlockExplorer() {
               animate={{ opacity: 1, x: 0 }}
             >
                 <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-white">Block Explorer</h1>
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.2)]">
+                  <h1 className="text-3xl font-bold text-slate-900">Block Explorer</h1>
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium animate-pulse">
                     <Wifi className="w-3 h-3" /> Live
                   </span>
                 </div>
-                <p className="text-slate-400">Immutable record of truth and identity</p>
+                <p className="text-slate-600">Immutable record of truth and identity</p>
             </motion.div>
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="relative w-full md:w-96"
             >
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input 
                     type="text"
                     placeholder="Search by address, hash, or block..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm placeholder:text-slate-600"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white shadow-sm"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
@@ -146,28 +146,28 @@ export default function BlockExplorer() {
             
             {/* Left Column: List & Tabs */}
             <div className="lg:col-span-2">
-                <div className="flex gap-6 border-b border-slate-800 mb-8">
+                <div className="flex gap-6 border-b border-slate-200 mb-8">
                     <button 
                         onClick={() => setActiveTab('transactions')}
-                        className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'transactions' ? 'text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.5)]' : 'text-slate-500 hover:text-slate-300'}`}
+                        className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'transactions' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Latest Transactions
                         {activeTab === 'transactions' && (
                             <motion.div 
                                 layoutId="activeTab"
-                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,1)]"
+                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"
                             />
                         )}
                     </button>
                     <button 
                         onClick={() => setActiveTab('identities')}
-                        className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'identities' ? 'text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.5)]' : 'text-slate-500 hover:text-slate-300'}`}
+                        className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'identities' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Verified Identities
                         {activeTab === 'identities' && (
                             <motion.div 
                                 layoutId="activeTab"
-                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,1)]"
+                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"
                             />
                         )}
                     </button>

@@ -15,10 +15,10 @@ export default function AddressWatchlist({ watchedAddresses, onAdd, onRemove }) 
   };
 
   return (
-    <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm shadow-sm h-full">
+    <Card className="border-slate-100 shadow-sm h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-bold text-slate-100 flex items-center gap-2">
-          <Eye className="w-5 h-5 text-indigo-400" />
+        <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <Eye className="w-5 h-5 text-indigo-600" />
           Watchlist
         </CardTitle>
       </CardHeader>
@@ -28,26 +28,26 @@ export default function AddressWatchlist({ watchedAddresses, onAdd, onRemove }) 
             placeholder="0x..." 
             value={newAddress}
             onChange={(e) => setNewAddress(e.target.value)}
-            className="font-mono text-sm bg-slate-950 border-slate-700 text-white placeholder:text-slate-600"
+            className="font-mono text-sm"
           />
-          <Button onClick={handleAdd} size="icon" className="bg-indigo-600 hover:bg-indigo-500 shrink-0 border border-indigo-500/50">
+          <Button onClick={handleAdd} size="icon" className="bg-indigo-600 hover:bg-indigo-700 shrink-0">
             <Plus className="w-4 h-4" />
           </Button>
         </div>
 
         <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
           {watchedAddresses.length === 0 ? (
-            <div className="text-center py-6 text-slate-500 text-sm flex flex-col items-center">
+            <div className="text-center py-6 text-slate-400 text-sm flex flex-col items-center">
               <AlertCircle className="w-8 h-8 mb-2 opacity-20" />
               No addresses watched
             </div>
           ) : (
             watchedAddresses.map(addr => (
-              <div key={addr} className="flex items-center justify-between p-2 bg-slate-950/50 border border-slate-800 rounded-lg group">
-                <span className="font-mono text-xs text-slate-400 truncate max-w-[180px]">{addr}</span>
+              <div key={addr} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg group">
+                <span className="font-mono text-xs text-slate-600 truncate max-w-[180px]">{addr}</span>
                 <button 
                   onClick={() => onRemove(addr)}
-                  className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
