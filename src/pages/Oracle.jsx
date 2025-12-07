@@ -13,6 +13,7 @@ export default function Oracle() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    let mounted = true;
     const fetchGreeting = async () => {
         setIsInitializing(true);
         try {
@@ -20,15 +21,22 @@ export default function Oracle() {
                 mode: 'greeting', 
                 address: account 
             });
-            setMessages([{ role: 'assistant', content: data.content }]);
+            if (mounted) {
+                setMessages([{ role: 'assistant', content: data.content || "Greetings, seeker." }]);
+            }
         } catch (error) {
-            console.error(error);
-            setMessages([{ role: 'assistant', content: "Greetings, seeker. The ether is turbulent today, but I am listening." }]);
+            console.error("Oracle error:", error);
+            if (mounted) {
+                setMessages([{ role: 'assistant', content: "Greetings, seeker. The ether is turbulent today, but I am listening." }]);
+            }
         } finally {
-            setIsInitializing(false);
+            if (mounted) {
+                setIsInitializing(false);
+            }
         }
     };
     fetchGreeting();
+    return () => { mounted = false; };
   }, [account]);
 
   const scrollToBottom = () => {
@@ -99,8 +107,10 @@ export default function Oracle() {
             ))}
             {(isLoading || isInitializing) && (
               <motion.div
+                key="loading"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
                 className="flex gap-4"
               >
                 <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
