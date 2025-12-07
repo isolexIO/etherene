@@ -120,26 +120,32 @@ export default function Profile() {
     setIsMinting(true);
     try {
       // 1. Check if we really have a contract. If not, use Database Persistence for the "Live App" feel.
-      const contractAddress = CONTRACT_ADDRESSES[chainId];
-      
+      const contractAddress = CONTRACT_ADDRESSES[Number(chainId)];
+
       if (contractAddress && contractAddress !== "0x..." && !contractAddress.includes("Address")) {
          // Real Contract Interaction
          const { ethers } = await import('ethers');
          const provider = new ethers.BrowserProvider(window.ethereum);
          const signer = await provider.getSigner();
          const contract = new ethers.Contract(contractAddress, ETHERENE_NFT_ABI, signer);
+
+         // Mint the NFT
          const tx = await contract.mint();
-         await tx.wait();
+         await tx.wait(); // Wait for transaction confirmation
+
+         setHasMinted(true);
+         localStorage.setItem(`etherene_minted_${account}_${chainId || 1}`, 'true');
       } else {
          // Simulation with DB Persistence (Fallback)
+         console.warn("No contract address found for this chain. Falling back to simulation.");
+
          // Simulate network delay
          await new Promise(resolve => setTimeout(resolve, 2000));
-         
+
          // Persist to DB
          const { base44 } = await import('@/api/base44Client');
 
-         // Generate a simulated Token ID (in a real app, this comes from the contract event)
-         // We'll just use a timestamp-based ID or count for simulation
+         // Generate a simulated Token ID
          const existingCount = (await base44.entities.Identity.list()).length;
          const nextTokenId = existingCount + 1;
 
@@ -150,16 +156,14 @@ export default function Profile() {
              status: 'minted',
              token_id: nextTokenId
          });
-      }
 
-      setHasMinted(true);
-      localStorage.setItem(`etherene_minted_${account}_${chainId || 1}`, 'true');
+         setHasMinted(true);
+         localStorage.setItem(`etherene_minted_${account}_${chainId || 1}`, 'true');
+      }
     } catch (err) {
       console.error("Mint failed:", err);
-      // Even if it fails, for the sake of the demo being "live functional" without a contract deployed by the user:
-      // We might want to just set it to true if it was a contract error, but let's be strict for now.
-      alert(`Minting action saved to network registry.`);
-      setHasMinted(true); // Allow proceeding for demo purposes
+      alert(`Minting failed: ${err.reason || err.message}`);
+      // Do NOT set hasMinted to true on error
     } finally {
       setIsMinting(false);
     }

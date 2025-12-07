@@ -34,8 +34,8 @@ export default function Layout({ children, currentPageName }) {
         const network = await provider.getNetwork();
         
         setAccount(accounts[0]);
-        setChainId(network.chainId);
-        
+        setChainId(Number(network.chainId));
+
         // Listen for changes
         window.ethereum.on('accountsChanged', (accs) => setAccount(accs[0] || null));
         window.ethereum.on('chainChanged', () => window.location.reload());
@@ -61,7 +61,7 @@ export default function Layout({ children, currentPageName }) {
           if (accounts.length > 0) {
               setAccount(accounts[0].address);
               const network = await provider.getNetwork();
-              setChainId(network.chainId);
+              setChainId(Number(network.chainId));
           }
         } catch (error) {
           console.error("Failed to check connection:", error);
