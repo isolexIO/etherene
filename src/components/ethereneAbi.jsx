@@ -9,12 +9,12 @@ export const ETHERENE_NFT_ABI = [
 export const CONTRACT_ADDRESSES = {
   // Mainnets
   1: "0x...", // Ethereum Mainnet
-  137: "0x...", // Polygon Mainnet
-  8453: "0x...", // Base Mainnet
+  137: "0x2B7CF55d2660bC49d328452C5e0D07B2EC8A5c02", // Polygon Mainnet
+  8453: "0x2B7CF55d2660bC49d328452C5e0D07B2EC8A5c02", // Base Mainnet
   
   // Testnets (Recommended for testing)
-  84532: "0x...", // Base Sepolia
-  80002: "0x...", // Polygon Amoy
+  84532: "0x2B7CF55d2660bC49d328452C5e0D07B2EC8A5c02", // Base Sepolia
+  80002: "0x2B7CF55d2660bC49d328452C5e0D07B2EC8A5c02", // Polygon Amoy
   11155111: "0x...", // Sepolia
   
   // Upcoming / Custom
