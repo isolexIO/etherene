@@ -1,24 +1,50 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Box, Clock, Database, Shield, Hash } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Box, Clock, Database, Shield, Hash, Loader2, AlertCircle } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
 import { createPageUrl } from '../utils';
 
 export default function Block() {
   const [searchParams] = useSearchParams();
-  const number = searchParams.get('number') || "0";
+  const number = searchParams.get('number');
+  const [blockData, setBlockData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const blockData = {
-    number: number,
-    hash: "0xabc...def",
-    timestamp: "Just now",
-    transactions: 142,
-    miner: "0xMiner...123",
-    reward: "2.1 ETH",
-    size: "45,230 bytes",
-    gasUsed: "14,500,000 (48%)",
-    parentHash: "0xprev...hash"
-  };
+  useEffect(() => {
+    const fetchBlock = async () => {
+        if (!number) return;
+        setLoading(true);
+        try {
+            const { ethers } = await import('ethers');
+            const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
+            const block = await provider.getBlock(number);
+            
+            if (block) {
+                setBlockData({
+                    number: block.number,
+                    hash: block.hash,
+                    timestamp: new Date(Number(block.timestamp) * 1000).toLocaleString(),
+                    transactions: block.transactions.length,
+                    miner: block.miner,
+                    gasUsed: block.gasUsed.toString(),
+                    parentHash: block.parentHash
+                });
+            } else {
+                setError("Block not found");
+            }
+        } catch (e) {
+            console.error(e);
+            setError("Failed to fetch block data");
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchBlock();
+  }, [number]);
+
+  if (loading) return <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-600"/></div>;
+  if (error || !blockData) return <div className="p-20 text-center text-red-500"><AlertCircle className="w-10 h-10 mx-auto mb-4"/>{error || "Block not found"}</div>;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
@@ -32,8 +58,8 @@ export default function Block() {
           <Box className="w-8 h-8" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Block #{number}</h1>
-          <p className="text-slate-500 font-mono text-sm">{blockData.hash}</p>
+          <h1 className="text-2xl font-bold text-slate-900">Block #{blockData.number}</h1>
+          <p className="text-slate-500 font-mono text-sm break-all">{blockData.hash}</p>
         </div>
       </div>
 
@@ -65,15 +91,15 @@ export default function Block() {
                 <dt className="font-medium text-slate-500 flex items-center gap-2">
                   <Shield className="w-4 h-4" /> Validated By
                 </dt>
-                <dd className="col-span-2 font-mono text-indigo-600">{blockData.miner}</dd>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
-                <dt className="font-medium text-slate-500">Block Reward</dt>
-                <dd className="col-span-2 text-slate-700">{blockData.reward}</dd>
+                <dd className="col-span-2 font-mono text-indigo-600 break-all">{blockData.miner}</dd>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
                 <dt className="font-medium text-slate-500">Gas Used</dt>
                 <dd className="col-span-2 text-slate-700">{blockData.gasUsed}</dd>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+                <dt className="font-medium text-slate-500">Parent Hash</dt>
+                <dd className="col-span-2 font-mono text-slate-500 break-all">{blockData.parentHash}</dd>
               </div>
             </dl>
           </CardContent>

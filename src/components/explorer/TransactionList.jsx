@@ -2,25 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
 
-const MOCK_TXS = [
-  { hash: "0x71c...9a23", from: "0xab1...23cd", to: "0xef4...56gh", type: "Declaration", age: "12 secs ago", status: "Success" },
-  { hash: "0x3b2...1c4d", from: "0x890...12kl", to: "Contract: Identity", type: "Mint Identity", age: "45 secs ago", status: "Success" },
-  { hash: "0x9d1...8e2f", from: "0x345...67mn", to: "0xab1...23cd", type: "Transfer", age: "1 min ago", status: "Success" },
-  { hash: "0x1a2...3b4c", from: "0x678...90op", to: "Contract: Oracle", type: "Query", age: "2 mins ago", status: "Pending" },
-  { hash: "0x5e6...7f8g", from: "0x123...45qr", to: "0xef4...56gh", type: "Vote", age: "5 mins ago", status: "Success" },
-  { hash: "0x9h0...1i2j", from: "0xab1...23cd", to: "Contract: Governance", type: "Proposal", age: "8 mins ago", status: "Success" },
-  { hash: "0x3k4...5l6m", from: "0x789...01st", to: "0x345...67mn", type: "Transfer", age: "12 mins ago", status: "Failed" },
-];
+const MOCK_TXS = [];
 
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 
 export default function TransactionList({ transactions, searchTerm, watchedAddresses }) {
-  const filteredTxs = transactions.filter(tx => 
+  const displayTxs = transactions || [];
+  const filteredTxs = displayTxs.filter(tx => 
     tx.hash.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tx.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tx.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (filteredTxs.length === 0) {
+      return (
+          <div className="p-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-100">
+              No transactions found.
+          </div>
+      );
+  }
 
   const isWatched = (address) => watchedAddresses.includes(address);
 

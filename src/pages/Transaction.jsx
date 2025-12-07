@@ -1,26 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Box, Clock, Database, Shield, CheckCircle2, Layers } from 'lucide-react';
+import { ArrowLeft, Layers, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createPageUrl } from '../utils';
 
 export default function Transaction() {
   const [searchParams] = useSearchParams();
-  const hash = searchParams.get('hash') || "0x...";
+  const hash = searchParams.get('hash');
+  const [txData, setTxData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock data based on hash
-  const txData = {
-    hash: hash,
-    status: "Success",
-    block: "14205921",
-    timestamp: "2 mins ago",
-    from: "0xab12...34cd",
-    to: "0xef56...78gh",
-    value: "4.2 ETH",
-    fee: "0.0021 ETH",
-    gasPrice: "12 Gwei",
-    nonce: 42
-  };
+  useEffect(() => {
+    const fetchTx = async () => {
+        if (!hash) return;
+        setLoading(true);
+        try {
+            const { ethers } = await import('ethers');
+            const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
+            const tx = await provider.getTransaction(hash);
+            const receipt = await provider.getTransactionReceipt(hash);
+
+            if (tx) {
+                setTxData({
+                    hash: tx.hash,
+                    status: receipt && receipt.status === 1 ? "Success" : "Failed",
+                    block: tx.blockNumber,
+                    from: tx.from,
+                    to: tx.to,
+                    value: ethers.formatEther(tx.value) + " ETH",
+                    fee: receipt ? ethers.formatEther(receipt.fee) + " ETH" : "Pending",
+                    gasPrice: ethers.formatUnits(tx.gasPrice, 'gwei') + " Gwei",
+                    nonce: tx.nonce
+                });
+            } else {
+                setError("Transaction not found");
+            }
+        } catch (e) {
+            console.error(e);
+            setError("Failed to fetch transaction");
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchTx();
+  }, [hash]);
+
+  if (loading) return <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-600"/></div>;
+  if (error || !txData) return <div className="p-20 text-center text-red-500"><AlertCircle className="w-10 h-10 mx-auto mb-4"/>{error || "Transaction not found"}</div>;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
@@ -35,15 +62,15 @@ export default function Transaction() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Transaction Details</h1>
-          <p className="text-slate-500 font-mono text-sm">{hash}</p>
+          <p className="text-slate-500 font-mono text-sm break-all">{txData.hash}</p>
         </div>
       </div>
 
       <Card className="border-slate-100 shadow-sm mb-8">
         <CardHeader className="border-b border-slate-50 bg-slate-50/50">
           <CardTitle className="text-lg text-slate-800 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
-            Transaction Success
+            <CheckCircle2 className={`w-5 h-5 ${txData.status === 'Success' ? 'text-green-500' : 'text-red-500'}`} />
+            Transaction {txData.status}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -53,14 +80,6 @@ export default function Transaction() {
               <dd className="col-span-2 font-mono text-slate-900 break-all">{txData.hash}</dd>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
-              <dt className="font-medium text-slate-500">Status</dt>
-              <dd className="col-span-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                  {txData.status}
-                </span>
-              </dd>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
               <dt className="font-medium text-slate-500">Block</dt>
               <dd className="col-span-2 text-indigo-600 font-mono cursor-pointer hover:underline">
                 <Link to={`${createPageUrl('Block')}?number=${txData.block}`}>#{txData.block}</Link>
@@ -68,11 +87,11 @@ export default function Transaction() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
               <dt className="font-medium text-slate-500">From</dt>
-              <dd className="col-span-2 font-mono text-slate-900">{txData.from}</dd>
+              <dd className="col-span-2 font-mono text-slate-900 break-all">{txData.from}</dd>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
               <dt className="font-medium text-slate-500">To</dt>
-              <dd className="col-span-2 font-mono text-slate-900">{txData.to}</dd>
+              <dd className="col-span-2 font-mono text-slate-900 break-all">{txData.to}</dd>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
               <dt className="font-medium text-slate-500">Value</dt>
@@ -81,6 +100,10 @@ export default function Transaction() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
               <dt className="font-medium text-slate-500">Transaction Fee</dt>
               <dd className="col-span-2 text-slate-600">{txData.fee}</dd>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+              <dt className="font-medium text-slate-500">Gas Price</dt>
+              <dd className="col-span-2 text-slate-600">{txData.gasPrice}</dd>
             </div>
           </dl>
         </CardContent>

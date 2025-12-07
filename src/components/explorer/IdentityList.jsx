@@ -1,27 +1,34 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, User, Hash, Calendar } from 'lucide-react';
-
-const MOCK_IDENTITIES = [
-  { address: "0xab1...23cd", soulName: "Seeker_01", joined: "Jan 12, 2024", status: "Verified" },
-  { address: "0x890...12kl", soulName: "Truth_Walker", joined: "Feb 04, 2024", status: "Verified" },
-  { address: "0x345...67mn", soulName: "Node_Keeper", joined: "Feb 18, 2024", status: "Verified" },
-  { address: "0x678...90op", soulName: "Light_Bearer", joined: "Mar 01, 2024", status: "Verified" },
-  { address: "0x123...45qr", soulName: "Code_Weaver", joined: "Mar 15, 2024", status: "Verified" },
-  { address: "0xef4...56gh", soulName: "Dao_Voice", joined: "Mar 22, 2024", status: "Verified" },
-];
+import { Shield, User, Hash, Calendar, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import moment from 'moment';
 
 export default function IdentityList({ searchTerm }) {
-  const filteredIdentities = MOCK_IDENTITIES.filter(id => 
+  const { data: identities, isLoading } = useQuery({
+    queryKey: ['identities'],
+    queryFn: () => base44.entities.Identity.list('-created_date'),
+  });
+
+  const filteredIdentities = (identities || []).filter(id => 
     id.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    id.soulName.toLowerCase().includes(searchTerm.toLowerCase())
+    (id.display_name && id.display_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  if (isLoading) {
+      return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
+  }
+
+  if (filteredIdentities.length === 0) {
+      return <div className="text-center p-12 text-slate-500">No identities found.</div>;
+  }
 
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {filteredIdentities.map((identity, index) => (
         <motion.div
-          key={identity.address}
+          key={identity.address + index}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
@@ -29,31 +36,37 @@ export default function IdentityList({ searchTerm }) {
         >
           <div className="flex items-start justify-between mb-6">
             <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600">
-              <User className="w-6 h-6" />
+              {identity.avatar_url ? (
+                  <img src={identity.avatar_url} alt="Avatar" className="w-6 h-6 rounded-full object-cover" />
+              ) : (
+                  <User className="w-6 h-6" />
+              )}
             </div>
-            <span className="bg-green-50 text-green-600 text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+            <span className={`text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1 ${
+                identity.verification_status === 'verified' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-600'
+            }`}>
               <Shield className="w-3 h-3" />
-              {identity.status}
+              {identity.verification_status === 'verified' ? 'Verified' : 'Minted'}
             </span>
           </div>
           
           <div className="space-y-4">
             <div>
               <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Soul Name</label>
-              <div className="text-lg font-bold text-slate-900">{identity.soulName}</div>
+              <div className="text-lg font-bold text-slate-900">{identity.display_name || 'Anonymous Node'}</div>
             </div>
             
             <div>
               <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Address</label>
-              <div className="flex items-center gap-2 text-sm font-mono text-slate-600 bg-slate-50 px-3 py-2 rounded-lg">
-                <Hash className="w-3 h-3 text-slate-400" />
-                {identity.address}
+              <div className="flex items-center gap-2 text-sm font-mono text-slate-600 bg-slate-50 px-3 py-2 rounded-lg truncate">
+                <Hash className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                <span className="truncate">{identity.address}</span>
               </div>
             </div>
 
             <div className="pt-4 border-t border-slate-50 flex items-center gap-2 text-xs text-slate-400">
               <Calendar className="w-3 h-3" />
-              Joined {identity.joined}
+              Joined {moment(identity.created_date).format("MMM D, YYYY")}
             </div>
           </div>
         </motion.div>

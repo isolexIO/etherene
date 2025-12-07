@@ -7,27 +7,15 @@ import ExplorerStats from '../components/explorer/ExplorerStats';
 import NetworkGraph from '../components/explorer/NetworkGraph';
 import AddressWatchlist from '../components/explorer/AddressWatchlist';
 
-// Initial State
-const INITIAL_STATS = {
-  blocks: 0,
-  gasPrice: 0,
-  identities: 0, // Will sync with DB
-  tps: 0
-};
-
-const INITIAL_TXS = [
-  { hash: "0x71c...9a23", from: "0xab1...23cd", to: "0xef4...56gh", type: "Declaration", age: "12 secs ago", status: "Success" },
-  { hash: "0x3b2...1c4d", from: "0x890...12kl", to: "Contract: Identity", type: "Mint Identity", age: "45 secs ago", status: "Success" },
-  { hash: "0x9d1...8e2f", from: "0x345...67mn", to: "0xab1...23cd", type: "Oracle Interaction", age: "1 min ago", status: "Success" },
-];
+// Initial State removed - using real data
 
 export default function BlockExplorer() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('transactions');
   
   // Global State
-  const [stats, setStats] = useState(INITIAL_STATS);
-  const [transactions, setTransactions] = useState(INITIAL_TXS);
+  const [stats, setStats] = useState({ blocks: 0, gasPrice: 0, identities: 0, tps: 0 });
+  const [transactions, setTransactions] = useState([]);
   const [graphData, setGraphData] = useState([]);
   const [watchedAddresses, setWatchedAddresses] = useState(() => {
     const saved = localStorage.getItem('etherene_watchlist');
@@ -52,24 +40,35 @@ export default function BlockExplorer() {
             
             const blockNumber = await provider.getBlockNumber();
             const feeData = await provider.getFeeData();
-            const block = await provider.getBlock(blockNumber);
+            const block = await provider.getBlock(blockNumber, true); // true for prefetched transactions
             
             setStats(prev => ({
                 ...prev,
                 blocks: blockNumber,
                 gasPrice: feeData.gasPrice ? ethers.formatUnits(feeData.gasPrice, 'gwei') : '0',
-                tps: block ? Math.round(block.transactions.length / 12) : 15 // Approx TPS
+                tps: block ? Math.round(block.prefetchedTransactions.length / 12) : 15
             }));
+
+            // Map recent transactions
+            if (block && block.prefetchedTransactions) {
+                const recentTxs = block.prefetchedTransactions.slice(0, 10).map(tx => ({
+                    hash: tx.hash,
+                    from: tx.from,
+                    to: tx.to || "Contract Creation",
+                    type: "Transaction", // Generic type as we don't decode calldata here
+                    age: "Just now",
+                    status: "Success" // Assumed for mined block
+                }));
+                setTransactions(recentTxs);
+            }
 
             // Sync internal identity count
             const { base44 } = await import('@/api/base44Client');
             const identities = await base44.entities.Identity.list();
-            setStats(prev => ({ ...prev, identities: identities.length + 12000 }));
+            setStats(prev => ({ ...prev, identities: identities.length })); // Real count only
 
         } catch (error) {
             console.error("Failed to fetch real chain stats:", error);
-            // Fallback
-            setStats(prev => ({ ...prev, blocks: 19420592, tps: 12, gasPrice: '24' }));
         }
     };
 
