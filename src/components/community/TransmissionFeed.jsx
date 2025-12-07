@@ -8,9 +8,7 @@ import { motion } from 'framer-motion';
 export default function TransmissionFeed() {
   const { data: transmissions, isLoading } = useQuery({
     queryKey: ['transmissions'],
-    queryFn: () => base44.entities.Transmission.list({
-       sort: { created_date: -1 }
-    }),
+    queryFn: () => base44.entities.Transmission.list('-created_date'),
   });
 
   if (isLoading) {
