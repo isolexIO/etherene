@@ -8,6 +8,7 @@ import BlockExplorer from './pages/BlockExplorer';
 import Transaction from './pages/Transaction';
 import Block from './pages/Block';
 import Agora from './pages/Agora';
+import CustomizeProfile from './pages/CustomizeProfile';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "Transaction": Transaction,
     "Block": Block,
     "Agora": Agora,
+    "CustomizeProfile": CustomizeProfile,
 }
 
 export const pagesConfig = {

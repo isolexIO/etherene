@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
+import { createPageUrl } from '../utils';
 // import { ethers } from 'ethers'; // Dynamic import used instead
 
 export default function Profile() {
@@ -83,6 +85,7 @@ export default function Profile() {
   const [hasSigned, setHasSigned] = useState(false);
   const [soulText, setSoulText] = useState('');
   const [soulHash, setSoulHash] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   
   // Fetch state from DB or LocalStorage
   useEffect(() => {
@@ -100,6 +103,7 @@ export default function Profile() {
             if (identityOnChain) {
                 setHasMinted(true);
                 if (identityOnChain.soul_hash) setSoulHash(identityOnChain.soul_hash);
+                setProfileData(identityOnChain);
             } else {
                 // Fallback to local storage
                 const localMinted = localStorage.getItem(`etherene_minted_${account}_${chainId || 1}`);
@@ -232,10 +236,29 @@ export default function Profile() {
       <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Etherene Identity</h1>
-          <p className="text-slate-500 font-mono mt-2">{account}</p>
+          <div className="flex flex-col gap-1 mt-2">
+            <p className="text-slate-500 font-mono text-sm">{account}</p>
+            {profileData?.display_name && (
+              <p className="text-lg font-medium text-indigo-600">{profileData.display_name}</p>
+            )}
+            {profileData?.bio && (
+               <p className="text-slate-600 text-sm max-w-md">{profileData.bio}</p>
+            )}
+          </div>
         </div>
-        
-        {/* Network Switcher */}
+
+        <div className="flex gap-3">
+          {hasMinted && (
+              <Link 
+                to={createPageUrl('CustomizeProfile')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors font-medium text-sm"
+              >
+                <Settings className="w-4 h-4" />
+                Customize Profile
+              </Link>
+          )}
+
+          {/* Network Switcher */}
         <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
           <button 
             onClick={() => switchNetwork(8453)}
@@ -252,9 +275,10 @@ export default function Profile() {
             Polygon Mainnet
           </button>
         </div>
-      </div>
+        </div>
+        </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8">
         
         {/* Left Col: Actions */}
         <div className="space-y-6">
@@ -303,12 +327,20 @@ export default function Profile() {
             {hasMinted ? (
               <div className="relative z-10 flex flex-col items-center">
                 <div className="mb-6 relative">
-                  <IdentityAvatar 
-                    address={account} 
-                    soulHash={soulHash} 
-                    size={200}
-                    chainId={Number(chainId)} 
-                  />
+                  {profileData?.avatar_url ? (
+                    <img 
+                      src={profileData.avatar_url} 
+                      alt="Avatar" 
+                      className="w-[200px] h-[200px] rounded-full object-cover border-4 border-slate-900 shadow-2xl" 
+                    />
+                  ) : (
+                    <IdentityAvatar 
+                      address={account} 
+                      soulHash={soulHash} 
+                      size={200}
+                      chainId={Number(chainId)} 
+                    />
+                  )}
                 </div>
                 <div className="flex items-center justify-center gap-2 text-indigo-600 font-medium bg-indigo-50 px-4 py-2 rounded-full">
                   <CheckCircle2 className="w-5 h-5" />
