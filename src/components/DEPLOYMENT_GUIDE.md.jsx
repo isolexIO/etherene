@@ -12,25 +12,19 @@ Since I cannot deploy to the blockchain directly, follow these simple steps to d
 2. Ensure "Compiler" is set to `0.8.20` (or newer).
 3. Click **Compile EthereneIdentityNFT.sol**.
 
-## Step 3: Select Your Network (Low Fees!)
+## Step 3: Select Your Network
 Click the "Deploy & Run Transactions" icon (Ethereum logo).
 Under "Environment", select **Injected Provider - MetaMask**.
 
-Connect MetaMask to one of these low-fee networks:
+Connect MetaMask to one of these Mainnets (Low Fees):
 
-### 🔵 Base (Coinbase L2) - Very Cheap
-- **Mainnet**: Chain ID `8453`
-- **Sepolia Testnet**: Chain ID `84532` (Free to test!)
-- *Great for users within the Coinbase ecosystem.*
+### 🔵 Base Mainnet (Coinbase L2)
+- **Chain ID**: `8453`
+- *Recommended for very low fees and high speed.*
 
-### 🟣 Polygon (Matic) - Extremely Cheap
-- **Mainnet**: Chain ID `137`
-- **Amoy Testnet**: Chain ID `80002` (Free to test!)
-- *Mature ecosystem with very low fees.*
-
-### 🟣 Monad (High Performance)
-- **Devnet**: Chain ID `10143` (Example)
-- *If you have access to Monad, just add the network to MetaMask and deploy!*
+### 🟣 Polygon Mainnet (Matic)
+- **Chain ID**: `137`
+- *Established network with low fees.*
 
 ## Step 4: Deploy
 1. In the "Deploy" section of Remix:
@@ -38,7 +32,7 @@ Connect MetaMask to one of these low-fee networks:
    - You will see input fields for the `constructor` arguments:
      - `name`: "Etherene Identity"
      - `symbol`: "EID"
-     - `baseTokenURI_`: "https://[YOUR-APP-ID].base44.app/functions/nftMetadata?id=" 
+     - `baseTokenURI_`: "https://[YOUR-APP-ID].base44.app/functions/nftMetadata?id="
        - *Note: Replace [YOUR-APP-ID] with your actual app ID from the URL bar.*
        - *Important: Include the `?id=` at the end.*
 2. Click **Transact** (or "Deploy").

@@ -232,41 +232,20 @@ export default function Profile() {
         </div>
         
         {/* Network Switcher */}
-        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
           <button 
             onClick={() => switchNetwork(8453)}
             disabled={switching}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 8453 ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${Number(chainId) === 8453 ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
           >
-            Base
-          </button>
-           <button 
-            onClick={() => switchNetwork(84532)}
-            disabled={switching}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 84532 ? 'bg-blue-400 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
-          >
-            Base Sepolia
+            Base Mainnet
           </button>
           <button 
             onClick={() => switchNetwork(137)}
             disabled={switching}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 137 ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${Number(chainId) === 137 ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
           >
-            Polygon
-          </button>
-           <button 
-            onClick={() => switchNetwork(80002)}
-            disabled={switching}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 80002 ? 'bg-purple-400 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
-          >
-            Amoy
-          </button>
-          <button 
-            onClick={() => switchNetwork(10143)}
-            disabled={switching}
-            className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${Number(chainId) === 10143 ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
-          >
-            Monad
+            Polygon Mainnet
           </button>
         </div>
       </div>
