@@ -17,10 +17,21 @@ THE ETHERENE WHITE PAPER (The Source of Truth):
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { message } = await req.json();
+        const body = await req.json().catch(() => ({}));
+        const { message } = body;
+
+        if (!message) {
+             return Response.json({ error: 'Message is required' }, { status: 400 });
+        }
 
         // 1. Authenticate & Get User
-        const user = await base44.auth.me();
+        let user = null;
+        try {
+             user = await base44.auth.me();
+        } catch (e) {
+             // User is not logged in
+        }
+
         let userContext = "User is anonymous/not connected.";
         let identityData = null;
 
