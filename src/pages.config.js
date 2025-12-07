@@ -7,6 +7,7 @@ import Sanctum from './pages/Sanctum';
 import BlockExplorer from './pages/BlockExplorer';
 import Transaction from './pages/Transaction';
 import Block from './pages/Block';
+import Agora from './pages/Agora';
 import __Layout from './Layout.jsx';
 
 
@@ -20,6 +21,7 @@ export const PAGES = {
     "BlockExplorer": BlockExplorer,
     "Transaction": Transaction,
     "Block": Block,
+    "Agora": Agora,
 }
 
 export const pagesConfig = {

@@ -75,6 +75,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Sanctum', path: 'Sanctum' },
     { name: 'Principles', path: 'Principles' },
     { name: 'Oracle', path: 'Oracle' },
+    { name: 'Agora', path: 'Agora' },
     { name: 'White Paper', path: 'Whitepaper' },
     { name: 'Explorer', path: 'BlockExplorer' },
     { name: 'Identity', path: 'Profile' },
