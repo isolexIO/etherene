@@ -27,10 +27,10 @@ export default function ActivityFeed() {
   }, []);
 
   return (
-    <div className="w-full max-w-md bg-white/50 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-sm">
+    <div className="w-full max-w-md bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-lg">
       <div className="flex items-center gap-2 mb-6">
-        <Activity className="w-5 h-5 text-indigo-600" />
-        <h3 className="font-bold text-slate-900">Network Consensus</h3>
+        <Activity className="w-5 h-5 text-indigo-400" />
+        <h3 className="font-bold text-slate-100">Network Consensus</h3>
       </div>
       
       <div className="space-y-4">
@@ -43,17 +43,17 @@ export default function ActivityFeed() {
               exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-3 text-sm"
             >
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
                 <User className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <p className="text-slate-900">
-                  <span className="font-mono text-xs">{item.address}</span>
+                <p className="text-slate-200">
+                  <span className="font-mono text-xs text-slate-300">{item.address}</span>
                   <span className="text-slate-500"> {item.type === 'mint' ? 'minted Identity' : 'signed Declaration'}</span>
                 </p>
-                <p className="text-xs text-slate-400">{item.time}</p>
+                <p className="text-xs text-slate-500">{item.time}</p>
               </div>
-              <a href="#" className="text-xs text-indigo-400 hover:text-indigo-600 transition-colors">View</a>
+              <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View</a>
             </motion.div>
           ))}
         </AnimatePresence>

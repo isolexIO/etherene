@@ -82,29 +82,30 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <Web3Context.Provider value={{ account, chainId, connectWallet, isConnecting, error }}>
-      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
-        
+      <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30 selection:text-indigo-200 overflow-x-hidden">
+
         {/* Sacred Geometry Background */}
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/20 blur-[100px]" />
-           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-200/20 blur-[100px]" />
-           <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-sky-100/30 blur-[80px]" />
+           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/20 blur-[100px]" />
+           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-900/20 blur-[100px]" />
+           <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-cyan-900/10 blur-[80px]" />
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
         </div>
 
         {/* Navigation */}
-        <nav className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-md border-b border-white/50 shadow-sm">
+        <nav className="fixed top-0 w-full z-50 bg-slate-950/70 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/5">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              
+
               {/* Logo */}
               <Link to={createPageUrl('Home')} className="flex items-center gap-2 group">
                 <div className="relative">
-                  <Hexagon className="w-8 h-8 text-indigo-600 fill-indigo-50 group-hover:rotate-90 transition-transform duration-700 ease-in-out" strokeWidth={1.5} />
+                  <Hexagon className="w-8 h-8 text-indigo-400 fill-indigo-500/10 group-hover:rotate-90 transition-transform duration-700 ease-in-out" strokeWidth={1.5} />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(129,140,248,0.8)]" />
                   </div>
                 </div>
-                <span className="text-xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                <span className="text-xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
                   ETHERENE
                 </span>
               </Link>
@@ -115,8 +116,8 @@ export default function Layout({ children, currentPageName }) {
                   <Link
                     key={item.name}
                     to={createPageUrl(item.path)}
-                    className={`text-sm font-medium transition-colors hover:text-indigo-600 ${
-                      currentPageName === item.path ? 'text-indigo-600' : 'text-slate-600'
+                    className={`text-sm font-medium transition-colors hover:text-indigo-400 ${
+                      currentPageName === item.path ? 'text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.5)]' : 'text-slate-400'
                     }`}
                   >
                     {item.name}
@@ -129,7 +130,7 @@ export default function Layout({ children, currentPageName }) {
                 <button
                   onClick={connectWallet}
                   disabled={!!account}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-all hover:shadow-lg disabled:opacity-90 disabled:cursor-default active:scale-95"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 text-slate-950 text-sm font-medium hover:bg-indigo-400 hover:text-white transition-all hover:shadow-[0_0_20px_rgba(129,140,248,0.4)] disabled:opacity-90 disabled:cursor-default active:scale-95 border border-transparent hover:border-indigo-300"
                 >
                   <Wallet className="w-4 h-4" />
                   {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Connect Wallet'}
@@ -140,7 +141,7 @@ export default function Layout({ children, currentPageName }) {
               <div className="flex md:hidden">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="text-slate-600 hover:text-indigo-600 p-2"
+                  className="text-slate-400 hover:text-indigo-400 p-2"
                 >
                   {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                 </button>
@@ -155,7 +156,7 @@ export default function Layout({ children, currentPageName }) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="md:hidden bg-white/95 backdrop-blur-md border-b border-slate-100 overflow-hidden"
+                className="md:hidden bg-slate-950/95 backdrop-blur-md border-b border-white/10 overflow-hidden"
               >
                 <div className="px-4 py-4 space-y-4">
                   {navItems.map((item) => (
@@ -164,7 +165,7 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl(item.path)}
                       onClick={() => setIsMenuOpen(false)}
                       className={`block text-base font-medium px-2 py-1 ${
-                        currentPageName === item.path ? 'text-indigo-600' : 'text-slate-600'
+                        currentPageName === item.path ? 'text-indigo-400' : 'text-slate-400'
                       }`}
                     >
                       {item.name}
@@ -173,7 +174,7 @@ export default function Layout({ children, currentPageName }) {
                   <button
                     onClick={connectWallet}
                     disabled={!!account}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 text-white text-sm font-medium mt-4"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-900 text-sm font-medium mt-4 hover:bg-indigo-400 hover:text-white transition-colors"
                   >
                     <Wallet className="w-4 h-4" />
                     {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Connect Wallet'}

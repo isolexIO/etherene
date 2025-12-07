@@ -47,16 +47,16 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-6"
+          className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6"
         >
-          The Future is <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Immutable</span>
+          The Future is <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]">Immutable</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-xl text-slate-600 max-w-2xl mb-10"
+          className="text-xl text-slate-400 max-w-2xl mb-10"
         >
           Etherene is a decentralized spiritual-tech protocol designed to empower self-sovereign individuals through cryptographically verifiable truth.
         </motion.p>
@@ -70,21 +70,21 @@ export default function Home() {
           {!account ? (
             <button
               onClick={connectWallet}
-              className="px-8 py-4 rounded-full bg-slate-900 text-white font-medium hover:bg-slate-800 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
+              className="px-8 py-4 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition-all hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 border border-indigo-500/50"
             >
               Connect Wallet <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <Link
               to={createPageUrl('Profile')}
-              className="px-8 py-4 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all hover:shadow-xl hover:shadow-indigo-200 hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
+              className="px-8 py-4 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition-all hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 border border-indigo-500/50"
             >
               View Identity <ArrowRight className="w-4 h-4" />
             </Link>
           )}
           <Link
             to={createPageUrl('Whitepaper')}
-            className="px-8 py-4 rounded-full bg-white text-slate-900 border border-slate-200 font-medium hover:bg-slate-50 transition-all hover:border-slate-300 flex items-center justify-center"
+            className="px-8 py-4 rounded-full bg-slate-900/50 text-slate-200 border border-slate-700 font-medium hover:bg-slate-800 transition-all hover:border-slate-500 flex items-center justify-center backdrop-blur-sm"
           >
             Read White Paper
           </Link>
@@ -104,13 +104,13 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.2 }}
-              className="bg-white/60 backdrop-blur-sm p-8 rounded-3xl border border-white/50 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-slate-900/40 backdrop-blur-md p-8 rounded-3xl border border-white/10 shadow-lg hover:shadow-indigo-900/20 hover:border-indigo-500/30 transition-all duration-300"
             >
-              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
-                <feature.icon className="w-6 h-6 text-indigo-600" />
+              <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/20">
+                <feature.icon className="w-6 h-6 text-indigo-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
-              <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+              <h3 className="text-xl font-bold text-slate-100 mb-3">{feature.title}</h3>
+              <p className="text-slate-400 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
           </div>
