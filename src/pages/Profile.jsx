@@ -28,13 +28,13 @@ export default function Profile() {
   const handleMint = async () => {
     setIsMinting(true);
     try {
-      if (!window.ethers) throw new Error("Web3 library not loaded");
-      const provider = new window.ethers.BrowserProvider(window.ethereum);
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       
       // REAL CONTRACT INTERACTION CODE (Commented out for demo without deployed contract)
       /*
-      const contract = new window.ethers.Contract(CONTRACT_ADDRESSES[chainId], ETHERENE_NFT_ABI, signer);
+      const contract = new ethers.Contract(CONTRACT_ADDRESSES[chainId], ETHERENE_NFT_ABI, signer);
       const tx = await contract.mint();
       await tx.wait();
       */
@@ -55,8 +55,8 @@ export default function Profile() {
   const handleSign = async () => {
     setIsSigning(true);
     try {
-      if (!window.ethers) throw new Error("Web3 library not loaded");
-      const provider = new window.ethers.BrowserProvider(window.ethereum);
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       
       const message = "I declare my self-sovereignty on the Etherene Protocol.";
