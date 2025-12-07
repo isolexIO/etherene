@@ -6,15 +6,30 @@ import { base44 } from '@/api/base44Client';
 
 export default function Oracle() {
   const { account } = useWeb3();
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: "Greetings, seeker. I am the Etherene Oracle. I hold the knowledge of the protocol's principles and the path to digital sovereignty. What do you seek to know?"
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const fetchGreeting = async () => {
+        setIsInitializing(true);
+        try {
+            const { data } = await base44.functions.invoke('askOracle', { 
+                mode: 'greeting', 
+                address: account 
+            });
+            setMessages([{ role: 'assistant', content: data.content }]);
+        } catch (error) {
+            console.error(error);
+            setMessages([{ role: 'assistant', content: "Greetings, seeker. The ether is turbulent today, but I am listening." }]);
+        } finally {
+            setIsInitializing(false);
+        }
+    };
+    fetchGreeting();
+  }, [account]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,7 +97,7 @@ export default function Oracle() {
                 </div>
               </motion.div>
             ))}
-            {isLoading && (
+            {(isLoading || isInitializing) && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
