@@ -8,6 +8,52 @@ import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy } from 
 export default function Profile() {
   const { account, chainId, connectWallet } = useWeb3();
   const [isMinting, setIsMinting] = useState(false);
+  const [switching, setSwitching] = useState(false);
+
+  const switchNetwork = async (targetChainId) => {
+    setSwitching(true);
+    try {
+      const hexChainId = "0x" + targetChainId.toString(16);
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: hexChainId }],
+      });
+    } catch (switchError) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902) {
+        try {
+          const networks = {
+            137: {
+              chainId: "0x89",
+              chainName: "Polygon Mainnet",
+              nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
+              rpcUrls: ["https://polygon-rpc.com/"],
+              blockExplorerUrls: ["https://polygonscan.com/"]
+            },
+            8453: {
+              chainId: "0x2105",
+              chainName: "Base",
+              nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://mainnet.base.org"],
+              blockExplorerUrls: ["https://basescan.org"]
+            }
+          };
+          
+          if (networks[targetChainId]) {
+             await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [networks[targetChainId]],
+            });
+          }
+        } catch (addError) {
+          console.error("Failed to add network:", addError);
+        }
+      }
+      console.error("Failed to switch network:", switchError);
+    } finally {
+      setSwitching(false);
+    }
+  };
   const [hasMinted, setHasMinted] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
   const [hasSigned, setHasSigned] = useState(false);
@@ -104,9 +150,29 @@ export default function Profile() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       
       {/* Header */}
-      <div className="mb-12">
-        <h1 className="text-3xl font-bold text-slate-900">Etherene Identity</h1>
-        <p className="text-slate-500 font-mono mt-2">{account}</p>
+      <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Etherene Identity</h1>
+          <p className="text-slate-500 font-mono mt-2">{account}</p>
+        </div>
+        
+        {/* Network Switcher */}
+        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+          <button 
+            onClick={() => switchNetwork(8453)}
+            disabled={switching}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${Number(chainId) === 8453 ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            Base
+          </button>
+          <button 
+            onClick={() => switchNetwork(137)}
+            disabled={switching}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${Number(chainId) === 137 ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            Polygon
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
