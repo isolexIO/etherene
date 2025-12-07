@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useWeb3 } from '../Layout';
-import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../utils/ethereneAbi';
+import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
 import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy } from 'lucide-react';
 // import { ethers } from 'ethers'; // Dynamic import used instead
 
