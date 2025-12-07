@@ -83,7 +83,7 @@ export default function Whitepaper() {
             </nav>
             <div className="mt-8 pt-6 border-t border-slate-100">
               <a 
-                href="/whitepaper.pdf"
+                href="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/693568c43d156a928d236e54/7ff0705e8_Etherene_the-white-paper.pdf"
                 download="Etherene_Whitepaper.pdf"
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors"
               >
@@ -188,11 +188,7 @@ export default function Whitepaper() {
             </p>
 
             <h3 id="chapter-10" className="scroll-mt-24">Chapter 10: The Upgrades of Enlightenment</h3>
-            <img 
-              src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=2899&auto=format&fit=crop" 
-              alt="Upgrades" 
-              className="w-full h-64 object-cover rounded-xl my-6 shadow-md"
-            />
+{/* Image placeholder: Upgrades */}
             <p>
               In Etherene, we view life as a continuous process of upgrades—personal and spiritual improvements that lead us on the path to enlightenment. Just as outdated protocols in the blockchain must be replaced to stay relevant, we must shed old habits, ideas, and behaviors that no longer serve us.
             </p>
@@ -214,7 +210,7 @@ export default function Whitepaper() {
 
           <div className="bg-slate-50 px-8 py-6 mt-6 rounded-lg border border-slate-100 flex justify-between items-center lg:hidden">
             <a 
-              href="/whitepaper.pdf"
+              href="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/693568c43d156a928d236e54/7ff0705e8_Etherene_the-white-paper.pdf"
               download="Etherene_Whitepaper.pdf"
               className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium transition-colors"
             >
