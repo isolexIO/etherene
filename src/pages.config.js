@@ -3,6 +3,7 @@ import Principles from './pages/Principles';
 import Whitepaper from './pages/Whitepaper';
 import Oracle from './pages/Oracle';
 import Profile from './pages/Profile';
+import Sanctum from './pages/Sanctum';
 import __Layout from './Layout.jsx';
 
 
@@ -12,6 +13,7 @@ export const PAGES = {
     "Whitepaper": Whitepaper,
     "Oracle": Oracle,
     "Profile": Profile,
+    "Sanctum": Sanctum,
 }
 
 export const pagesConfig = {

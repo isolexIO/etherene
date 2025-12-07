@@ -72,7 +72,7 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   const navItems = [
-    { name: 'Sanctum', path: 'Home' },
+    { name: 'Sanctum', path: 'Sanctum' },
     { name: 'Principles', path: 'Principles' },
     { name: 'Oracle', path: 'Oracle' },
     { name: 'White Paper', path: 'Whitepaper' },
