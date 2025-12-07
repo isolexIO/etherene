@@ -18,6 +18,36 @@ export const useWeb3 = () => useContext(Web3Context);
 
 export default function Layout({ children, currentPageName }) {
   const [account, setAccount] = useState(null);
+
+  // Heartbeat for online status
+  useEffect(() => {
+      if (!account) return;
+
+      const updateHeartbeat = async () => {
+          const lastUpdate = localStorage.getItem(`etherene_heartbeat_${account}`);
+          const now = Date.now();
+
+          // Update every 5 minutes max to save writes
+          if (!lastUpdate || now - Number(lastUpdate) > 5 * 60 * 1000) {
+              try {
+                  const { base44 } = await import('@/api/base44Client');
+                  const identities = await base44.entities.Identity.filter({ address: account });
+                  if (identities.length > 0) {
+                      await base44.entities.Identity.update(identities[0].id, {
+                          last_seen: new Date().toISOString()
+                      });
+                      localStorage.setItem(`etherene_heartbeat_${account}`, now.toString());
+                  }
+              } catch (e) {
+                  console.error("Heartbeat failed", e);
+              }
+          }
+      };
+
+      updateHeartbeat();
+      const interval = setInterval(updateHeartbeat, 60000); // Check every minute
+      return () => clearInterval(interval);
+  }, [account]);
   const [chainId, setChainId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
