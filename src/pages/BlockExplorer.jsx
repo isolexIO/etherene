@@ -35,12 +35,12 @@ export default function BlockExplorer() {
     const fetchRealStats = async () => {
         try {
             const { ethers } = await import('ethers');
-            // Use a public RPC provider for Ethereum Mainnet
-            const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
+            // Use a public RPC provider for Ethereum Mainnet (Ankr is reliable)
+            const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
             
             const blockNumber = await provider.getBlockNumber();
             const feeData = await provider.getFeeData();
-            const block = await provider.getBlock(blockNumber, true); // true for prefetched transactions
+            const block = await provider.getBlock(blockNumber, true);
             
             setStats(prev => ({
                 ...prev,
