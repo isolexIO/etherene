@@ -112,23 +112,28 @@ export default function Profile() {
       if (!data.success) throw new Error(data.error || "Setup failed");
 
       // 2. Decode and Sign with Phantom
-      const { Transaction } = await import('@solana/web3.js');
-      
+      const { Transaction, Connection } = await import('@solana/web3.js');
+
       // Decode base64 to Uint8Array without Buffer dependency
       const binaryString = atob(data.transaction);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       const transaction = Transaction.from(bytes);
-      
+
       // Phantom specific signing
       const { solana } = window;
       const { signature } = await solana.signAndSendTransaction(transaction);
-      
-      // 3. Wait for Confirmation (Optional, but good UX)
-      // For now, we assume success if signature is returned, as DB update follows.
+
+      // 3. Wait for Confirmation
+      const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+      const confirmation = await connection.confirmTransaction(signature, "confirmed");
+
+      if (confirmation.value.err) {
+          throw new Error("Transaction failed on chain");
+      }
 
       // 4. Create DB Record
       const existingCount = (await base44.entities.Identity.list()).length;

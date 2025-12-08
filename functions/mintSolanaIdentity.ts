@@ -6,7 +6,8 @@ import {
   PublicKey, 
   Transaction, 
   SystemProgram, 
-  LAMPORTS_PER_SOL
+  LAMPORTS_PER_SOL,
+  ComputeBudgetProgram
 } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   createInitializeMintInstruction, 
@@ -110,6 +111,11 @@ Deno.serve(async (req) => {
         } catch (e) { console.error("Price fetch failed"); }
 
         const transaction = new Transaction();
+
+        // 0. Increase Compute Budget (Metadata operations can be heavy)
+        transaction.add(
+            ComputeBudgetProgram.setComputeUnitLimit({ units: 600000 })
+        );
 
         // A. Transfer Payment (User -> Server)
         transaction.add(
