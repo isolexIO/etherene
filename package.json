@@ -79,7 +79,10 @@
     "zod": "^3.24.2",
     "ethers": "^6.13.2",
     "@solana/web3.js": "^1.91.0",
-    "@solana/spl-token": "^0.4.0"
+    "@solana/spl-token": "^0.4.0",
+    "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
+    "@metaplex-foundation/umi": "^0.8.10",
+    "@metaplex-foundation/umi-bundle-defaults": "^0.8.10"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
