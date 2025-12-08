@@ -98,18 +98,60 @@ Deno.serve(async (req) => {
             )
         );
 
-        // Sign and Send
-        const signature = await sendAndConfirmTransaction(
-            connection,
-            transaction,
-            [payer, mint]
+        // Sign and Send (Updated to Transfer Transaction)
+        // 1. Fetch SOL Price (approximate $5)
+        let lamportsFor5USD = 0;
+        try {
+            const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+            const priceData = await priceReq.json();
+            const solPrice = priceData.solana.usd;
+            lamportsFor5USD = Math.round((5 / solPrice) * 1_000_000_000);
+        } catch (e) {
+            console.error("Failed to fetch price, defaulting to 0.05 SOL", e);
+            lamportsFor5USD = 50_000_000; // Fallback
+        }
+
+        // Add Transfer Instruction (User pays $5 to Treasury/Server)
+        // We use the payer (server key) as the Treasury destination for simplicity
+        transaction.add(
+            SystemProgram.transfer({
+                fromPubkey: userPublicKey,
+                toPubkey: payer.publicKey,
+                lamports: lamportsFor5USD
+            })
         );
+
+        // Set Fee Payer to User (since they are signing)
+        transaction.feePayer = userPublicKey;
+        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+        // Partially sign with the Mint Keypair (it's a new account, so it needs to sign)
+        // We also need the Payer (Server) to sign IF the server was paying for rent.
+        // BUT, to simplify "Solana Pay" style, let's make the USER pay for rent too.
+        // Re-building the createAccount instruction to use userPublicKey as payer.
+        
+        transaction.instructions[0] = SystemProgram.createAccount({
+                fromPubkey: userPublicKey, // User pays rent
+                newAccountPubkey: mint.publicKey,
+                space: MINT_SIZE,
+                lamports,
+                programId: TOKEN_PROGRAM_ID,
+        });
+
+        // The only signer needed from backend is the 'mint' keypair (proof of new account)
+        transaction.partialSign(mint);
+        
+        // Serialize
+        const serializedTransaction = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false
+        });
 
         return Response.json({ 
             success: true, 
-            signature, 
+            transaction: Buffer.from(serializedTransaction).toString('base64'),
             mint: mint.publicKey.toString(),
-            explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`
+            message: `Please sign to pay ~$5 (${(lamportsFor5USD/1e9).toFixed(4)} SOL) and mint your identity.`
         });
 
     } catch (error) {

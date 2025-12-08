@@ -102,29 +102,39 @@ export default function Profile() {
 
     setIsMinting(true);
     try {
-      // Call Backend to Mint NFT
+      // 1. Get Transaction from Backend
       const { data } = await base44.functions.invoke('mintSolanaIdentity', {
           userAddress: targetAddress,
           soulHash: profileData?.soul_hash || '0x' + Math.random().toString(16).slice(2)
       });
 
-      if (!data.success) throw new Error(data.error || "Minting failed");
+      if (!data.success) throw new Error(data.error || "Setup failed");
 
-      // Create DB Record
+      // 2. Decode and Sign with Phantom
+      const { Buffer } = await import('buffer');
+      const { Transaction } = await import('@solana/web3.js');
+      
+      const transaction = Transaction.from(Buffer.from(data.transaction, 'base64'));
+      
+      // Phantom specific signing
+      const { solana } = window;
+      const { signature } = await solana.signAndSendTransaction(transaction);
+      
+      // 3. Wait for Confirmation (Optional, but good UX)
+      // For now, we assume success if signature is returned, as DB update follows.
+
+      // 4. Create DB Record
       const existingCount = (await base44.entities.Identity.list()).length;
       await base44.entities.Identity.create({
-           address: account, // Keep the ETH address as the main identity key for now? Or switch?
-           // The app is currently keyed by ETH address in useWeb3. 
-           // We'll store the Solana address in the bio or a new field if needed, 
-           // but for now we link this ETH identity to the Solana Mint.
-           soul_hash: data.mint, // Storing Mint Address as Soul Hash for reference
+           address: account, 
+           soul_hash: data.mint, 
            network: 'Solana Devnet',
            status: 'minted',
            token_id: existingCount + 1,
-           bio: `Solana Mint: ${data.mint}` // Temporary storage of mint address
+           bio: `Solana Mint: ${data.mint}` 
       });
       
-      window.open(data.explorerUrl, '_blank');
+      window.open(`https://explorer.solana.com/tx/${signature}?cluster=devnet`, '_blank');
       window.location.reload();
 
     } catch (err) {
