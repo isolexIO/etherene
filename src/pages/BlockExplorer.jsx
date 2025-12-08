@@ -30,63 +30,88 @@ export default function BlockExplorer() {
     localStorage.setItem('etherene_watchlist', JSON.stringify(watchedAddresses));
   }, [watchedAddresses]);
 
-  // Real Chain Stats (Ethereum Mainnet)
+  // Metaphysical Chain Stats
   useEffect(() => {
-    const fetchRealStats = async () => {
+    const fetchMetaphysicalStats = async () => {
         try {
-            const { ethers } = await import('ethers');
-            // Use a public RPC provider for Ethereum Mainnet
-            const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
-            
-            const blockNumber = await provider.getBlockNumber();
-            const feeData = await provider.getFeeData();
-            const block = await provider.getBlock(blockNumber, true); // true for prefetched transactions
-            
-            setStats(prev => ({
-                ...prev,
-                blocks: blockNumber,
-                gasPrice: feeData.gasPrice ? ethers.formatUnits(feeData.gasPrice, 'gwei') : '0',
-                tps: block ? Math.round(block.prefetchedTransactions.length / 12) : 15
-            }));
-
-            // Map recent transactions
-            if (block && block.prefetchedTransactions) {
-                const recentTxs = block.prefetchedTransactions.slice(0, 10).map(tx => ({
-                    hash: tx.hash,
-                    from: tx.from,
-                    to: tx.to || "Contract Creation",
-                    type: "Transaction", // Generic type as we don't decode calldata here
-                    age: "Just now",
-                    status: "Success" // Assumed for mined block
-                }));
-                setTransactions(recentTxs);
-            }
-
-            // Sync internal identity count
             const { base44 } = await import('@/api/base44Client');
-            const identities = await base44.entities.Identity.list();
-            setStats(prev => ({ ...prev, identities: identities.length })); // Real count only
+            const moment = (await import('moment')).default;
+            
+            // Calculate "Block Height" (Days since Genesis: 2024-01-01)
+            const genesis = moment('2024-01-01');
+            const now = moment();
+            const blockHeight = now.diff(genesis, 'days');
+
+            // Fetch Entities
+            const [identities, transmissions, interactions] = await Promise.all([
+                base44.entities.Identity.list(),
+                base44.entities.Transmission.list(),
+                base44.entities.OracleInteraction.list()
+            ]);
+
+            const totalActivity = identities.length + transmissions.length + interactions.length;
+            const tps = totalActivity > 0 ? (totalActivity / (blockHeight * 24)).toFixed(2) : 0; // Transmissions Per Hour basically
+
+            setStats({
+                blocks: blockHeight,
+                gasPrice: "10", // Constant "Energy"
+                identities: identities.length,
+                tps: tps
+            });
+
+            // Merge and Map Transactions
+            const allTxs = [
+                ...identities.map(i => ({
+                    hash: i.id,
+                    from: i.address,
+                    to: "Etherene Identity",
+                    type: "Identity Mint",
+                    created_date: i.created_date,
+                    status: "Minted"
+                })),
+                ...transmissions.map(t => ({
+                    hash: t.id,
+                    from: t.author_address,
+                    to: "Agora",
+                    type: "Transmission",
+                    created_date: t.created_date,
+                    status: "Broadcasted"
+                })),
+                ...interactions.map(i => ({
+                    hash: i.id,
+                    from: i.user_address,
+                    to: "Oracle",
+                    type: "Oracle Interaction",
+                    created_date: i.created_date,
+                    status: "Revealed"
+                }))
+            ].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+
+            setTransactions(allTxs.slice(0, 15).map(tx => ({
+                ...tx,
+                age: moment(tx.created_date).fromNow()
+            })));
 
         } catch (error) {
-            console.error("Failed to fetch real chain stats:", error);
+            console.error("Failed to fetch metaphysical stats:", error);
         }
     };
 
     // Initial Graph
     setGraphData(Array.from({ length: 20 }, (_, i) => ({
       time: new Date(Date.now() - (20 - i) * 2000).toLocaleTimeString(),
-      tps: 15
+      tps: 5
     })));
 
-    fetchRealStats();
-    const interval = setInterval(fetchRealStats, 12000); // ~Block time
+    fetchMetaphysicalStats();
+    const interval = setInterval(fetchMetaphysicalStats, 30000); 
     
     // Visual Graph Update
     const graphInterval = setInterval(() => {
         setGraphData(prev => {
             const newData = [...prev.slice(1), { 
               time: new Date().toLocaleTimeString(), 
-              value: Math.floor((stats.tps || 15) + (Math.random() * 5 - 2.5)) 
+              value: Math.floor(Math.random() * 10) + 2
             }];
             return newData;
         });

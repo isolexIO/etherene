@@ -16,26 +16,61 @@ export default function Transaction() {
         if (!hash) return;
         setLoading(true);
         try {
-            const { ethers } = await import('ethers');
-            const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
-            const tx = await provider.getTransaction(hash);
-            const receipt = await provider.getTransactionReceipt(hash);
+            const { base44 } = await import('@/api/base44Client');
+            const moment = (await import('moment')).default;
 
-            if (tx) {
+            // Search in all entities
+            // Optimization: In real app, we'd know the type or have a unified index. 
+            // Here we just try to find it.
+            let entity = null;
+            let type = "";
+            let to = "";
+
+            // Try Identity
+            const identities = await base44.entities.Identity.filter({ id: hash });
+            if (identities.length > 0) {
+                entity = identities[0];
+                type = "Identity Mint";
+                to = "Etherene Identity";
+            } else {
+                // Try Transmission
+                const transmissions = await base44.entities.Transmission.filter({ id: hash });
+                if (transmissions.length > 0) {
+                    entity = transmissions[0];
+                    type = "Transmission";
+                    to = "Agora";
+                } else {
+                    // Try Oracle
+                    const interactions = await base44.entities.OracleInteraction.filter({ id: hash });
+                    if (interactions.length > 0) {
+                        entity = interactions[0];
+                        type = "Oracle Interaction";
+                        to = "Oracle";
+                    }
+                }
+            }
+
+            if (entity) {
+                // Calculate "Block" (Days since Genesis)
+                const genesis = moment('2024-01-01');
+                const txDate = moment(entity.created_date);
+                const blockNumber = txDate.diff(genesis, 'days');
+
                 setTxData({
-                    hash: tx.hash,
-                    status: receipt && receipt.status === 1 ? "Success" : "Failed",
-                    block: tx.blockNumber,
-                    from: tx.from,
-                    to: tx.to,
-                    value: ethers.formatEther(tx.value) + " ETH",
-                    fee: receipt ? ethers.formatEther(receipt.fee) + " ETH" : "Pending",
-                    gasPrice: ethers.formatUnits(tx.gasPrice, 'gwei') + " Gwei",
-                    nonce: tx.nonce
+                    hash: entity.id,
+                    status: "Confirmed",
+                    block: blockNumber,
+                    from: entity.address || entity.author_address || entity.user_address || "Unknown",
+                    to: to,
+                    value: "0 ETH (Metaphysical)",
+                    fee: "0.001 Soul (Energy)",
+                    gasPrice: "10 Gwei",
+                    nonce: 1
                 });
             } else {
-                setError("Transaction not found");
+                setError("Transaction not found in the Etherene ledger");
             }
+
         } catch (e) {
             console.error(e);
             setError("Failed to fetch transaction");

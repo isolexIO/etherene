@@ -16,23 +16,47 @@ export default function Block() {
         if (!number) return;
         setLoading(true);
         try {
-            const { ethers } = await import('ethers');
-            const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
-            const block = await provider.getBlock(number);
+            const moment = (await import('moment')).default;
+            const { base44 } = await import('@/api/base44Client');
             
-            if (block) {
-                setBlockData({
-                    number: block.number,
-                    hash: block.hash,
-                    timestamp: new Date(Number(block.timestamp) * 1000).toLocaleString(),
-                    transactions: block.transactions.length,
-                    miner: block.miner,
-                    gasUsed: block.gasUsed.toString(),
-                    parentHash: block.parentHash
-                });
-            } else {
-                setError("Block not found");
-            }
+            // Reconstruct Date from Block Number (Days since Genesis 2024-01-01)
+            const genesis = moment('2024-01-01');
+            const blockDate = genesis.add(Number(number), 'days');
+            
+            // Format for filtering (YYYY-MM-DD)
+            const dateStr = blockDate.format('YYYY-MM-DD');
+            const nextDayStr = moment(blockDate).add(1, 'days').format('YYYY-MM-DD');
+
+            // Fetch activities for this day
+            // Note: Filters might need "gte" and "lt" but standard filter is equality. 
+            // We'll fetch all and filter client side for now as simpler query
+            const [identities, transmissions, interactions] = await Promise.all([
+                base44.entities.Identity.list(),
+                base44.entities.Transmission.list(),
+                base44.entities.OracleInteraction.list()
+            ]);
+
+            const filterByDate = (item) => {
+                const itemDate = moment(item.created_date);
+                return itemDate.isBetween(blockDate.startOf('day'), blockDate.endOf('day'));
+            };
+
+            const dayTxs = [
+                ...identities.filter(filterByDate),
+                ...transmissions.filter(filterByDate),
+                ...interactions.filter(filterByDate)
+            ];
+
+            setBlockData({
+                number: number,
+                hash: "0x" + Math.abs(dateStr.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(16).padStart(64, '0'), // Pseudo hash from date
+                timestamp: blockDate.format('MMMM Do YYYY, h:mm:ss a') + " (EST)",
+                transactions: dayTxs.length,
+                miner: "Chronos (Time itself)",
+                gasUsed: (dayTxs.length * 21000).toString(),
+                parentHash: "0x" + Math.abs(moment(blockDate).subtract(1, 'days').format('YYYY-MM-DD').split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(16).padStart(64, '0')
+            });
+
         } catch (e) {
             console.error(e);
             setError("Failed to fetch block data");

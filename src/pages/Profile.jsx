@@ -70,29 +70,20 @@ export default function Profile() {
   }, [viewAddress]);
 
 
-  // Minting Logic (Only for Owner)
+  // Minting Logic (Metaphysical Solana Mint)
   const handleMint = async () => {
     if (!isOwner) return;
     setIsMinting(true);
     try {
-      const contractAddress = CONTRACT_ADDRESSES[Number(chainId)];
-      if (contractAddress && contractAddress !== "0x..." && !contractAddress.includes("Address")) {
-         const { ethers } = await import('ethers');
-         const provider = new ethers.BrowserProvider(window.ethereum);
-         const signer = await provider.getSigner();
-         const contract = new ethers.Contract(contractAddress, ETHERENE_NFT_ABI, signer);
-         const tx = await contract.mint();
-         await tx.wait();
-      } else {
-         await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      // Simulate Solana Transaction
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Create DB Record
       const existingCount = (await base44.entities.Identity.list()).length;
       await base44.entities.Identity.create({
            address: account,
            soul_hash: profileData?.soul_hash || '0x' + Math.random().toString(16).slice(2),
-           network: chainId ? chainId.toString() : '1',
+           network: 'Solana', // Hardcoded as per Metaphysical update
            status: 'minted',
            token_id: existingCount + 1
       });
@@ -217,7 +208,7 @@ export default function Profile() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">Network</span>
-                            <span className="font-medium text-slate-900">Base Mainnet</span>
+                            <span className="font-medium text-slate-900">Solana (Metaphysical)</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">Token ID</span>
