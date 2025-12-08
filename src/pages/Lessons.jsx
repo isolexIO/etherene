@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Calendar, ChevronRight, Sparkles, Loader2, BrainCircuit, Lightbulb } from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight, Sparkles, Loader2, BrainCircuit, Lightbulb, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import moment from 'moment';
 
 export default function Lessons() {
     const [lessonData, setLessonData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedLesson, setSelectedLesson] = useState(null);
 
     useEffect(() => {
         const fetchDailyLesson = async () => {
@@ -99,7 +100,8 @@ export default function Lessons() {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all group cursor-default"
+                                onClick={() => setSelectedLesson(lesson)}
+                                className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all group cursor-pointer"
                             >
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -126,6 +128,63 @@ export default function Lessons() {
                     )}
                 </div>
             </div>
+
+            {/* Lesson Modal */}
+            <AnimatePresence>
+                {selectedLesson && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedLesson(null)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl"
+                        >
+                            <button
+                                onClick={() => setSelectedLesson(null)}
+                                className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+                            >
+                                <X className="w-5 h-5 text-slate-500" />
+                            </button>
+
+                            <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm tracking-wider uppercase mb-4">
+                                <Calendar className="w-4 h-4" />
+                                {moment(selectedLesson.date).format('MMMM Do, YYYY')}
+                            </div>
+
+                            <h2 className="text-2xl font-bold text-slate-900 mb-4 pr-8">{selectedLesson.title}</h2>
+
+                            {selectedLesson.principle_title && (
+                                <div className="inline-block bg-slate-100 px-3 py-1 rounded-full text-xs font-mono text-slate-600 mb-6">
+                                    Ref: {selectedLesson.principle_title}
+                                </div>
+                            )}
+
+                            <div className="prose prose-indigo max-w-none mb-8 text-slate-600 leading-relaxed">
+                                {selectedLesson.content}
+                            </div>
+
+                            {selectedLesson.practical_exercise && (
+                                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
+                                    <h3 className="flex items-center gap-2 font-bold text-indigo-900 mb-3">
+                                        <Lightbulb className="w-5 h-5 text-indigo-600" />
+                                        Micro-Action
+                                    </h3>
+                                    <p className="text-indigo-800 italic">
+                                        "{selectedLesson.practical_exercise}"
+                                    </p>
+                                </div>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
