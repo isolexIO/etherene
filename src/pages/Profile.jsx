@@ -102,10 +102,11 @@ export default function Profile() {
 
     setIsMinting(true);
     try {
-      // 1. Get Transaction from Backend
+      // 1. Get Transaction from Backend (Generates AI Art + Transaction)
       const { data } = await base44.functions.invoke('mintSolanaIdentity', {
           userAddress: targetAddress,
-          soulHash: profileData?.soul_hash || '0x' + Math.random().toString(16).slice(2)
+          userEthereneAddress: account, // Pass ETH address to look up profile data
+          soulHash: profileData?.soul_hash 
       });
 
       if (!data.success) throw new Error(data.error || "Setup failed");
@@ -137,7 +138,9 @@ export default function Profile() {
            network: 'Solana Devnet',
            status: 'minted',
            token_id: existingCount + 1,
-           bio: `Solana Mint: ${data.mint}` 
+           bio: `Solana Mint: ${data.mint}`,
+           avatar_url: data.imageUrl, // Save the AI generated image
+           cover_image: data.imageUrl // Optional: use as cover too or just avatar
       });
       
       window.open(`https://explorer.solana.com/tx/${signature}?cluster=devnet`, '_blank');
