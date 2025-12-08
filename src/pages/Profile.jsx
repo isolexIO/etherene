@@ -111,10 +111,16 @@ export default function Profile() {
       if (!data.success) throw new Error(data.error || "Setup failed");
 
       // 2. Decode and Sign with Phantom
-      const { Buffer } = await import('buffer');
       const { Transaction } = await import('@solana/web3.js');
       
-      const transaction = Transaction.from(Buffer.from(data.transaction, 'base64'));
+      // Decode base64 to Uint8Array without Buffer dependency
+      const binaryString = atob(data.transaction);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const transaction = Transaction.from(bytes);
       
       // Phantom specific signing
       const { solana } = window;
