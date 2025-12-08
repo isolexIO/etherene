@@ -70,24 +70,63 @@ export default function Profile() {
   }, [viewAddress]);
 
 
-  // Minting Logic (Metaphysical Solana Mint)
+  // Solana Wallet Integration
+  const [solanaAddress, setSolanaAddress] = useState(null);
+
+  const connectSolana = async () => {
+      try {
+          const { solana } = window;
+          if (solana && solana.isPhantom) {
+              const response = await solana.connect();
+              setSolanaAddress(response.publicKey.toString());
+              return response.publicKey.toString();
+          } else {
+              alert("Please install Phantom Wallet!");
+              window.open("https://phantom.app/", "_blank");
+          }
+      } catch (err) {
+          console.error(err);
+      }
+      return null;
+  };
+
   const handleMint = async () => {
     if (!isOwner) return;
+    
+    // Ensure Solana Wallet is connected
+    let targetAddress = solanaAddress;
+    if (!targetAddress) {
+        targetAddress = await connectSolana();
+        if (!targetAddress) return;
+    }
+
     setIsMinting(true);
     try {
-      // Simulate Solana Transaction
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call Backend to Mint NFT
+      const { data } = await base44.functions.invoke('mintSolanaIdentity', {
+          userAddress: targetAddress,
+          soulHash: profileData?.soul_hash || '0x' + Math.random().toString(16).slice(2)
+      });
+
+      if (!data.success) throw new Error(data.error || "Minting failed");
 
       // Create DB Record
       const existingCount = (await base44.entities.Identity.list()).length;
       await base44.entities.Identity.create({
-           address: account,
-           soul_hash: profileData?.soul_hash || '0x' + Math.random().toString(16).slice(2),
-           network: 'Solana', // Hardcoded as per Metaphysical update
+           address: account, // Keep the ETH address as the main identity key for now? Or switch?
+           // The app is currently keyed by ETH address in useWeb3. 
+           // We'll store the Solana address in the bio or a new field if needed, 
+           // but for now we link this ETH identity to the Solana Mint.
+           soul_hash: data.mint, // Storing Mint Address as Soul Hash for reference
+           network: 'Solana Devnet',
            status: 'minted',
-           token_id: existingCount + 1
+           token_id: existingCount + 1,
+           bio: `Solana Mint: ${data.mint}` // Temporary storage of mint address
       });
+      
+      window.open(data.explorerUrl, '_blank');
       window.location.reload();
+
     } catch (err) {
       console.error("Mint failed:", err);
       alert(`Minting failed: ${err.message}`);
@@ -182,9 +221,16 @@ export default function Profile() {
                         <Settings className="w-4 h-4" /> Customize
                     </Link>
                     {!profileData && (
-                        <button onClick={handleMint} disabled={isMinting} className="px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
-                            {isMinting ? "Minting..." : "Mint Identity"}
-                        </button>
+                        <div className="flex flex-col gap-2">
+                            {!solanaAddress && (
+                                <button onClick={connectSolana} className="px-6 py-2 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200">
+                                    Connect Phantom
+                                </button>
+                            )}
+                            <button onClick={handleMint} disabled={isMinting} className="px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50">
+                                {isMinting ? "Minting on Solana..." : "Mint Identity NFT"}
+                            </button>
+                        </div>
                     )}
                   </>
               )}
