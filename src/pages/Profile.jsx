@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
@@ -28,6 +28,11 @@ export default function Profile() {
   const [profileData, setProfileData] = useState(null);
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Follow State
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
   
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -75,13 +80,20 @@ export default function Profile() {
               const identity = identities[0] || null;
               setProfileData(identity);
 
-              // 2. Fetch Activities (Parallel)
-              const [transmissions, interactions, mints, resonances] = await Promise.all([
+              // 2. Fetch Activities & Social Graph (Parallel)
+              const [transmissions, interactions, mints, resonances, followers, following, myFollow] = await Promise.all([
                   base44.entities.Transmission.filter({ author_address: viewAddress }),
                   base44.entities.OracleInteraction.filter({ user_address: viewAddress }),
                   Promise.resolve(identity ? [identity] : []),
-                  base44.entities.Resonance.filter({ author_address: viewAddress })
+                  base44.entities.Resonance.filter({ author_address: viewAddress }),
+                  base44.entities.Follow.filter({ following_address: viewAddress }),
+                  base44.entities.Follow.filter({ follower_address: viewAddress }),
+                  account ? base44.entities.Follow.filter({ follower_address: account, following_address: viewAddress }) : Promise.resolve([])
               ]);
+
+              setFollowersCount(followers.length);
+              setFollowingCount(following.length);
+              setIsFollowing(myFollow.length > 0);
 
               const timeline = [
                   ...transmissions.map(t => ({ ...t, type: 'transmission', date: t.created_date })),
@@ -203,6 +215,34 @@ export default function Profile() {
       } catch (e) { console.error(e); }
   };
 
+  const handleFollow = async () => {
+      if (!account) return;
+      try {
+          if (isFollowing) {
+              // Unfollow
+              const records = await base44.entities.Follow.filter({ follower_address: account, following_address: viewAddress });
+              if (records.length > 0) {
+                  await base44.entities.Follow.delete(records[0].id);
+                  setIsFollowing(false);
+                  setFollowersCount(prev => Math.max(0, prev - 1));
+                  toast.success("Unfollowed successfully");
+              }
+          } else {
+              // Follow
+              await base44.entities.Follow.create({
+                  follower_address: account,
+                  following_address: viewAddress
+              });
+              setIsFollowing(true);
+              setFollowersCount(prev => prev + 1);
+              toast.success("Following user");
+          }
+      } catch (e) {
+          console.error("Follow action failed", e);
+          toast.error("Failed to update follow status");
+      }
+  };
+
 
   if (isLoading) {
       return <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-600"/></div>;
@@ -300,12 +340,25 @@ export default function Profile() {
           {/* Actions */}
           <div className="flex gap-3">
               {!isOwner && viewAddress && (
-                  <Link 
-                    to={`${createPageUrl('DirectMessages')}?to=${viewAddress}`}
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-200"
-                  >
-                      <MessageSquare className="w-4 h-4" /> Message
-                  </Link>
+                  <>
+                    <button 
+                        onClick={handleFollow}
+                        className={`px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg ${
+                            isFollowing 
+                            ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50' 
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                        }`}
+                    >
+                        {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                        {isFollowing ? 'Unfollow' : 'Follow'}
+                    </button>
+                    <Link 
+                        to={`${createPageUrl('DirectMessages')}?to=${viewAddress}`}
+                        className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2"
+                    >
+                        <MessageSquare className="w-4 h-4" /> Message
+                    </Link>
+                  </>
               )}
               {isOwner && (
                   <>
@@ -345,6 +398,23 @@ export default function Profile() {
         {/* Left Column: Stats & Identity */}
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                 <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-indigo-600" />
+                    Community Stats
+                </h3>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <span className="block text-2xl font-bold text-slate-900">{followersCount}</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wide">Followers</span>
+                    </div>
+                    <div className="text-center p-3 bg-slate-50 rounded-xl">
+                        <span className="block text-2xl font-bold text-slate-900">{followingCount}</span>
+                        <span className="text-xs text-slate-500 uppercase tracking-wide">Following</span>
+                    </div>
+                </div>
+
+                <div className="h-px bg-slate-100 my-6" />
+
                 <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                     <Shield className="w-5 h-5 text-indigo-600" />
                     Identity Status

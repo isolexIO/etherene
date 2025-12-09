@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Radio, Users, Sparkles, Circle } from 'lucide-react';
+import { Radio, Users, Sparkles, Circle, Globe } from 'lucide-react';
 import CreateTransmission from '../components/community/CreateTransmission';
 import TransmissionFeed from '../components/community/TransmissionFeed';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +11,8 @@ import IdentityAvatar from '../components/profile/IdentityAvatar';
 import NFTGate from '../components/shared/NFTGate';
 
 export default function Agora() {
+  const [feedType, setFeedType] = useState('global'); // 'global' | 'following'
+
   const { data: activeIdentities } = useQuery({
     queryKey: ['activeIdentities'],
     queryFn: async () => {
@@ -76,22 +78,31 @@ export default function Agora() {
             </NFTGate>
           </motion.div>
 
-          {/* Feed Filter (Visual only for now) */}
-          <div className="flex items-center justify-between mb-6 px-2">
-              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Latest Signals
-              </h2>
-              <div className="flex gap-4 text-sm text-slate-500">
-                  <button className="text-indigo-600 font-medium">Trending</button>
-                  <button className="hover:text-slate-800">New</button>
-                  <button className="hover:text-slate-800">Top</button>
-              </div>
+          {/* Feed Filter */}
+          <div className="flex items-center gap-4 mb-6 px-2 border-b border-slate-100">
+              <button 
+                  onClick={() => setFeedType('global')}
+                  className={`pb-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border-b-2 ${
+                      feedType === 'global' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+              >
+                  <Globe className="w-4 h-4" />
+                  Global Frequency
+              </button>
+              <button 
+                  onClick={() => setFeedType('following')}
+                  className={`pb-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border-b-2 ${
+                      feedType === 'following' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+              >
+                  <Users className="w-4 h-4" />
+                  Network Activity
+              </button>
           </div>
 
           {/* Feed */}
           <div className="opacity-90">
-             <TransmissionFeed />
+             <TransmissionFeed feedType={feedType} />
           </div>
         </div>
 
