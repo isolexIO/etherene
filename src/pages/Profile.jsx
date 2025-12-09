@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
@@ -299,6 +299,14 @@ export default function Profile() {
 
           {/* Actions */}
           <div className="flex gap-3">
+              {!isOwner && viewAddress && (
+                  <Link 
+                    to={`${createPageUrl('DirectMessages')}?to=${viewAddress}`}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-200"
+                  >
+                      <MessageSquare className="w-4 h-4" /> Message
+                  </Link>
+              )}
               {isOwner && (
                   <>
                     {isEditing ? (
