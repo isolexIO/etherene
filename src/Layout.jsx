@@ -108,7 +108,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Principles', path: 'Principles' },
     { name: 'Oracle', path: 'Oracle' },
     { name: 'Agora', path: 'Agora' },
-    { name: 'Messages', path: 'DirectMessages' },
     { name: 'White Paper', path: 'Whitepaper' },
     { name: 'Explorer', path: 'BlockExplorer' },
     { name: 'Identity', path: 'Profile' },

@@ -10,7 +10,6 @@ import Block from './pages/Block';
 import Agora from './pages/Agora';
 import CustomizeProfile from './pages/CustomizeProfile';
 import Lessons from './pages/Lessons';
-import DirectMessages from './pages/DirectMessages';
 import __Layout from './Layout.jsx';
 
 
@@ -27,7 +26,6 @@ export const PAGES = {
     "Agora": Agora,
     "CustomizeProfile": CustomizeProfile,
     "Lessons": Lessons,
-    "DirectMessages": DirectMessages,
 }
 
 export const pagesConfig = {

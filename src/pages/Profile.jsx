@@ -7,6 +7,8 @@ import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settin
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
+import ConversationList from '../components/messaging/ConversationList';
+import ChatWindow from '../components/messaging/ChatWindow';
 import moment from 'moment';
 import { toast } from 'sonner';
 
@@ -40,6 +42,18 @@ export default function Profile() {
   
   // Tabs State
   const [activeTab, setActiveTab] = useState('all');
+
+  // Messaging State
+  const [selectedConversationUser, setSelectedConversationUser] = useState(null);
+
+  // Handle messages tab from URL or other interactions
+  useEffect(() => {
+      if (searchParams.get('tab') === 'messages') {
+          setActiveTab('messages');
+          const to = searchParams.get('to');
+          if (to) setSelectedConversationUser(to);
+      }
+  }, [searchParams]);
 
   const startEditing = () => {
     if (!profileData) return;
@@ -353,7 +367,7 @@ export default function Profile() {
                         {isFollowing ? 'Unfollow' : 'Follow'}
                     </button>
                     <Link 
-                        to={`${createPageUrl('DirectMessages')}?to=${viewAddress}`}
+                        to={`${createPageUrl('Profile')}?tab=messages&to=${viewAddress}`}
                         className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2"
                     >
                         <MessageSquare className="w-4 h-4" /> Message
@@ -450,10 +464,10 @@ export default function Profile() {
         <div className="lg:col-span-2">
              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[500px]">
                 {/* Tabs Header */}
-                <div className="flex border-b border-slate-100">
+                <div className="flex border-b border-slate-100 overflow-x-auto">
                     <button 
                         onClick={() => setActiveTab('all')}
-                        className={`flex-1 py-4 text-sm font-medium transition-colors border-b-2 ${
+                        className={`flex-1 py-4 px-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                             activeTab === 'all' 
                                 ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -463,7 +477,7 @@ export default function Profile() {
                     </button>
                     <button 
                         onClick={() => setActiveTab('created')}
-                        className={`flex-1 py-4 text-sm font-medium transition-colors border-b-2 ${
+                        className={`flex-1 py-4 px-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                             activeTab === 'created' 
                                 ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -473,7 +487,7 @@ export default function Profile() {
                     </button>
                     <button 
                         onClick={() => setActiveTab('participated')}
-                        className={`flex-1 py-4 text-sm font-medium transition-colors border-b-2 ${
+                        className={`flex-1 py-4 px-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                             activeTab === 'participated' 
                                 ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -481,61 +495,105 @@ export default function Profile() {
                     >
                         Resonances
                     </button>
+                    {isOwner && (
+                        <button 
+                            onClick={() => setActiveTab('messages')}
+                            className={`flex-1 py-4 px-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                                activeTab === 'messages' 
+                                    ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                            <span className="flex items-center gap-2 justify-center">
+                                <MessageSquare className="w-4 h-4" />
+                                Messages
+                            </span>
+                        </button>
+                    )}
                 </div>
 
-                {/* Feed Content */}
-                <div className="divide-y divide-slate-100">
-                    {activities
-                        .filter(item => {
+                {/* Content */}
+                {activeTab === 'messages' && isOwner ? (
+                    <div className="h-[600px] flex flex-col md:flex-row bg-white">
+                         <div className={`w-full md:w-80 border-r border-slate-100 bg-white flex flex-col ${selectedConversationUser ? 'hidden md:flex' : 'flex'}`}>
+                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                <h2 className="font-bold text-slate-900 text-sm">Conversations</h2>
+                            </div>
+                            <ConversationList 
+                                account={account} 
+                                onSelectUser={(addr) => setSelectedConversationUser(addr)} 
+                                selectedUser={selectedConversationUser} 
+                            />
+                        </div>
+
+                        <div className={`flex-1 flex flex-col h-full ${!selectedConversationUser ? 'hidden md:flex' : 'flex'}`}>
+                            {selectedConversationUser && (
+                                <div className="md:hidden p-2 bg-white border-b border-slate-100">
+                                    <button onClick={() => setSelectedConversationUser(null)} className="text-sm text-indigo-600 font-medium px-2 py-1 flex items-center gap-1">
+                                        <X className="w-4 h-4" /> Close Chat
+                                    </button>
+                                </div>
+                            )}
+                            <ChatWindow 
+                                account={account} 
+                                otherUserAddress={selectedConversationUser} 
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-slate-100">
+                        {activities
+                            .filter(item => {
+                                if (activeTab === 'all') return true;
+                                if (activeTab === 'created') return item.type === 'transmission';
+                                if (activeTab === 'participated') return item.type === 'resonance';
+                                return true;
+                            })
+                            .map((item, i) => (
+                                <div key={i} className="p-6 flex gap-4 hover:bg-slate-50 transition-colors">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                        item.type === 'transmission' ? 'bg-purple-100 text-purple-600' :
+                                        item.type === 'oracle' ? 'bg-blue-100 text-blue-600' :
+                                        item.type === 'resonance' ? 'bg-amber-100 text-amber-600' :
+                                        'bg-green-100 text-green-600'
+                                    }`}>
+                                        {item.type === 'transmission' && <Radio className="w-5 h-5" />}
+                                        {item.type === 'oracle' && <MessageSquare className="w-5 h-5" />}
+                                        {item.type === 'mint' && <Shield className="w-5 h-5" />}
+                                        {item.type === 'resonance' && <MessageSquare className="w-5 h-5" />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <p className="font-medium text-slate-900">
+                                                {item.type === 'transmission' && 'Broadcasted a Transmission'}
+                                                {item.type === 'oracle' && 'Consulted the Oracle'}
+                                                {item.type === 'mint' && 'Minted Identity'}
+                                                {item.type === 'resonance' && 'Replied to a Transmission'}
+                                            </p>
+                                            <span className="text-xs text-slate-400">{moment(item.date).fromNow()}</span>
+                                        </div>
+                                        <p className="text-slate-600 text-sm whitespace-pre-wrap">
+                                            {item.type === 'transmission' && item.content}
+                                            {item.type === 'oracle' && (item.topic ? `Topic: ${item.topic}` : 'Deep protocol meditation')}
+                                            {item.type === 'mint' && `Soul Hash: ${item.soul_hash?.slice(0,10)}...`}
+                                            {item.type === 'resonance' && item.content}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        
+                        {activities.filter(item => {
                             if (activeTab === 'all') return true;
                             if (activeTab === 'created') return item.type === 'transmission';
                             if (activeTab === 'participated') return item.type === 'resonance';
                             return true;
-                        })
-                        .map((item, i) => (
-                            <div key={i} className="p-6 flex gap-4 hover:bg-slate-50 transition-colors">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                    item.type === 'transmission' ? 'bg-purple-100 text-purple-600' :
-                                    item.type === 'oracle' ? 'bg-blue-100 text-blue-600' :
-                                    item.type === 'resonance' ? 'bg-amber-100 text-amber-600' :
-                                    'bg-green-100 text-green-600'
-                                }`}>
-                                    {item.type === 'transmission' && <Radio className="w-5 h-5" />}
-                                    {item.type === 'oracle' && <MessageSquare className="w-5 h-5" />}
-                                    {item.type === 'mint' && <Shield className="w-5 h-5" />}
-                                    {item.type === 'resonance' && <MessageSquare className="w-5 h-5" />}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <p className="font-medium text-slate-900">
-                                            {item.type === 'transmission' && 'Broadcasted a Transmission'}
-                                            {item.type === 'oracle' && 'Consulted the Oracle'}
-                                            {item.type === 'mint' && 'Minted Identity'}
-                                            {item.type === 'resonance' && 'Replied to a Transmission'}
-                                        </p>
-                                        <span className="text-xs text-slate-400">{moment(item.date).fromNow()}</span>
-                                    </div>
-                                    <p className="text-slate-600 text-sm whitespace-pre-wrap">
-                                        {item.type === 'transmission' && item.content}
-                                        {item.type === 'oracle' && (item.topic ? `Topic: ${item.topic}` : 'Deep protocol meditation')}
-                                        {item.type === 'mint' && `Soul Hash: ${item.soul_hash?.slice(0,10)}...`}
-                                        {item.type === 'resonance' && item.content}
-                                    </p>
-                                </div>
+                        }).length === 0 && (
+                            <div className="p-12 text-center text-slate-500">
+                                No activity found in this frequency.
                             </div>
-                        ))}
-                    
-                    {activities.filter(item => {
-                        if (activeTab === 'all') return true;
-                        if (activeTab === 'created') return item.type === 'transmission';
-                        if (activeTab === 'participated') return item.type === 'resonance';
-                        return true;
-                    }).length === 0 && (
-                        <div className="p-12 text-center text-slate-500">
-                            No activity found in this frequency.
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
              </div>
         </div>
 
