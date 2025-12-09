@@ -17,7 +17,8 @@ import {
 } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   getDomainKey, 
-  createNameRegistry
+  createNameRegistry,
+  NameRegistryState
 } from 'npm:@bonfida/spl-name-service@^2.3.1';
 import bs58 from 'npm:bs58@5.0.0';
 
@@ -121,6 +122,29 @@ Deno.serve(async (req) => {
         const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
         const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
         console.log("Parent key derived:", parentNameKey.toBase58());
+
+        // Verify Server Balance
+        const serverBalance = await connection.getBalance(serverKeypair.publicKey);
+        if (serverBalance < 0.005 * LAMPORTS_PER_SOL) {
+             console.error(`Insufficient server funds: ${serverBalance} lamports`);
+             throw new Error("Server faucet empty. Contact admin.");
+        }
+
+        // Verify Parent Domain Ownership
+        const parentAccount = await connection.getAccountInfo(parentNameKey);
+        if (!parentAccount) {
+            throw new Error("Parent domain 'etherene.sol' not found on mainnet.");
+        }
+        
+        try {
+            const retrievedName = NameRegistryState.retrieve(connection, parentNameKey);
+            const parentRegistry = await retrievedName;
+            if (parentRegistry.registry.owner.toBase58() !== serverKeypair.publicKey.toBase58()) {
+                 throw new Error(`Server key (${serverKeypair.publicKey.toBase58()}) is not owner of etherene.sol (${parentRegistry.registry.owner.toBase58()})`);
+            }
+        } catch (e) {
+             throw new Error(`Failed to verify parent domain ownership: ${e.message}`);
+        }
 
         console.log("Creating registry instruction...");
         const space = 1000; 
