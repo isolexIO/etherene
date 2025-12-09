@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Wifi } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 import TransactionList from '../components/explorer/TransactionList';
 import IdentityList from '../components/explorer/IdentityList';
 import ExplorerStats from '../components/explorer/ExplorerStats';
@@ -17,18 +20,47 @@ export default function BlockExplorer() {
   const [stats, setStats] = useState({ blocks: 0, gasPrice: 0, identities: 0, tps: 0 });
   const [transactions, setTransactions] = useState([]);
   const [graphData, setGraphData] = useState([]);
-  const [watchedAddresses, setWatchedAddresses] = useState(() => {
-    const saved = localStorage.getItem('etherene_watchlist');
-    return saved ? JSON.parse(saved) : [];
+  // Watchlist from DB
+  const { data: watchlistItems, refetch: refetchWatchlist } = useQuery({
+    queryKey: ['watchlist'],
+    queryFn: async () => {
+        try {
+            const items = await base44.entities.Watchlist.list();
+            return items;
+        } catch (e) {
+            console.error("Failed to fetch watchlist", e);
+            return [];
+        }
+    }
   });
 
-  // Refs for simulation state to avoid closure staleness
-  const txSinceLastBlock = useRef(0); // kept for legacy reference or can be removed, but minimizing changes.
+  const watchedAddresses = watchlistItems?.map(item => item.address) || [];
 
-  // Save watchlist
-  useEffect(() => {
-    localStorage.setItem('etherene_watchlist', JSON.stringify(watchedAddresses));
-  }, [watchedAddresses]);
+  const addToWatchlist = async (address) => {
+    try {
+        if (watchlistItems?.some(item => item.address === address)) return;
+        await base44.entities.Watchlist.create({ address });
+        refetchWatchlist();
+        toast.success("Added to watchlist");
+    } catch (e) {
+        console.error(e);
+        toast.error("Failed to add to watchlist");
+    }
+  };
+
+  const removeFromWatchlist = async (address) => {
+    try {
+        const item = watchlistItems?.find(i => i.address === address);
+        if (item) {
+            await base44.entities.Watchlist.delete(item.id);
+            refetchWatchlist();
+            toast.success("Removed from watchlist");
+        }
+    } catch (e) {
+        console.error(e);
+        toast.error("Failed to remove from watchlist");
+    }
+  };
 
   // Metaphysical Chain Stats
   useEffect(() => {
@@ -217,13 +249,15 @@ export default function BlockExplorer() {
             </div>
 
             {/* Right Column: Graph & Watchlist */}
-            <div className="space-y-8">
+            <div className="space-y-8 relative">
                 <NetworkGraph data={graphData} />
-                <AddressWatchlist 
-                  watchedAddresses={watchedAddresses} 
-                  onAdd={addToWatchlist}
-                  onRemove={removeFromWatchlist}
-                />
+                <div className="sticky top-24">
+                  <AddressWatchlist 
+                    watchedAddresses={watchedAddresses} 
+                    onAdd={addToWatchlist}
+                    onRemove={removeFromWatchlist}
+                  />
+                </div>
             </div>
 
         </div>

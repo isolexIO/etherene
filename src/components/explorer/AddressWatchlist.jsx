@@ -15,7 +15,7 @@ export default function AddressWatchlist({ watchedAddresses, onAdd, onRemove }) 
   };
 
   return (
-    <Card className="border-slate-100 shadow-sm h-full">
+    <Card className="border-slate-100 shadow-sm sticky top-20 z-0">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
           <Eye className="w-5 h-5 text-indigo-600" />
