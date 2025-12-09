@@ -56,7 +56,7 @@ export default function IdentityAvatar({ address, subdomain, size = 200 }) {
     const coreType = rng() > 0.5 ? 'crystal' : 'star';
 
     return { layers, colors: palette, glowColor, coreType };
-  }, [seed, chainId]);
+    }, [seed]);
 
   // Helper to create polygon points
   const createPolygon = (r, sides, rotation = 0) => {

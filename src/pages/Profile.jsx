@@ -20,7 +20,7 @@ import moment from 'moment';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const { account, chainId, connectWallet } = useWeb3();
+  const { account, connectWallet } = useWeb3();
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
