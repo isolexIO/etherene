@@ -83,7 +83,8 @@
     "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
     "@metaplex-foundation/umi": "^0.8.10",
     "@metaplex-foundation/umi-bundle-defaults": "^0.8.10",
-    "buffer": "^6.0.3"
+    "buffer": "^6.0.3",
+    "@bonfida/spl-name-service": "^2.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
