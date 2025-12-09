@@ -69,17 +69,19 @@ export default function BlockExplorer() {
             const { base44 } = await import('@/api/base44Client');
             const moment = (await import('moment')).default;
             
-            // Calculate "Block Height" (Days since Genesis: 2024-01-01)
-            const genesis = moment('2024-01-01');
-            const now = moment();
-            const blockHeight = now.diff(genesis, 'days');
-
-            // Fetch Entities
-            const [identities, transmissions, interactions] = await Promise.all([
+            // Fetch Settings & Entities
+            const [identities, transmissions, interactions, settingsList] = await Promise.all([
                 base44.entities.Identity.list(),
                 base44.entities.Transmission.list(),
-                base44.entities.OracleInteraction.list()
+                base44.entities.OracleInteraction.list(),
+                base44.entities.GlobalSettings.list()
             ]);
+
+            // Calculate "Block Height" (Days since Genesis)
+            const genesisDate = settingsList[0]?.genesis_date || '2024-01-01';
+            const genesis = moment(genesisDate);
+            const now = moment();
+            const blockHeight = now.diff(genesis, 'days');
 
             const totalActivity = identities.length + transmissions.length + interactions.length;
             const tps = totalActivity > 0 ? (totalActivity / (blockHeight * 24)).toFixed(2) : 0; // Transmissions Per Hour basically
