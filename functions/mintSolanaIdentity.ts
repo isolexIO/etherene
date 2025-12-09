@@ -1,11 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import { Buffer } from "node:buffer";
-
-// Polyfill Buffer for Solana web3.js and Metaplex in Deno
-if (typeof globalThis.Buffer === 'undefined') {
-  globalThis.Buffer = Buffer;
-}
-
 import { 
   Connection, 
   Keypair, 
@@ -33,10 +27,18 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         
         // Parse Body
-        const { userAddress, userEthereneAddress } = await req.json();
+        let { userAddress, userEthereneAddress } = await req.json();
 
         if (!userAddress) {
             return Response.json({ error: 'Solana user address required' }, { status: 400 });
+        }
+
+        userAddress = userAddress.trim();
+        try {
+            // Validate key early
+            new PublicKey(userAddress);
+        } catch (e) {
+            return Response.json({ error: `Invalid public key: ${userAddress}` }, { status: 400 });
         }
 
         // 1. Load Server Key (Treasury & Authority)
@@ -106,13 +108,13 @@ Deno.serve(async (req) => {
         const mintKeypair = Keypair.generate();
         const userPublicKey = new PublicKey(userAddress);
 
-        // Calculate Price ($5)
-        let lamportsFor5USD = 50_000_000; 
+        // Calculate Price ($3 platform fee)
+        let lamportsForFee = 20_000_000; // ~0.02 SOL default
         try {
             const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
             const data = await priceReq.json();
             if (data.solana?.usd) {
-                lamportsFor5USD = Math.round((5 / data.solana.usd) * LAMPORTS_PER_SOL);
+                lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
             }
         } catch (e) { console.error("Price fetch failed"); }
 
@@ -128,7 +130,7 @@ Deno.serve(async (req) => {
             SystemProgram.transfer({
                 fromPubkey: userPublicKey,
                 toPubkey: serverKeypair.publicKey,
-                lamports: lamportsFor5USD
+                lamports: lamportsForFee
             })
         );
 
