@@ -162,11 +162,13 @@ export default function Profile() {
     setIsMinting(true);
     try {
       // 1. Get Transaction from Backend (Generates AI Art + Transaction)
-      const { data } = await base44.functions.invoke('mintSolanaIdentity', {
+      const response = await base44.functions.invoke('mintSolanaIdentity', {
           userAddress: targetAddress,
           userEthereneAddress: account, // Pass ETH address to look up profile data
           soulHash: profileData?.soul_hash 
       });
+      const data = response.data;
+      console.log("Mint Backend Response:", data);
 
       if (!data.success) throw new Error(data.error || "Setup failed");
 
