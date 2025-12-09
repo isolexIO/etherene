@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Link, useSearchParams } from 'react-router-dom';
+import { validateSolanaPK } from '../components/utils/validatePK';
 
 // Polyfill Buffer for Solana web3.js
 if (typeof window !== 'undefined') {
@@ -191,18 +192,25 @@ export default function Profile() {
   const handleMint = async () => {
     if (!isOwner) return;
     
-    // Ensure Solana Wallet is connected
-    let targetAddress = solanaAddress;
-    if (!targetAddress) {
-        targetAddress = await connectSolana();
-        if (!targetAddress) return;
-    }
-
     setIsMinting(true);
     try {
+      // Ensure Solana Wallet is connected
+      let targetAddressStr = solanaAddress;
+      if (!targetAddressStr) {
+          targetAddressStr = await connectSolana();
+          if (!targetAddressStr) {
+             setIsMinting(false);
+             return;
+          }
+      }
+
+      // Validate Public Key before sending to backend
+      const userPK = validateSolanaPK(targetAddressStr);
+      console.debug("Minting with valid PK:", userPK.toBase58());
+
       // 1. Get Transaction from Backend (Generates AI Art + Transaction)
       const response = await base44.functions.invoke('mintSolanaIdentity', {
-          userAddress: targetAddress,
+          userAddress: userPK.toBase58(),
           userEthereneAddress: account, // Pass ETH address to look up profile data
           soulHash: profileData?.soul_hash 
       });

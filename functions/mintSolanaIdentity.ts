@@ -33,21 +33,30 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         
         // Parse Body
-        let { userAddress, userEthereneAddress } = await req.json();
-        console.log("Mint request for:", userAddress);
+        const body = await req.json();
+        let { userAddress, userEthereneAddress } = body;
+        console.log("Mint request payload:", JSON.stringify(body));
 
-        if (!userAddress) {
-            return Response.json({ error: 'Solana user address required' }, { status: 400 });
+        // Strict Validation
+        if (!userAddress || typeof userAddress !== 'string') {
+            console.error("Invalid userAddress format:", userAddress);
+            return Response.json({ error: 'Solana user address required as a base58 string' }, { status: 400 });
         }
 
         // Clean and validate address
-        userAddress = String(userAddress).trim();
+        userAddress = userAddress.trim();
         let userPublicKey;
         try {
+            if (userAddress === 'undefined' || userAddress === 'null') {
+                throw new Error("Address is " + userAddress);
+            }
             userPublicKey = new PublicKey(userAddress);
+            if (!PublicKey.isOnCurve(userPublicKey.toBytes())) {
+                 console.warn("Public key is not on curve (PDA?):", userAddress);
+            }
         } catch (e) {
             console.error("Public key validation failed for:", userAddress, e);
-            return Response.json({ error: `Invalid public key: ${userAddress} (${e.message})` }, { status: 400 });
+            return Response.json({ error: `Invalid public key input: ${userAddress}. Ensure you are using a valid Solana wallet address.` }, { status: 400 });
         }
 
         // 1. Load Server Key (Treasury & Authority)
