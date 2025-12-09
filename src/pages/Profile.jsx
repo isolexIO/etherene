@@ -195,7 +195,7 @@ export default function Profile() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-0 pb-20">
       
       {/* Cover Image */}
-      <div className="relative h-64 w-full rounded-b-3xl bg-gradient-to-r from-indigo-900 to-purple-900 overflow-hidden mb-20 shadow-lg">
+      <div className="relative h-48 md:h-64 w-full rounded-b-3xl bg-gradient-to-r from-indigo-900 to-purple-900 overflow-hidden mb-16 md:mb-20 shadow-lg">
           {profileData?.cover_image && (
               <img src={profileData.cover_image} alt="Cover" className="w-full h-full object-cover opacity-80" />
           )}
@@ -203,9 +203,9 @@ export default function Profile() {
       </div>
 
       {/* Profile Header */}
-      <div className="relative -mt-32 mb-12 flex flex-col items-center text-center">
+      <div className="relative -mt-24 md:-mt-32 mb-12 flex flex-col items-center text-center">
           <div className="relative mb-6">
-             <div className="w-40 h-40 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white">
+             <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white">
                 {profileData?.avatar_url ? (
                     <img src={profileData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (

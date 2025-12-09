@@ -50,7 +50,7 @@ export default function Lessons() {
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-3xl p-8 border border-indigo-100 shadow-xl shadow-indigo-100/50 mb-12 relative overflow-hidden"
+                    className="bg-white rounded-3xl p-6 md:p-8 border border-indigo-100 shadow-xl shadow-indigo-100/50 mb-12 relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                     
@@ -144,7 +144,7 @@ export default function Lessons() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl"
+                            className="relative bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl"
                         >
                             <button
                                 onClick={() => setSelectedLesson(null)}

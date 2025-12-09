@@ -50,7 +50,7 @@ export default function Principles() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white/70 backdrop-blur-md rounded-3xl p-8 border border-white/60 shadow-sm hover:shadow-lg transition-all group"
+              className="bg-white/70 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/60 shadow-sm hover:shadow-lg transition-all group"
             >
               <div className="flex items-start gap-6">
                 <div className="hidden sm:flex flex-col items-center gap-4">

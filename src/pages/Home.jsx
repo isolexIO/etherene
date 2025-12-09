@@ -104,7 +104,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.2 }}
-              className="bg-white/60 backdrop-blur-sm p-8 rounded-3xl border border-white/50 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-3xl border border-white/50 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
                 <feature.icon className="w-6 h-6 text-indigo-600" />
