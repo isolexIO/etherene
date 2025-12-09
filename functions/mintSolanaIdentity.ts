@@ -1,5 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import { Buffer } from "node:buffer";
+
+// Polyfill Buffer for Solana web3.js
+if (typeof globalThis.Buffer === 'undefined') {
+  globalThis.Buffer = Buffer;
+}
+
 import { 
   Connection, 
   Keypair, 
@@ -28,17 +34,19 @@ Deno.serve(async (req) => {
         
         // Parse Body
         let { userAddress, userEthereneAddress } = await req.json();
+        console.log("Mint request for:", userAddress);
 
         if (!userAddress) {
             return Response.json({ error: 'Solana user address required' }, { status: 400 });
         }
 
-        userAddress = userAddress.trim();
+        // Clean and validate address
+        userAddress = String(userAddress).trim();
         try {
-            // Validate key early
             new PublicKey(userAddress);
         } catch (e) {
-            return Response.json({ error: `Invalid public key: ${userAddress}` }, { status: 400 });
+            console.error("Public key validation failed:", e);
+            return Response.json({ error: `Invalid public key format: ${userAddress}` }, { status: 400 });
         }
 
         // 1. Load Server Key (Treasury & Authority)
