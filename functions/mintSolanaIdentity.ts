@@ -121,8 +121,9 @@ Deno.serve(async (req) => {
 
         // B. SNS Subdomain Minting
         // Parent: etherene.sol
-        const parentDomain = "etherene";
-        const { pubkey: parentNameKey } = await getDomainKey(parentDomain);
+        // We must derive the key relative to the .sol TLD
+        const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
+        const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
         
         // Instruction to create subdomain
         const space = 1000; 
@@ -162,6 +163,6 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error("Mint setup error:", error);
-        return Response.json({ error: error.message }, { status: 500 });
+        return Response.json({ error: `Backend Error: ${error.message} - ${error.stack}` }, { status: 500 });
     }
 });
