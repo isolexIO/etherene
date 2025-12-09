@@ -215,7 +215,7 @@ export default function Profile() {
     } catch (err) {
       console.error("Mint failed:", err);
       const msg = err.response?.data?.error || err.message || "Unknown error";
-      alert(`Minting failed: ${msg}`);
+      toast.error(`Minting failed: ${msg}`, { duration: 8000 });
     } finally {
       setIsMinting(false);
     }
