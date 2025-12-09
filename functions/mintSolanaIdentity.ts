@@ -1,5 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 import { Buffer } from "node:buffer";
+
+// Polyfill Buffer for Solana web3.js and Metaplex in Deno
+if (typeof globalThis.Buffer === 'undefined') {
+  globalThis.Buffer = Buffer;
+}
+
 import { 
   Connection, 
   Keypair, 

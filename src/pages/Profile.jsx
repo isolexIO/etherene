@@ -154,7 +154,8 @@ export default function Profile() {
 
     } catch (err) {
       console.error("Mint failed:", err);
-      alert(`Minting failed: ${err.message}`);
+      const msg = err.response?.data?.error || err.message || "Unknown error";
+      alert(`Minting failed: ${msg}`);
     } finally {
       setIsMinting(false);
     }
