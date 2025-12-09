@@ -100,6 +100,9 @@ Deno.serve(async (req) => {
         const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
         const transaction = new Transaction();
 
+        // Add Compute Budget (Priority Fee might be needed, but standard limit helps)
+        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
+
         // Calculate Fee ($3)
         let lamportsForFee = 20_000_000;
         try {
@@ -149,7 +152,9 @@ Deno.serve(async (req) => {
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
-        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        // Use finalized blockhash for better validity window
+        const { blockhash } = await connection.getLatestBlockhash('finalized');
+        transaction.recentBlockhash = blockhash;
 
         // Partial Sign by Server (Authority of parent domain)
         transaction.partialSign(serverKeypair);

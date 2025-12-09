@@ -225,9 +225,19 @@ export default function Profile() {
       const transactionBuffer = Buffer.from(data.transaction, 'base64');
       const transaction = Transaction.from(transactionBuffer);
 
+      console.log("Transaction decoded, requesting signature...");
+
       // Phantom specific signing
       const { solana } = window;
-      const { signature } = await solana.signAndSendTransaction(transaction);
+      let signature;
+      try {
+          const result = await solana.signAndSendTransaction(transaction);
+          signature = result.signature;
+          console.log("Signature received:", signature);
+      } catch (signErr) {
+          console.error("Signing failed:", signErr);
+          throw new Error(`Wallet Signing Failed: ${signErr.message || "User rejected or wallet error"}`);
+      }
 
       // 3. Wait for Confirmation
       const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
