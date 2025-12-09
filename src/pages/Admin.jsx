@@ -1,0 +1,348 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { 
+    Shield, 
+    Settings, 
+    Users, 
+    Activity, 
+    Ban, 
+    CheckCircle, 
+    Save, 
+    AlertTriangle,
+    DollarSign,
+    Calendar
+} from 'lucide-react';
+import { format } from 'date-fns';
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    LineChart,
+    Line
+} from 'recharts';
+import { toast } from 'sonner';
+
+export default function AdminPage() {
+    const [activeTab, setActiveTab] = useState('analytics');
+    const queryClient = useQueryClient();
+
+    // --- Analytics Data ---
+    const { data: analyticsData } = useQuery({
+        queryKey: ['adminAnalytics'],
+        queryFn: async () => {
+            const [identities, transmissions, interactions] = await Promise.all([
+                base44.entities.Identity.list(),
+                base44.entities.Transmission.list(),
+                base44.entities.OracleInteraction.list()
+            ]);
+
+            // Daily Activity Logic
+            const activityByDate = {};
+            [...identities, ...transmissions, ...interactions].forEach(item => {
+                const date = item.created_date.split('T')[0];
+                activityByDate[date] = (activityByDate[date] || 0) + 1;
+            });
+
+            const chartData = Object.entries(activityByDate)
+                .map(([date, count]) => ({ date, count }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .slice(-30); // Last 30 days
+
+            return {
+                totalUsers: identities.length,
+                totalTransmissions: transmissions.length,
+                totalInteractions: interactions.length,
+                chartData,
+                recentIdentities: identities.slice(0, 10)
+            };
+        }
+    });
+
+    // --- Settings Data ---
+    const { data: settings, isLoading: settingsLoading } = useQuery({
+        queryKey: ['globalSettings'],
+        queryFn: async () => {
+            const res = await base44.entities.GlobalSettings.list();
+            return res[0] || {};
+        }
+    });
+
+    const updateSettingsMutation = useMutation({
+        mutationFn: async (newSettings) => {
+            if (settings?.id) {
+                return base44.entities.GlobalSettings.update(settings.id, newSettings);
+            } else {
+                return base44.entities.GlobalSettings.create(newSettings);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(['globalSettings']);
+            toast.success("Settings updated successfully");
+        },
+        onError: () => toast.error("Failed to update settings")
+    });
+
+    const [genesisDate, setGenesisDate] = useState('');
+    const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+    useEffect(() => {
+        if (settings) {
+            setGenesisDate(settings.genesis_date || '2024-01-01');
+            setMaintenanceMode(settings.maintenance_mode || false);
+        }
+    }, [settings]);
+
+    const handleSaveSettings = () => {
+        updateSettingsMutation.mutate({
+            genesis_date: genesisDate,
+            maintenance_mode: maintenanceMode
+        });
+    };
+
+    // --- User Management ---
+    const { data: users, refetch: refetchUsers } = useQuery({
+        queryKey: ['allUsers'],
+        queryFn: () => base44.entities.Identity.list()
+    });
+
+    const toggleBanMutation = useMutation({
+        mutationFn: async ({ id, banned }) => {
+            return base44.entities.Identity.update(id, { banned });
+        },
+        onSuccess: () => {
+            refetchUsers();
+            toast.success("User status updated");
+        }
+    });
+
+    return (
+        <div className="min-h-screen bg-slate-50 p-8 pt-24">
+            <div className="max-w-7xl mx-auto">
+                
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-8">
+                    <Shield className="w-8 h-8 text-indigo-600" />
+                    <h1 className="text-3xl font-bold text-slate-900">Protocol Administration</h1>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-4 mb-8 border-b border-slate-200">
+                    <button
+                        onClick={() => setActiveTab('analytics')}
+                        className={`pb-4 px-2 font-medium transition-colors border-b-2 ${
+                            activeTab === 'analytics' 
+                                ? 'border-indigo-600 text-indigo-600' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Activity className="w-4 h-4" /> Analytics
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        className={`pb-4 px-2 font-medium transition-colors border-b-2 ${
+                            activeTab === 'users' 
+                                ? 'border-indigo-600 text-indigo-600' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4" /> User Management
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('settings')}
+                        className={`pb-4 px-2 font-medium transition-colors border-b-2 ${
+                            activeTab === 'settings' 
+                                ? 'border-indigo-600 text-indigo-600' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Settings className="w-4 h-4" /> Global Settings
+                        </div>
+                    </button>
+                </div>
+
+                {/* Analytics Tab */}
+                {activeTab === 'analytics' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                <h3 className="text-slate-500 text-sm font-medium mb-2">Total Identities</h3>
+                                <div className="text-3xl font-bold text-indigo-600">{analyticsData?.totalUsers || 0}</div>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                <h3 className="text-slate-500 text-sm font-medium mb-2">Total Transmissions</h3>
+                                <div className="text-3xl font-bold text-purple-600">{analyticsData?.totalTransmissions || 0}</div>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                <h3 className="text-slate-500 text-sm font-medium mb-2">Oracle Interactions</h3>
+                                <div className="text-3xl font-bold text-amber-600">{analyticsData?.totalInteractions || 0}</div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 className="font-bold text-slate-900 mb-6">Activity Growth</h3>
+                            <div className="h-80">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={analyticsData?.chartData || []}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis 
+                                            dataKey="date" 
+                                            tickFormatter={(val) => format(new Date(val), 'MMM d')}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+                                        <YAxis axisLine={false} tickLine={false} />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            labelFormatter={(val) => format(new Date(val), 'MMMM d, yyyy')}
+                                        />
+                                        <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* User Management Tab */}
+                {activeTab === 'users' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">User</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Address</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Status</th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Joined</th>
+                                        <th className="px-6 py-4 text-right text-sm font-semibold text-slate-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {users?.map((user) => (
+                                        <tr key={user.id} className="hover:bg-slate-50/50">
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-slate-900">{user.display_name || 'Anonymous'}</div>
+                                                <div className="text-xs text-slate-500">Token #{user.token_id}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">
+                                                    {user.address}
+                                                </code>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {user.banned ? (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                        <Ban className="w-3 h-3" /> Banned
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        <CheckCircle className="w-3 h-3" /> Active
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-slate-500">
+                                                {format(new Date(user.created_date), 'MMM d, yyyy')}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => toggleBanMutation.mutate({ id: user.id, banned: !user.banned })}
+                                                    className={`text-sm font-medium px-3 py-1 rounded-lg transition-colors ${
+                                                        user.banned
+                                                            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                                            : 'bg-red-50 text-red-700 hover:bg-red-100'
+                                                    }`}
+                                                >
+                                                    {user.banned ? 'Unban' : 'Ban User'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Settings Tab */}
+                {activeTab === 'settings' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-8">
+                            
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-indigo-600" />
+                                    Genesis Configuration
+                                </h3>
+                                <p className="text-slate-500 text-sm mb-4">Set the official start date of the metaphysical chain.</p>
+                                
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Genesis Date</label>
+                                    <input
+                                        type="date"
+                                        value={genesisDate}
+                                        onChange={(e) => setGenesisDate(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-100 pt-6">
+                                <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                    <DollarSign className="w-5 h-5 text-indigo-600" />
+                                    Financials
+                                </h3>
+                                <p className="text-slate-500 text-sm mb-4">Platform fee configuration.</p>
+                                <div className="bg-slate-50 p-4 rounded-xl text-sm text-slate-600">
+                                    Current Platform Fee: <span className="font-bold text-slate-900">$3.00 USD</span> (Hardcoded in contract)
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-100 pt-6">
+                                <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                    System Status
+                                </h3>
+                                <div className="flex items-center justify-between mt-4">
+                                    <div>
+                                        <div className="font-medium text-slate-900">Maintenance Mode</div>
+                                        <div className="text-xs text-slate-500">Disable all new mints and transactions</div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={maintenanceMode}
+                                            onChange={(e) => setMaintenanceMode(e.target.checked)}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="pt-4">
+                                <button
+                                    onClick={handleSaveSettings}
+                                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Save className="w-4 h-4" /> Save Configuration
+                                </button>
+                            </div>
+
+                        </div>
+                    </motion.div>
+                )}
+            </div>
+        </div>
+    );
+}

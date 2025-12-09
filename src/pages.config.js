@@ -10,6 +10,7 @@ import Block from './pages/Block';
 import Agora from './pages/Agora';
 import CustomizeProfile from './pages/CustomizeProfile';
 import Lessons from './pages/Lessons';
+import Admin from './pages/Admin';
 import __Layout from './Layout.jsx';
 
 
@@ -26,6 +27,7 @@ export const PAGES = {
     "Agora": Agora,
     "CustomizeProfile": CustomizeProfile,
     "Lessons": Lessons,
+    "Admin": Admin,
 }
 
 export const pagesConfig = {
