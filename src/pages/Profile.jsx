@@ -220,31 +220,47 @@ export default function Profile() {
 
       // 2. Decode and Sign with Phantom
       const { Transaction, Connection } = await import('@solana/web3.js');
+      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
       // Decode base64 to Uint8Array using Buffer
       const transactionBuffer = Buffer.from(data.transaction, 'base64');
       const transaction = Transaction.from(transactionBuffer);
 
-      console.log("Transaction decoded, requesting signature...");
+      console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
 
       // Phantom specific signing
       const { solana } = window;
-      let signature;
+      let signedTransaction;
       try {
-          const result = await solana.signAndSendTransaction(transaction);
-          signature = result.signature;
-          console.log("Signature received:", signature);
+          // Use signTransaction for better compatibility and debugging of partial signatures
+          signedTransaction = await solana.signTransaction(transaction);
+          console.log("Transaction signed by wallet");
       } catch (signErr) {
           console.error("Signing failed:", signErr);
           throw new Error(`Wallet Signing Failed: ${signErr.message || "User rejected or wallet error"}`);
       }
 
-      // 3. Wait for Confirmation
-      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+      // 3. Send and Confirm
+      let signature;
+      try {
+          const rawTransaction = signedTransaction.serialize();
+          signature = await connection.sendRawTransaction(rawTransaction, {
+              skipPreflight: false,
+              preflightCommitment: 'confirmed'
+          });
+          console.log("Transaction sent. Signature:", signature);
+      } catch (sendErr) {
+          console.error("Send failed:", sendErr);
+          // Try to extract logs if available
+          const logs = sendErr.logs ? ` Logs: ${sendErr.logs.join('\n')}` : '';
+          throw new Error(`Broadcast Failed: ${sendErr.message}${logs}`);
+      }
+
       const confirmation = await connection.confirmTransaction(signature, "confirmed");
 
       if (confirmation.value.err) {
-          throw new Error("Transaction failed on chain");
+          console.error("Confirmation error:", confirmation.value.err);
+          throw new Error(`Transaction failed on chain: ${JSON.stringify(confirmation.value.err)}`);
       }
 
       // 4. Create DB Record
