@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Buffer } from 'buffer';
 import { Link, useSearchParams } from 'react-router-dom';
+
+// Polyfill Buffer for Solana web3.js
+if (typeof window !== 'undefined') {
+    window.Buffer = Buffer;
+}
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
 import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users } from 'lucide-react';
