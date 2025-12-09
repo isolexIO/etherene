@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
             userPublicKey, // Payer
             userPublicKey, // Owner
             lamports,
-            PublicKey.default, 
+            undefined, // Class
             parentNameKey
         );
         transaction.add(createSubdomainIx);
