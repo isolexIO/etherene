@@ -34,7 +34,7 @@ export default function NFTGate({ children, fallback }) {
                 </p>
                 <button 
                     onClick={connectWallet}
-                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-medium transition-colors"
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-medium transition-colors cursor-pointer z-50 relative"
                 >
                     Connect Wallet
                 </button>
