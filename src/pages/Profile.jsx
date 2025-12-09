@@ -44,17 +44,18 @@ export default function Profile() {
               setProfileData(identity);
 
               // 2. Fetch Activities (Parallel)
-              const [transmissions, interactions, mints] = await Promise.all([
+              const [transmissions, interactions, mints, resonances] = await Promise.all([
                   base44.entities.Transmission.filter({ author_address: viewAddress }),
                   base44.entities.OracleInteraction.filter({ user_address: viewAddress }),
-                  // Re-using identity fetch for mint event basically
-                  Promise.resolve(identity ? [identity] : [])
+                  Promise.resolve(identity ? [identity] : []),
+                  base44.entities.Resonance.filter({ author_address: viewAddress })
               ]);
 
               const timeline = [
                   ...transmissions.map(t => ({ ...t, type: 'transmission', date: t.created_date })),
                   ...interactions.map(i => ({ ...i, type: 'oracle', date: i.created_date })),
-                  ...mints.map(m => ({ ...m, type: 'mint', date: m.created_date }))
+                  ...mints.map(m => ({ ...m, type: 'mint', date: m.created_date })),
+                  ...resonances.map(r => ({ ...r, type: 'resonance', date: r.created_date }))
               ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
               setActivities(timeline);
@@ -318,11 +319,13 @@ export default function Profile() {
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                                     item.type === 'transmission' ? 'bg-purple-100 text-purple-600' :
                                     item.type === 'oracle' ? 'bg-blue-100 text-blue-600' :
+                                    item.type === 'resonance' ? 'bg-amber-100 text-amber-600' :
                                     'bg-green-100 text-green-600'
                                 }`}>
                                     {item.type === 'transmission' && <Radio className="w-5 h-5" />}
                                     {item.type === 'oracle' && <MessageSquare className="w-5 h-5" />}
                                     {item.type === 'mint' && <Shield className="w-5 h-5" />}
+                                    {item.type === 'resonance' && <MessageSquare className="w-5 h-5" />}
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start mb-1">
@@ -330,6 +333,7 @@ export default function Profile() {
                                             {item.type === 'transmission' && 'Broadcasted a Transmission'}
                                             {item.type === 'oracle' && 'Consulted the Oracle'}
                                             {item.type === 'mint' && 'Minted Identity'}
+                                            {item.type === 'resonance' && 'Replied to a Transmission'}
                                         </p>
                                         <span className="text-xs text-slate-400">{moment(item.date).fromNow()}</span>
                                     </div>
@@ -337,6 +341,7 @@ export default function Profile() {
                                         {item.type === 'transmission' && item.content}
                                         {item.type === 'oracle' && (item.topic ? `Topic: ${item.topic}` : 'Deep protocol meditation')}
                                         {item.type === 'mint' && `Soul Hash: ${item.soul_hash?.slice(0,10)}...`}
+                                        {item.type === 'resonance' && item.content}
                                     </p>
                                 </div>
                             </div>

@@ -9,6 +9,7 @@ export default function TransmissionFeed() {
   const { data: transmissions, isLoading } = useQuery({
     queryKey: ['transmissions'],
     queryFn: () => base44.entities.Transmission.list('-created_date'),
+    refetchInterval: 10000, // Real-time updates every 10s
   });
 
   if (isLoading) {

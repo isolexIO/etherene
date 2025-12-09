@@ -37,7 +37,8 @@ export default function TransmissionItem({ transmission }) {
   const { data: resonances, isLoading: loadingResonances } = useQuery({
     queryKey: ['resonances', transmission.id],
     queryFn: () => base44.entities.Resonance.filter({ transmission_id: transmission.id }),
-    enabled: showComments
+    enabled: showComments,
+    refetchInterval: 5000
   });
 
   const commentMutation = useMutation({
@@ -123,7 +124,7 @@ export default function TransmissionItem({ transmission }) {
           className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
         >
           <MessageCircle className="w-4 h-4" />
-          <span>Resonances</span>
+          <span>Replies</span>
         </button>
 
         <button className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors ml-auto">
