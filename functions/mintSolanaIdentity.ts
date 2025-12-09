@@ -75,22 +75,34 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Server Configuration Error: Invalid Keypair' }, { status: 500 });
         }
 
-        // 2. Fetch User Context for AI
+        // 2. Fetch User Context for AI & Settings
         const ethAddress = userEthereneAddress || userAddress; // Fallback
 
         // Parallel fetch with error handling
-        let identities = [], transmissions = [];
+        let identities = [], transmissions = [], settingsList = [];
         try {
-            [identities, transmissions] = await Promise.all([
+            [identities, transmissions, settingsList] = await Promise.all([
                  base44.asServiceRole.entities.Identity.filter({ address: ethAddress }),
-                 base44.asServiceRole.entities.Transmission.filter({ author_address: ethAddress })
+                 base44.asServiceRole.entities.Transmission.filter({ author_address: ethAddress }),
+                 base44.asServiceRole.entities.GlobalSettings.list()
             ]);
         } catch (e) {
             console.error("Failed to fetch entity data", e);
             // Continue with defaults
         }
 
+        // Check Maintenance Mode
+        const settings = settingsList[0];
+        if (settings?.maintenance_mode) {
+            return Response.json({ error: 'Minting is currently disabled for maintenance.' }, { status: 503 });
+        }
+
         const identity = identities[0];
+
+        // Check Ban Status
+        if (identity?.banned) {
+            return Response.json({ error: 'This identity has been suspended.' }, { status: 403 });
+        }
 
         // 3. Generate AI Image
         const bio = identity?.bio || "A mysterious node in the Etherene network";
