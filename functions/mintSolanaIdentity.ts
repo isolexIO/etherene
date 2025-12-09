@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
         }
 
         // Check Maintenance Mode
-        const settings = settingsList[0];
+        const settings = settingsList.length > 0 ? settingsList[0] : null;
         if (settings?.maintenance_mode) {
             return Response.json({ error: 'Minting is currently disabled for maintenance.' }, { status: 503 });
         }
@@ -157,7 +157,11 @@ Deno.serve(async (req) => {
             if (data.solana?.usd) {
                 lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
             }
-        } catch (e) { console.error("Price fetch failed"); }
+            } catch (e) { console.error("Price fetch failed", e); }
+
+            if (!Number.isFinite(lamportsForFee) || lamportsForFee <= 0) {
+            lamportsForFee = 20_000_000;
+            }
 
         const transaction = new Transaction();
 
