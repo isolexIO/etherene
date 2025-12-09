@@ -126,8 +126,9 @@ Deno.serve(async (req) => {
         // Check Balance
         const balance = await connection.getBalance(serverKeypair.publicKey);
         console.log("Server balance:", balance);
-        if (balance < 0.05 * LAMPORTS_PER_SOL) {
-             throw new Error(`Server low balance: ${balance / LAMPORTS_PER_SOL} SOL`);
+        // Server only signs, user pays fees. Just ensure account exists.
+        if (balance < 0.001 * LAMPORTS_PER_SOL) {
+             console.warn(`Server balance low: ${balance / LAMPORTS_PER_SOL} SOL`);
         }
 
         console.log("Creating registry instruction...");
