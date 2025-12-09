@@ -96,8 +96,8 @@ Deno.serve(async (req) => {
         }
 
         // 5. Setup Transaction
-        // Using Ankr RPC for better reliability on Mainnet
-        const connection = new Connection("https://rpc.ankr.com/solana", "confirmed");
+        console.log("Connecting to Solana Mainnet...");
+        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
         const transaction = new Transaction();
 
         // Calculate Fee ($3)
@@ -122,6 +122,13 @@ Deno.serve(async (req) => {
         const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
         const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
         console.log("Parent key derived:", parentNameKey.toBase58());
+
+        // Check Balance
+        const balance = await connection.getBalance(serverKeypair.publicKey);
+        console.log("Server balance:", balance);
+        if (balance < 0.05 * LAMPORTS_PER_SOL) {
+             throw new Error(`Server low balance: ${balance / LAMPORTS_PER_SOL} SOL`);
+        }
 
         console.log("Creating registry instruction...");
         const space = 1000; 
