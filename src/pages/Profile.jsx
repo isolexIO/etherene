@@ -138,21 +138,54 @@ export default function Profile() {
   // Solana Wallet Integration
   const [solanaAddress, setSolanaAddress] = useState(null);
 
+  useEffect(() => {
+      const checkSolana = async () => {
+           const { solana } = window;
+           if (solana && solana.isPhantom) {
+               try {
+                   // Eager connect (silent)
+                   const response = await solana.connect({ onlyIfTrusted: true });
+                   setSolanaAddress(response.publicKey.toString());
+               } catch (e) {
+                   // User not connected yet
+               }
+           }
+      };
+      // Give time for wallet injection
+      const timer = setTimeout(checkSolana, 500);
+      return () => clearTimeout(timer);
+  }, []);
+
   const connectSolana = async () => {
       try {
           const { solana } = window;
           if (solana && solana.isPhantom) {
               const response = await solana.connect();
               setSolanaAddress(response.publicKey.toString());
+              toast.success("Phantom wallet connected");
               return response.publicKey.toString();
           } else {
-              alert("Please install Phantom Wallet!");
+              toast.error("Please install Phantom Wallet!");
               window.open("https://phantom.app/", "_blank");
           }
       } catch (err) {
           console.error(err);
+          toast.error("Connection cancelled");
       }
       return null;
+  };
+
+  const disconnectSolana = async () => {
+      try {
+          const { solana } = window;
+          if (solana) {
+              await solana.disconnect();
+              setSolanaAddress(null);
+              toast.success("Disconnected from Solana");
+          }
+      } catch (err) {
+          console.error(err);
+      }
   };
 
   const handleMint = async () => {
