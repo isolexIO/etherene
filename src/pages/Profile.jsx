@@ -211,8 +211,7 @@ export default function Profile() {
       // 1. Get Transaction from Backend (Generates AI Art + Transaction)
       const response = await base44.functions.invoke('mintSolanaIdentity', {
           userAddress: userPK.toBase58(),
-          userEthereneAddress: account, // Pass ETH address to look up profile data
-          soulHash: profileData?.soul_hash 
+          userEthereneAddress: account
       });
       const data = response.data;
       console.log("Mint Backend Response:", data);
@@ -239,16 +238,14 @@ export default function Profile() {
       }
 
       // 4. Create DB Record
-      const existingCount = (await base44.entities.Identity.list()).length;
       await base44.entities.Identity.create({
            address: account, 
-           soul_hash: data.mint, 
+           subdomain: data.subdomain,
            network: 'Solana Devnet',
            status: 'minted',
-           token_id: existingCount + 1,
-           bio: `Solana Mint: ${data.mint}`,
-           avatar_url: data.imageUrl, // Save the AI generated image
-           cover_image: data.imageUrl // Optional: use as cover too or just avatar
+           bio: `Solana Identity: ${data.subdomain}`,
+           avatar_url: data.imageUrl,
+           cover_image: data.imageUrl
       });
 
       window.open(`https://explorer.solana.com/tx/${signature}?cluster=devnet`, '_blank');
@@ -331,7 +328,7 @@ export default function Profile() {
                 {profileData?.avatar_url ? (
                     <img src={profileData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                    <IdentityAvatar address={viewAddress} soulHash={profileData?.soul_hash} size={160} />
+                    <IdentityAvatar address={viewAddress} subdomain={profileData?.subdomain} size={160} />
                 )}
              </div>
              {profileData && (
@@ -433,7 +430,7 @@ export default function Profile() {
                                 className="w-full px-6 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isMinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-                                {isMinting ? "Minting Identity..." : "Mint Identity NFT"}
+                                {isMinting ? "Minting Identity..." : "Mint Identity Token"}
                             </button>
                           ) : (
                             <button onClick={connectWallet} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
@@ -489,8 +486,8 @@ export default function Profile() {
                             <span className="font-mono text-slate-900">#{profileData.token_id || '---'}</span>
                         </div>
                         <div className="pt-4 border-t border-slate-100">
-                            <span className="text-xs text-slate-400 block mb-1">Soul Hash</span>
-                            <code className="block w-full bg-slate-50 p-2 rounded text-xs text-slate-600 break-all">{profileData.soul_hash}</code>
+                            <span className="text-xs text-slate-400 block mb-1">Subdomain</span>
+                            <code className="block w-full bg-slate-50 p-2 rounded text-xs text-slate-600 break-all">{profileData.subdomain}</code>
                         </div>
                     </div>
                 ) : (
@@ -616,7 +613,7 @@ export default function Profile() {
                                         <p className="text-slate-600 text-sm whitespace-pre-wrap">
                                             {item.type === 'transmission' && item.content}
                                             {item.type === 'oracle' && (item.topic ? `Topic: ${item.topic}` : 'Deep protocol meditation')}
-                                            {item.type === 'mint' && `Soul Hash: ${item.soul_hash?.slice(0,10)}...`}
+                                            {item.type === 'mint' && `Subdomain: ${item.subdomain}`}
                                             {item.type === 'resonance' && item.content}
                                         </p>
                                     </div>

@@ -15,8 +15,8 @@ const seededRandom = (seed) => {
   }
 };
 
-export default function IdentityAvatar({ address, soulHash, size = 200 }) {
-  const seed = (address || '') + (soulHash || '');
+export default function IdentityAvatar({ address, subdomain, size = 200 }) {
+  const seed = (address || '') + (subdomain || '');
   
   const { layers, colors, glowColor, coreType } = useMemo(() => {
     const rng = seededRandom(seed);

@@ -16,16 +16,10 @@ import {
   ComputeBudgetProgram
 } from 'npm:@solana/web3.js@^1.91.0';
 import { 
-  createInitializeMintInstruction, 
-  getAssociatedTokenAddress, 
-  createAssociatedTokenAccountInstruction, 
-  createMintToInstruction, 
-  TOKEN_PROGRAM_ID, 
-  MINT_SIZE 
-} from 'npm:@solana/spl-token@^0.4.0';
-import { 
-  createCreateMetadataAccountV3Instruction 
-} from 'npm:@metaplex-foundation/mpl-token-metadata@^2.13.0';
+  getDomainKey, 
+  createNameRegistry,
+  Numberu64
+} from 'npm:@bonfida/spl-name-service@^2.3.1';
 import bs58 from 'npm:bs58@5.0.0';
 
 Deno.serve(async (req) => {
@@ -34,61 +28,41 @@ Deno.serve(async (req) => {
         
         // Parse Body
         const body = await req.json();
-        let { userAddress, soulHash } = body;
+        let { userAddress } = body;
         console.log("Mint request payload:", JSON.stringify(body));
 
         // Strict Validation
         if (!userAddress || typeof userAddress !== 'string') {
-            console.error("Invalid userAddress format:", userAddress);
-            return Response.json({ error: 'Solana user address required as a base58 string' }, { status: 400 });
+            return Response.json({ error: 'Solana user address required' }, { status: 400 });
         }
 
-        // Clean and validate address
         userAddress = userAddress.trim();
         let userPublicKey;
         try {
-            if (userAddress === 'undefined' || userAddress === 'null') {
-                throw new Error("Address is " + userAddress);
-            }
             userPublicKey = new PublicKey(userAddress);
-            if (!PublicKey.isOnCurve(userPublicKey.toBytes())) {
-                 console.warn("Public key is not on curve (PDA?):", userAddress);
-            }
         } catch (e) {
-            console.error("Public key validation failed for:", userAddress, e);
-            return Response.json({ error: `Invalid public key input: ${userAddress}. Ensure you are using a valid Solana wallet address.` }, { status: 400 });
+            return Response.json({ error: `Invalid public key: ${userAddress}` }, { status: 400 });
         }
 
-        // 1. Load Server Key (Treasury & Authority)
+        // 1. Load Server Key (Parent Domain Owner & Fee Receiver)
         const privateKeyString = Deno.env.get("SOLANA_PAYER_PRIVATE_KEY");
         if (!privateKeyString) {
             return Response.json({ error: 'Server Missing Payer Key' }, { status: 500 });
         }
-        let secretKey;
-        try {
-            if (privateKeyString.trim().startsWith('[') || privateKeyString.includes(',')) {
-                secretKey = Uint8Array.from(JSON.parse(privateKeyString));
-            } else {
-                secretKey = bs58.decode(privateKeyString.trim());
-            }
-        } catch (e) {
-            console.error("Failed to parse private key", e);
-            return Response.json({ error: 'Server Configuration Error: Invalid Payer Key' }, { status: 500 });
-        }
-
+        
         let serverKeypair;
         try {
+            const secretKey = privateKeyString.trim().startsWith('[') 
+                ? Uint8Array.from(JSON.parse(privateKeyString))
+                : bs58.decode(privateKeyString.trim());
             serverKeypair = Keypair.fromSecretKey(secretKey);
         } catch (e) {
-            console.error("Invalid secret key size/format", e);
-            return Response.json({ error: 'Server Configuration Error: Invalid Keypair' }, { status: 500 });
+            console.error("Key parse failed", e);
+            return Response.json({ error: 'Server Configuration Error' }, { status: 500 });
         }
 
-        // 2. Fetch User Context for AI & Settings
-        // Use userAddress directly as the identity key
+        // 2. Fetch User Context for AI
         const ethAddress = userAddress; 
-
-        // Parallel fetch with error handling
         let identities = [], transmissions = [], settingsList = [];
         try {
             [identities, transmissions, settingsList] = await Promise.all([
@@ -96,91 +70,47 @@ Deno.serve(async (req) => {
                  base44.asServiceRole.entities.Transmission.filter({ author_address: ethAddress }),
                  base44.asServiceRole.entities.GlobalSettings.list()
             ]);
-        } catch (e) {
-            console.error("Failed to fetch entity data", e);
-            // Continue with defaults
+        } catch (e) { console.error(e); }
+
+        // Check Maintenance
+        if (settingsList[0]?.maintenance_mode) {
+            return Response.json({ error: 'Minting disabled for maintenance.' }, { status: 503 });
         }
 
-        // Check Maintenance Mode
-        const settings = settingsList.length > 0 ? settingsList[0] : null;
-        if (settings?.maintenance_mode) {
-            return Response.json({ error: 'Minting is currently disabled for maintenance.' }, { status: 503 });
+        if (identities[0]?.banned) {
+            return Response.json({ error: 'Identity suspended.' }, { status: 403 });
         }
 
-        const identity = identities[0];
+        // 3. Generate Subdomain Name
+        // Generate a random 8-char string for the subdomain to ensure uniqueness
+        const randomSuffix = Math.random().toString(36).substring(2, 10);
+        const subdomain = `node-${randomSuffix}`;
+        const fullDomain = `${subdomain}.etherene`; // Assuming .sol is implicit or handled by logic
 
-        // Check Ban Status
-        if (identity?.banned) {
-            return Response.json({ error: 'This identity has been suspended.' }, { status: 403 });
-        }
-
-        // 3. Generate AI Image
-        const bio = identity?.bio || `A mysterious node in the Etherene network: ${ethAddress.slice(0, 6)}...`;
-        const signals = transmissions.map(t => t.content).join(' ').slice(0, 100);
-
-        const prompt = `
-        Abstract spiritual digital art, sacred geometry, ethereal glowing lines, blockchain nodes connecting in the void.
-        Theme: ${bio}. 
-        Essence: ${signals}.
-        Style: Cyberpunk meets Mysticism, high quality, 8k, octane render, blue and purple palette.
-        `;
-
-        // Start Image Gen
+        // 4. Generate AI Image (Avatar)
+        const bio = identities[0]?.bio || `Etherene Node ${subdomain}`;
+        const prompt = `Abstract spiritual digital art, sacred geometry, node ${subdomain}, ${bio}. Cyberpunk, 8k, blue purple.`;
+        
         let imageRes;
         try {
             imageRes = await base44.asServiceRole.integrations.Core.GenerateImage({ prompt });
         } catch (e) {
-             console.error("Image generation failed", e);
-             // Fallback image
              imageRes = { url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" };
         }
-
-        if (!imageRes?.url) {
-             imageRes = { url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" };
-        }
-
-        // 4. Upload Metadata
-        const metadataJson = {
-            name: identity?.display_name || "Etherene Node",
-            symbol: "ETHN",
-            description: `Identity Node for ${ethAddress}. ${bio}`,
-            image: imageRes.url,
-            attributes: [
-                { trait_type: "Network", value: "Etherene" },
-                { trait_type: "Role", value: "Node" },
-                { trait_type: "Transmissions", value: transmissions.length.toString() }
-            ]
-        };
-
-        const metadataUri = imageRes.url; 
 
         // 5. Setup Transaction
         const connection = new Connection("https://api.devnet.solana.com", "confirmed");
-        const mintKeypair = Keypair.generate();
-        // userPublicKey is already defined above
+        const transaction = new Transaction();
 
-        // Calculate Price ($3 platform fee)
-        let lamportsForFee = 20_000_000; // ~0.02 SOL default
+        // Calculate Fee ($3)
+        let lamportsForFee = 20_000_000;
         try {
             const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
             const data = await priceReq.json();
-            if (data.solana?.usd) {
-                lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
-            }
-            } catch (e) { console.error("Price fetch failed", e); }
+            if (data.solana?.usd) lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
+        } catch (e) {}
 
-            if (!Number.isFinite(lamportsForFee) || lamportsForFee <= 0) {
-            lamportsForFee = 20_000_000;
-            }
-
-        const transaction = new Transaction();
-
-        // 0. Increase Compute Budget (Metadata operations can be heavy)
-        transaction.add(
-            ComputeBudgetProgram.setComputeUnitLimit({ units: 600000 })
-        );
-
-        // A. Transfer Payment (User -> Server)
+        // A. Fee Transfer
         transaction.add(
             SystemProgram.transfer({
                 fromPubkey: userPublicKey,
@@ -189,91 +119,42 @@ Deno.serve(async (req) => {
             })
         );
 
-        // B. Create Mint Account (User pays rent)
-        const mintRent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-        transaction.add(
-            SystemProgram.createAccount({
-                fromPubkey: userPublicKey,
-                newAccountPubkey: mintKeypair.publicKey,
-                space: MINT_SIZE,
-                lamports: mintRent,
-                programId: TOKEN_PROGRAM_ID,
-            }),
-            createInitializeMintInstruction(
-                mintKeypair.publicKey,
-                0, 
-                serverKeypair.publicKey, 
-                serverKeypair.publicKey, 
-                TOKEN_PROGRAM_ID
-            )
+        // B. SNS Subdomain Minting
+        // Parent: etherene.sol
+        // We need to derive the parent account key.
+        // TLD for .sol is '58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11' (Mainnet) or similar.
+        // On Devnet, it might be different or we use a custom parent.
+        // Assuming standard SNS on Mainnet/Devnet:
+        // Note: 'etherene' is the parent name.
+        
+        const parentDomain = "etherene";
+        const { pubkey: parentNameKey } = await getDomainKey(parentDomain);
+        
+        // Instruction to create subdomain
+        // The space required for the name registry
+        const space = 1000; // ample space for data
+        const lamports = await connection.getMinimumBalanceForRentExemption(space);
+
+        const createSubdomainIx = await createNameRegistry(
+            connection,
+            subdomain,
+            space,
+            userPublicKey, // Payer
+            userPublicKey, // Owner of the new subdomain
+            lamports,
+            new PublicKey("11111111111111111111111111111111"), // Class (None)
+            parentNameKey // Parent name account
         );
 
-        // C. Create ATA
-        const ata = await getAssociatedTokenAddress(mintKeypair.publicKey, userPublicKey);
-        transaction.add(
-            createAssociatedTokenAccountInstruction(
-                userPublicKey,
-                ata,
-                userPublicKey,
-                mintKeypair.publicKey
-            )
-        );
+        // Important: The serverKeypair must sign this because it owns 'etherene'
+        transaction.add(createSubdomainIx);
 
-        // D. Mint Token
-        transaction.add(
-            createMintToInstruction(
-                mintKeypair.publicKey,
-                ata,
-                serverKeypair.publicKey,
-                1,
-                [],
-                TOKEN_PROGRAM_ID
-            )
-        );
-
-        // E. Add Metadata
-        const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm36Sc18nhZ5613NY");
-        const [metadataAddress] = PublicKey.findProgramAddressSync(
-            [
-                Buffer.from("metadata"),
-                TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-                mintKeypair.publicKey.toBuffer(),
-            ],
-            TOKEN_METADATA_PROGRAM_ID
-        );
-
-        const metadataInstruction = createCreateMetadataAccountV3Instruction(
-            {
-                metadata: metadataAddress,
-                mint: mintKeypair.publicKey,
-                mintAuthority: serverKeypair.publicKey,
-                payer: userPublicKey,
-                updateAuthority: serverKeypair.publicKey,
-            },
-            {
-                createMetadataAccountArgsV3: {
-                    data: {
-                        name: metadataJson.name,
-                        symbol: metadataJson.symbol,
-                        uri: metadataUri,
-                        sellerFeeBasisPoints: 0,
-                        creators: [{ address: serverKeypair.publicKey, verified: true, share: 100 }],
-                        collection: null,
-                        uses: null,
-                    },
-                    isMutable: true,
-                    collectionDetails: null,
-                },
-            }
-        );
-        transaction.add(metadataInstruction);
-
-        // 6. Finalize & Sign
+        // 6. Finalize
         transaction.feePayer = userPublicKey;
         transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-        // Partial Sign (Mint + Server)
-        transaction.partialSign(mintKeypair, serverKeypair);
+        // Partial Sign by Server (Authority of parent domain)
+        transaction.partialSign(serverKeypair);
 
         const serializedTransaction = transaction.serialize({
             requireAllSignatures: false,
@@ -283,7 +164,7 @@ Deno.serve(async (req) => {
         return Response.json({ 
             success: true, 
             transaction: Buffer.from(serializedTransaction).toString('base64'),
-            mint: mintKeypair.publicKey.toString(),
+            subdomain: `${subdomain}.etherene.sol`,
             imageUrl: imageRes.url
         });
 
