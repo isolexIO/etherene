@@ -42,11 +42,12 @@ Deno.serve(async (req) => {
 
         // Clean and validate address
         userAddress = String(userAddress).trim();
+        let userPublicKey;
         try {
-            new PublicKey(userAddress);
+            userPublicKey = new PublicKey(userAddress);
         } catch (e) {
-            console.error("Public key validation failed:", e);
-            return Response.json({ error: `Invalid public key format: ${userAddress}` }, { status: 400 });
+            console.error("Public key validation failed for:", userAddress, e);
+            return Response.json({ error: `Invalid public key: ${userAddress} (${e.message})` }, { status: 400 });
         }
 
         // 1. Load Server Key (Treasury & Authority)
@@ -55,25 +56,46 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Server Missing Payer Key' }, { status: 500 });
         }
         let secretKey;
-        if (privateKeyString.includes('[')) {
-            secretKey = Uint8Array.from(JSON.parse(privateKeyString));
-        } else {
-            secretKey = bs58.decode(privateKeyString);
+        try {
+            if (privateKeyString.trim().startsWith('[') || privateKeyString.includes(',')) {
+                secretKey = Uint8Array.from(JSON.parse(privateKeyString));
+            } else {
+                secretKey = bs58.decode(privateKeyString.trim());
+            }
+        } catch (e) {
+            console.error("Failed to parse private key", e);
+            return Response.json({ error: 'Server Configuration Error: Invalid Payer Key' }, { status: 500 });
         }
-        const serverKeypair = Keypair.fromSecretKey(secretKey);
+
+        let serverKeypair;
+        try {
+            serverKeypair = Keypair.fromSecretKey(secretKey);
+        } catch (e) {
+            console.error("Invalid secret key size/format", e);
+            return Response.json({ error: 'Server Configuration Error: Invalid Keypair' }, { status: 500 });
+        }
 
         // 2. Fetch User Context for AI
         const ethAddress = userEthereneAddress || userAddress; // Fallback
-        const [identities, transmissions] = await Promise.all([
-             base44.asServiceRole.entities.Identity.filter({ address: ethAddress }),
-             base44.asServiceRole.entities.Transmission.filter({ author_address: ethAddress })
-        ]);
+
+        // Parallel fetch with error handling
+        let identities = [], transmissions = [];
+        try {
+            [identities, transmissions] = await Promise.all([
+                 base44.asServiceRole.entities.Identity.filter({ address: ethAddress }),
+                 base44.asServiceRole.entities.Transmission.filter({ author_address: ethAddress })
+            ]);
+        } catch (e) {
+            console.error("Failed to fetch entity data", e);
+            // Continue with defaults
+        }
+
         const identity = identities[0];
-        
+
         // 3. Generate AI Image
         const bio = identity?.bio || "A mysterious node in the Etherene network";
         const signals = transmissions.map(t => t.content).join(' ').slice(0, 100);
-        
+
         const prompt = `
         Abstract spiritual digital art, sacred geometry, ethereal glowing lines, blockchain nodes connecting in the void.
         Theme: ${bio}. 
@@ -82,8 +104,18 @@ Deno.serve(async (req) => {
         `;
 
         // Start Image Gen
-        const imageRes = await base44.asServiceRole.integrations.Core.GenerateImage({ prompt });
-        if (!imageRes.url) throw new Error("Failed to generate image");
+        let imageRes;
+        try {
+            imageRes = await base44.asServiceRole.integrations.Core.GenerateImage({ prompt });
+        } catch (e) {
+             console.error("Image generation failed", e);
+             // Fallback image
+             imageRes = { url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" };
+        }
+
+        if (!imageRes?.url) {
+             imageRes = { url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" };
+        }
 
         // 4. Upload Metadata
         const metadataJson = {
@@ -98,23 +130,12 @@ Deno.serve(async (req) => {
             ]
         };
 
-        // Create a temporary file and upload it to get a URL for the metadata
-        // Since we can't easily "upload string" in one go without a file object in some SDKs, 
-        // We will just use a data URI for the metadata URI in the NFT if it's short, OR
-        // simpler: Use the image URL as the URI for now (Not standard but works for demo), 
-        // OR better: Just return the image URL and let the frontend use it.
-        // For a real NFT, we need a hosted JSON.
-        // Let's use the Image URL as the 'uri' for now to save complexity of JSON hosting in this script,
-        // or try to upload the JSON.
-        // Actually, the 'UploadFile' integration usually takes a file object/string.
-        // Let's Skip JSON hosting for this specific turn to ensure reliability of the TRANSACTION first.
-        // We will point URI to the Image URL (some explorers display the image if URI is image).
         const metadataUri = imageRes.url; 
 
         // 5. Setup Transaction
         const connection = new Connection("https://api.devnet.solana.com", "confirmed");
         const mintKeypair = Keypair.generate();
-        const userPublicKey = new PublicKey(userAddress);
+        // userPublicKey is already defined above
 
         // Calculate Price ($3 platform fee)
         let lamportsForFee = 20_000_000; // ~0.02 SOL default
