@@ -124,7 +124,6 @@ export default function Layout({ children, currentPageName }) {
     ];
 
   return (
-    <Web3Context.Provider value={{ account, chainId, connectWallet, isConnecting, error }}>
       <Web3Context.Provider value={{ account, connectWallet, disconnectWallet, isConnecting, error }}>
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
         <Toaster position="top-center" richColors />
