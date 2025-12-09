@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         
         // Parse Body
         const body = await req.json();
-        let { userAddress, userEthereneAddress } = body;
+        let { userAddress, soulHash } = body;
         console.log("Mint request payload:", JSON.stringify(body));
 
         // Strict Validation
@@ -85,7 +85,8 @@ Deno.serve(async (req) => {
         }
 
         // 2. Fetch User Context for AI & Settings
-        const ethAddress = userEthereneAddress || userAddress; // Fallback
+        // Use userAddress directly as the identity key
+        const ethAddress = userAddress; 
 
         // Parallel fetch with error handling
         let identities = [], transmissions = [], settingsList = [];
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
         }
 
         // 3. Generate AI Image
-        const bio = identity?.bio || "A mysterious node in the Etherene network";
+        const bio = identity?.bio || `A mysterious node in the Etherene network: ${ethAddress.slice(0, 6)}...`;
         const signals = transmissions.map(t => t.content).join(' ').slice(0, 100);
 
         const prompt = `

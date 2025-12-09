@@ -9,7 +9,7 @@ if (typeof window !== 'undefined') {
     window.Buffer = Buffer;
 }
 import { useWeb3 } from '../Layout';
-import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
+
 import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
@@ -222,14 +222,9 @@ export default function Profile() {
       // 2. Decode and Sign with Phantom
       const { Transaction, Connection } = await import('@solana/web3.js');
 
-      // Decode base64 to Uint8Array without Buffer dependency
-      const binaryString = atob(data.transaction);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const transaction = Transaction.from(bytes);
+      // Decode base64 to Uint8Array using Buffer
+      const transactionBuffer = Buffer.from(data.transaction, 'base64');
+      const transaction = Transaction.from(transactionBuffer);
 
       // Phantom specific signing
       const { solana } = window;
@@ -255,28 +250,18 @@ export default function Profile() {
            avatar_url: data.imageUrl, // Save the AI generated image
            cover_image: data.imageUrl // Optional: use as cover too or just avatar
       });
-      
+
       window.open(`https://explorer.solana.com/tx/${signature}?cluster=devnet`, '_blank');
       window.location.reload();
 
-    } catch (err) {
+      } catch (err) {
       console.error("Mint failed:", err);
       const msg = err.response?.data?.error || err.message || "Unknown error";
       toast.error(`Minting failed: ${msg}`, { duration: 8000 });
-    } finally {
+      } finally {
       setIsMinting(false);
-    }
-  };
-
-  const switchNetwork = async (targetChainId) => {
-      // Implementation kept simple for brevity
-      try {
-          await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: "0x" + targetChainId.toString(16) }],
-          });
-      } catch (e) { console.error(e); }
-  };
+      }
+      };
 
   const handleFollow = async () => {
       if (!account) return;
@@ -402,84 +387,64 @@ export default function Profile() {
 
           {/* Actions */}
           <div className="flex gap-3">
-              {!isOwner && viewAddress && (
-                  <>
-                    <button 
-                        onClick={handleFollow}
-                        className={`px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg ${
-                            isFollowing 
-                            ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50' 
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
-                        }`}
-                    >
-                        {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                        {isFollowing ? 'Unfollow' : 'Follow'}
-                    </button>
-                    <Link 
-                        to={`${createPageUrl('Profile')}?tab=messages&to=${viewAddress}`}
-                        className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2"
-                    >
-                        <MessageSquare className="w-4 h-4" /> Message
-                    </Link>
-                  </>
-              )}
-              {isOwner && (
-                  <>
-                    {isEditing ? (
-                        <div className="flex gap-2">
-                             <button onClick={saveProfile} className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
-                                <Save className="w-4 h-4" /> Save
-                             </button>
-                             <button onClick={() => setIsEditing(false)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
-                                <X className="w-4 h-4" /> Cancel
-                             </button>
-                        </div>
-                    ) : (
-                        <button onClick={startEditing} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
-                            <PenTool className="w-4 h-4" /> Edit Profile
-                        </button>
-                    )}
-                    {!profileData && (
-                        <div className="flex flex-col gap-4 items-center w-full max-w-xs">
-                            {solanaAddress ? (
-                                <div className="flex items-center gap-3 bg-purple-50 text-purple-900 px-5 py-2.5 rounded-full border border-purple-100 shadow-sm w-full justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-                                        <span className="font-mono font-medium text-sm">{solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}</span>
-                                    </div>
-                                    <button 
-                                        onClick={disconnectSolana}
-                                        className="p-1.5 hover:bg-purple-200 rounded-full text-purple-600 transition-colors"
-                                        title="Disconnect"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button onClick={() => connectSolana()} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
-                                    <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 
-                                    Connect Phantom
-                                </button>
-                            )}
-
+            {!isOwner && viewAddress && (
+                <>
+                  <button 
+                      onClick={handleFollow}
+                      className={`px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg ${
+                          isFollowing 
+                          ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50' 
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                      }`}
+                  >
+                      {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                      {isFollowing ? 'Unfollow' : 'Follow'}
+                  </button>
+                  <Link 
+                      to={`${createPageUrl('Profile')}?tab=messages&to=${viewAddress}`}
+                      className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2"
+                  >
+                      <MessageSquare className="w-4 h-4" /> Message
+                  </Link>
+                </>
+            )}
+            {isOwner && (
+                <>
+                  {isEditing ? (
+                      <div className="flex gap-2">
+                           <button onClick={saveProfile} className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                              <Save className="w-4 h-4" /> Save
+                           </button>
+                           <button onClick={() => setIsEditing(false)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+                              <X className="w-4 h-4" /> Cancel
+                           </button>
+                      </div>
+                  ) : (
+                      <button onClick={startEditing} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+                          <PenTool className="w-4 h-4" /> Edit Profile
+                      </button>
+                  )}
+                  {!profileData && (
+                      <div className="flex flex-col gap-4 items-center w-full max-w-xs">
+                          {account ? (
                             <button 
                                 onClick={handleMint} 
-                                disabled={isMinting || !solanaAddress} 
+                                disabled={isMinting} 
                                 className="w-full px-6 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isMinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
                                 {isMinting ? "Minting Identity..." : "Mint Identity NFT"}
                             </button>
-                            
-                            {!solanaAddress && (
-                                <p className="text-xs text-slate-400 text-center">
-                                    You must connect a Solana wallet to mint your identity.
-                                </p>
-                            )}
-                        </div>
-                    )}
-                  </>
-              )}
+                          ) : (
+                            <button onClick={connectWallet} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
+                                <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 
+                                Connect Phantom
+                            </button>
+                          )}
+                      </div>
+                  )}
+                </>
+            )}
           </div>
       </div>
 

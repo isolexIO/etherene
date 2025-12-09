@@ -5,11 +5,11 @@ import { Wallet, Menu, X, Hexagon, Sparkles } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { createPageUrl } from './components/utils';
 
-// Web3 Context
+// Web3 Context (Solana)
 const Web3Context = createContext({
   account: null,
-  chainId: null,
   connectWallet: async () => {},
+  disconnectWallet: async () => {},
   isConnecting: false,
   error: null
 });
@@ -18,6 +18,10 @@ export const useWeb3 = () => useContext(Web3Context);
 
 export default function Layout({ children, currentPageName }) {
   const [account, setAccount] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
 
   // Heartbeat for online status
   useEffect(() => {
@@ -48,30 +52,27 @@ export default function Layout({ children, currentPageName }) {
       const interval = setInterval(updateHeartbeat, 60000); // Check every minute
       return () => clearInterval(interval);
   }, [account]);
-  const [chainId, setChainId] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
 
   const connectWallet = async () => {
     setIsConnecting(true);
     setError(null);
     try {
-      if (typeof window.ethereum !== 'undefined') {
-        const { ethers } = await import('ethers');
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_requestAccounts", []);
-        const network = await provider.getNetwork();
-        
-        setAccount(accounts[0]);
-        setChainId(Number(network.chainId));
-
-        // Listen for changes
-        window.ethereum.on('accountsChanged', (accs) => setAccount(accs[0] || null));
-        window.ethereum.on('chainChanged', () => window.location.reload());
+      const { solana } = window;
+      if (solana && solana.isPhantom) {
+        const response = await solana.connect();
+        setAccount(response.publicKey.toString());
+        // Listen for disconnect
+        solana.on('disconnect', () => setAccount(null));
+        solana.on('accountChanged', (publicKey) => {
+            if (publicKey) {
+                setAccount(publicKey.toString());
+            } else {
+                setAccount(null);
+            }
+        });
       } else {
-        setError("Please install MetaMask or another EVM wallet.");
+        setError("Please install Phantom Wallet or a compatible Solana wallet.");
+        window.open("https://phantom.app/", "_blank");
       }
     } catch (err) {
       console.error(err);
@@ -81,25 +82,33 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
-  useEffect(() => {
-    // Check if already connected
-    const checkConnection = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const { ethers } = await import('ethers');
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const accounts = await provider.listAccounts();
-          if (accounts.length > 0) {
-              setAccount(accounts[0].address);
-              const network = await provider.getNetwork();
-              setChainId(Number(network.chainId));
+  const disconnectWallet = async () => {
+      try {
+          const { solana } = window;
+          if (solana) {
+              await solana.disconnect();
+              setAccount(null);
           }
+      } catch (err) {
+          console.error(err);
+      }
+  };
+
+  useEffect(() => {
+    // Check if already connected (eagerly)
+    const checkConnection = async () => {
+      const { solana } = window;
+      if (solana && solana.isPhantom) {
+        try {
+          const response = await solana.connect({ onlyIfTrusted: true });
+          setAccount(response.publicKey.toString());
         } catch (error) {
-          console.error("Failed to check connection:", error);
+          // User not connected yet, ignore
         }
       }
     };
-    checkConnection();
+    // Small delay to allow injection
+    setTimeout(checkConnection, 500);
   }, []);
 
   const navItems = [
@@ -116,9 +125,10 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <Web3Context.Provider value={{ account, chainId, connectWallet, isConnecting, error }}>
+      <Web3Context.Provider value={{ account, connectWallet, disconnectWallet, isConnecting, error }}>
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
         <Toaster position="top-center" richColors />
-        
+
         {/* Sacred Geometry Background */}
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/20 blur-[100px]" />
