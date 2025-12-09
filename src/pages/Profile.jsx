@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useWeb3 } from '../Layout';
 import { ETHERENE_NFT_ABI, CONTRACT_ADDRESSES } from '../components/ethereneAbi';
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
 import moment from 'moment';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const { account, chainId, connectWallet } = useWeb3();
@@ -27,6 +28,37 @@ export default function Profile() {
   const [profileData, setProfileData] = useState(null);
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ display_name: '', bio: '' });
+  
+  // Tabs State
+  const [activeTab, setActiveTab] = useState('all');
+
+  const startEditing = () => {
+    if (!profileData) return;
+    setEditForm({
+      display_name: profileData.display_name || '',
+      bio: profileData.bio || ''
+    });
+    setIsEditing(true);
+  };
+
+  const saveProfile = async () => {
+    try {
+      await base44.entities.Identity.update(profileData.id, {
+        display_name: editForm.display_name,
+        bio: editForm.bio
+      });
+      setProfileData({ ...profileData, ...editForm });
+      setIsEditing(false);
+      toast.success("Profile updated successfully");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update profile");
+    }
+  };
 
   // Load Data
   useEffect(() => {
@@ -221,16 +253,42 @@ export default function Profile() {
              )}
           </div>
 
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-              {profileData?.display_name || 'Anonymous Node'}
-          </h1>
-          <div className="flex items-center gap-2 text-slate-500 font-mono text-sm bg-slate-100 px-3 py-1 rounded-full mb-4">
-              <Hash className="w-3 h-3" />
-              {viewAddress.slice(0,6)}...{viewAddress.slice(-4)}
-          </div>
+          {isEditing ? (
+              <div className="w-full max-w-md mx-auto mb-6 space-y-4">
+                  <input
+                      type="text"
+                      value={editForm.display_name}
+                      onChange={(e) => setEditForm({...editForm, display_name: e.target.value})}
+                      className="w-full text-center text-3xl font-bold text-slate-900 border-b-2 border-indigo-200 focus:border-indigo-600 outline-none bg-transparent placeholder:text-slate-300"
+                      placeholder="Display Name"
+                  />
+                  <div className="flex justify-center mb-2">
+                       <div className="flex items-center gap-2 text-slate-500 font-mono text-sm bg-slate-100 px-3 py-1 rounded-full">
+                          <Hash className="w-3 h-3" />
+                          {viewAddress.slice(0,6)}...{viewAddress.slice(-4)}
+                      </div>
+                  </div>
+                  <textarea
+                      value={editForm.bio}
+                      onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                      className="w-full text-center text-slate-600 border rounded-lg p-3 focus:ring-2 focus:ring-indigo-100 outline-none resize-none h-24"
+                      placeholder="Tell us about your journey..."
+                  />
+              </div>
+          ) : (
+              <>
+                  <h1 className="text-3xl font-bold text-slate-900 mb-2">
+                      {profileData?.display_name || 'Anonymous Node'}
+                  </h1>
+                  <div className="flex items-center gap-2 text-slate-500 font-mono text-sm bg-slate-100 px-3 py-1 rounded-full mb-4">
+                      <Hash className="w-3 h-3" />
+                      {viewAddress.slice(0,6)}...{viewAddress.slice(-4)}
+                  </div>
 
-          {profileData?.bio && (
-              <p className="text-slate-600 max-w-lg mb-6 leading-relaxed">{profileData.bio}</p>
+                  {profileData?.bio && (
+                      <p className="text-slate-600 max-w-lg mb-6 leading-relaxed">{profileData.bio}</p>
+                  )}
+              </>
           )}
 
           {/* Socials */}
@@ -243,9 +301,20 @@ export default function Profile() {
           <div className="flex gap-3">
               {isOwner && (
                   <>
-                    <Link to={createPageUrl('CustomizeProfile')} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
-                        <Settings className="w-4 h-4" /> Customize
-                    </Link>
+                    {isEditing ? (
+                        <div className="flex gap-2">
+                             <button onClick={saveProfile} className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <Save className="w-4 h-4" /> Save
+                             </button>
+                             <button onClick={() => setIsEditing(false)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+                                <X className="w-4 h-4" /> Cancel
+                             </button>
+                        </div>
+                    ) : (
+                        <button onClick={startEditing} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+                            <PenTool className="w-4 h-4" /> Edit Profile
+                        </button>
+                    )}
                     {!profileData && (
                         <div className="flex flex-col gap-2">
                             {!solanaAddress && (
@@ -301,21 +370,51 @@ export default function Profile() {
 
         {/* Right Column: Activity Feed */}
         <div className="lg:col-span-2">
-             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                        <Hexagon className="w-5 h-5 text-indigo-600" />
-                        Network Contributions
-                    </h3>
-                    <span className="text-xs text-slate-500">{activities.length} Events</span>
+             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[500px]">
+                {/* Tabs Header */}
+                <div className="flex border-b border-slate-100">
+                    <button 
+                        onClick={() => setActiveTab('all')}
+                        className={`flex-1 py-4 text-sm font-medium transition-colors border-b-2 ${
+                            activeTab === 'all' 
+                                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        All Activity
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('created')}
+                        className={`flex-1 py-4 text-sm font-medium transition-colors border-b-2 ${
+                            activeTab === 'created' 
+                                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        Transmissions
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('participated')}
+                        className={`flex-1 py-4 text-sm font-medium transition-colors border-b-2 ${
+                            activeTab === 'participated' 
+                                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        Resonances
+                    </button>
                 </div>
+
+                {/* Feed Content */}
                 <div className="divide-y divide-slate-100">
-                    {activities.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500">
-                            No recent network activity.
-                        </div>
-                    ) : (
-                        activities.map((item, i) => (
+                    {activities
+                        .filter(item => {
+                            if (activeTab === 'all') return true;
+                            if (activeTab === 'created') return item.type === 'transmission';
+                            if (activeTab === 'participated') return item.type === 'resonance';
+                            return true;
+                        })
+                        .map((item, i) => (
                             <div key={i} className="p-6 flex gap-4 hover:bg-slate-50 transition-colors">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                                     item.type === 'transmission' ? 'bg-purple-100 text-purple-600' :
@@ -338,7 +437,7 @@ export default function Profile() {
                                         </p>
                                         <span className="text-xs text-slate-400">{moment(item.date).fromNow()}</span>
                                     </div>
-                                    <p className="text-slate-600 text-sm">
+                                    <p className="text-slate-600 text-sm whitespace-pre-wrap">
                                         {item.type === 'transmission' && item.content}
                                         {item.type === 'oracle' && (item.topic ? `Topic: ${item.topic}` : 'Deep protocol meditation')}
                                         {item.type === 'mint' && `Soul Hash: ${item.soul_hash?.slice(0,10)}...`}
@@ -346,7 +445,17 @@ export default function Profile() {
                                     </p>
                                 </div>
                             </div>
-                        ))
+                        ))}
+                    
+                    {activities.filter(item => {
+                        if (activeTab === 'all') return true;
+                        if (activeTab === 'created') return item.type === 'transmission';
+                        if (activeTab === 'participated') return item.type === 'resonance';
+                        return true;
+                    }).length === 0 && (
+                        <div className="p-12 text-center text-slate-500">
+                            No activity found in this frequency.
+                        </div>
                     )}
                 </div>
              </div>
