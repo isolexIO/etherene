@@ -15,17 +15,17 @@ const seededRandom = (seed) => {
   }
 };
 
-export default function IdentityAvatar({ address, soulHash, size = 200, chainId }) {
+export default function IdentityAvatar({ address, soulHash, size = 200 }) {
   const seed = (address || '') + (soulHash || '');
   
   const { layers, colors, glowColor, coreType } = useMemo(() => {
     const rng = seededRandom(seed);
     
-    // Theme Colors based on chain but with Etherene aesthetic (Indigo/Purple/Gold/Cyan)
-    const baseHue = chainId === 137 ? 270 : (chainId === 8453 ? 210 : 240); // Purple for Poly, Blue for Base, Indigo for ETH
+    // Solana Theme (Green/Purple/Blue)
+    const baseHue = 270; // Purple base for Solana/Etherene
     const primaryColor = `hsl(${baseHue}, 80%, 60%)`;
-    const secondaryColor = `hsl(${(baseHue + 180) % 360}, 70%, 50%)`;
-    const accentColor = `hsl(${(baseHue + 60) % 360}, 90%, 70%)`;
+    const secondaryColor = `hsl(150, 90%, 45%)`; // Solana Green
+    const accentColor = `hsl(190, 90%, 60%)`; // Cyan
     const glowColor = `hsla(${baseHue}, 100%, 70%, 0.6)`;
     
     const palette = [primaryColor, secondaryColor, accentColor, '#ffffff'];

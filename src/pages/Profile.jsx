@@ -331,7 +331,7 @@ export default function Profile() {
                 {profileData?.avatar_url ? (
                     <img src={profileData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                    <IdentityAvatar address={viewAddress} soulHash={profileData?.soul_hash} size={160} chainId={1} />
+                    <IdentityAvatar address={viewAddress} soulHash={profileData?.soul_hash} size={160} />
                 )}
              </div>
              {profileData && (

@@ -8,7 +8,7 @@ import { base44 } from '@/api/base44Client';
 import { useWeb3 } from '../../Layout';
 
 export default function NFTGate({ children, fallback }) {
-  const { account } = useWeb3();
+  const { account, connectWallet } = useWeb3();
 
   const { data: identity, isLoading } = useQuery({
     queryKey: ['identity', account],
@@ -30,11 +30,14 @@ export default function NFTGate({ children, fallback }) {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Community Access Restricted</h3>
                 <p className="text-slate-300 mb-6 max-w-md mx-auto">
-                    Connect your wallet to access the Etherene community features.
+                    Connect your Solana wallet to access the Etherene community features.
                 </p>
-                {/* Wallet connect is handled in layout usually, but we can't trigger it easily from here without context. 
-                    The user will likely see the connect button in navbar. */}
-                <div className="text-sm text-indigo-300 font-mono">Wallet Connection Required</div>
+                <button 
+                    onClick={connectWallet}
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-medium transition-colors"
+                >
+                    Connect Wallet
+                </button>
             </div>
         </div>
       );
