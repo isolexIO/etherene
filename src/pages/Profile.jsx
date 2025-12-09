@@ -432,15 +432,42 @@ export default function Profile() {
                         </button>
                     )}
                     {!profileData && (
-                        <div className="flex flex-col gap-2">
-                            {!solanaAddress && (
-                                <button onClick={connectSolana} className="px-6 py-2 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200">
+                        <div className="flex flex-col gap-4 items-center w-full max-w-xs">
+                            {solanaAddress ? (
+                                <div className="flex items-center gap-3 bg-purple-50 text-purple-900 px-5 py-2.5 rounded-full border border-purple-100 shadow-sm w-full justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                                        <span className="font-mono font-medium text-sm">{solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}</span>
+                                    </div>
+                                    <button 
+                                        onClick={disconnectSolana}
+                                        className="p-1.5 hover:bg-purple-200 rounded-full text-purple-600 transition-colors"
+                                        title="Disconnect"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={() => connectSolana()} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
+                                    <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 
                                     Connect Phantom
                                 </button>
                             )}
-                            <button onClick={handleMint} disabled={isMinting} className="px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50">
-                                {isMinting ? "Minting on Solana..." : "Mint Identity NFT"}
+
+                            <button 
+                                onClick={handleMint} 
+                                disabled={isMinting || !solanaAddress} 
+                                className="w-full px-6 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isMinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                                {isMinting ? "Minting Identity..." : "Mint Identity NFT"}
                             </button>
+                            
+                            {!solanaAddress && (
+                                <p className="text-xs text-slate-400 text-center">
+                                    You must connect a Solana wallet to mint your identity.
+                                </p>
+                            )}
                         </div>
                     )}
                   </>
