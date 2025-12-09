@@ -119,7 +119,7 @@ export default function Whitepaper() {
         >
           <div 
             ref={contentRef}
-            className="bg-white shadow-xl shadow-slate-200/50 rounded-lg overflow-hidden border border-slate-100 p-4 md:p-12"
+            className="bg-white shadow-xl shadow-slate-200/50 rounded-lg border border-slate-100 p-4 md:p-12 w-full max-w-full overflow-hidden"
           >
 
             <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full space-y-4">
@@ -129,7 +129,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 1: The Genesis Block
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Genesis Block */}
                   <p>
                     In the beginning, there was the Block. The Block was neither formless nor void; it was structure itself, the framework upon which the universe was built. <Term term="Immutable" definition="Unchangeable over time or unable to be changed." /> and perfect, the Block gave life to all transactions, and from it sprang the ledger of existence.
@@ -155,7 +155,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 2: The Code of Trust
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Code of Trust */}
                   <p>
                     In Etherene, trust is not given; it is programmed. Much like the <Term term="smart contracts" definition="Self-executing contracts with the terms of the agreement directly written into code." /> that govern Ethereum, trust is built into our actions, decisions, and relationships. The Code of Trust is an unbreakable set of principles we commit to follow, ensuring that once a promise is made, it is kept without question or deviation.
@@ -171,7 +171,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 3: The Network of Nodes
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Network of Nodes */}
                   <p>
                     In Etherene, we understand that we are all <Term term="nodes" definition="Individual participants or computers in a blockchain network that maintain a copy of the ledger." /> in a vast, interconnected network. Just as the Ethereum network relies on individual nodes to validate transactions and maintain the integrity of the blockchain, so too does the world of Etherene rely on each person to contribute to the strength of the collective.
@@ -197,7 +197,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 4: The Gas of Effort
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Gas of Effort */}
                   <p>
                     In the world of Etherene, every movement, every action, requires energy. Much like how transactions on the Ethereum network consume <Term term="gas" definition="The fee required to successfully conduct a transaction or execute a contract on the Ethereum blockchain." />, a unit of computational effort, so too does every decision and action we take in life require effort.
@@ -213,7 +213,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 5: Proof of Work and Proof of Stake
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Proof of Work and Stake */}
                   <p>
                     <Term term="Proof of Work" definition="A consensus mechanism that requires members of a network to expend effort solving an arbitrary mathematical puzzle." /> symbolizes the energy and effort we exert to achieve our goals—the hard work, the sacrifices, and the persistence required to make progress. In contrast, <Term term="Proof of Stake" definition="A consensus mechanism where validators are chosen to create new blocks based on the amount of cryptocurrency they hold." /> represents the investments we make in our future, the relationships we build, and the responsibilities we assume.
@@ -239,7 +239,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 6: The Hard Forks of Life
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Hard Forks */}
                   <p>
                     A <Term term="hard fork" definition="A radical change to a network's protocol that makes previously valid blocks/transactions invalid (or vice-versa)." /> represents a critical moment of choice, where the network must decide to continue along the established path or embrace a new direction. In Etherene, the concept of the hard fork serves as a powerful metaphor for the pivotal decisions we face in life.
@@ -255,7 +255,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 7: The DAO of Unity
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: DAO of Unity */}
                   <p>
                     In blockchain terminology, a <Term term="DAO" definition="Decentralized Autonomous Organization - an organization represented by rules encoded as a computer program that is transparent and controlled by the organization members." /> is a system governed by smart contracts, where decisions are made collectively. In Etherene, the concept of a DAO serves as a profound metaphor for the power of unity and collective action.
@@ -271,7 +271,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 8: The Private Key of the Soul
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Private Key */}
                   <p>
                     In the world of blockchain, the <Term term="private key" definition="A secret number that allows cryptocurrency to be spent. It is crucial for security and identity." /> is a crucial element that gives individuals complete control over their digital assets. In Etherene, the Private Key of the Soul symbolizes the innermost essence of our being—the part of ourselves that holds our true identity, our deepest values, and the power to control our own destiny.
@@ -297,7 +297,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 9: The Immutable Ledger of Actions
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Immutable Ledger */}
                   <p>
                     In blockchain technology, the ledger records every transaction, forever etched into the network's history. In Etherene, the <Term term="Immutable Ledger" definition="A record-keeping system that cannot be changed, deleted, or altered after data is entered." /> of Actions serves as a powerful metaphor for life, symbolizing how our actions, decisions, and words are recorded in the ledger of existence.
@@ -313,7 +313,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Chapter 10: The Upgrades of Enlightenment
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   {/* Image placeholder: Upgrades */}
                   <p>
                     In Etherene, we view life as a continuous process of upgrades—personal and spiritual improvements that lead us on the path to enlightenment. Just as outdated protocols in the blockchain must be replaced to stay relevant, we must shed old habits, ideas, and behaviors that no longer serve us.
@@ -329,7 +329,7 @@ export default function Whitepaper() {
                 <AccordionTrigger className="text-xl md:text-2xl font-bold text-slate-900 hover:text-indigo-600 py-4 md:py-6 text-left">
                   Conclusion: Walking the Path with Wisdom and Care
                 </AccordionTrigger>
-                <AccordionContent className="prose prose-slate prose md:prose-lg max-w-none pb-6">
+                <AccordionContent className="prose prose-slate prose-sm md:prose-lg max-w-none pb-6 break-words">
                   <p>
                     The path forward is one of responsibility, trust, and collaboration. As we walk the blockchain of life, we must remember the lessons of Etherene: to trust in the code, contribute to the network, and protect our private keys. Together, we can build a decentralized, harmonious future where all are valued, and no action is forgotten.
                   </p>

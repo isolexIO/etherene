@@ -33,7 +33,7 @@ export default function Quiz({ question, options, correctIndex }) {
             <Button
               key={idx}
               variant="outline"
-              className={`w-full justify-start text-left h-auto py-4 px-4 relative transition-all ${
+              className={`w-full justify-start text-left h-auto py-4 px-4 relative transition-all whitespace-normal ${
                 selected === idx
                   ? isCorrect
                     ? "bg-green-50 border-green-200 text-green-900 hover:bg-green-50 ring-1 ring-green-500"
