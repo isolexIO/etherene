@@ -81,11 +81,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Identity suspended.' }, { status: 403 });
         }
 
-        // 3. Generate Subdomain Name
-        // Generate a random 8-char string for the subdomain to ensure uniqueness
+        // 3. Generate Identity Name (Standalone)
+        // We use a standalone name to avoid dependency on a parent domain existing on Devnet
         const randomSuffix = Math.random().toString(36).substring(2, 10);
-        const subdomain = `node-${randomSuffix}`;
-        const fullDomain = `${subdomain}.etherene`; // Assuming .sol is implicit or handled by logic
+        const subdomain = `etherene-node-${randomSuffix}`; // This is now the full name
+        // const fullDomain = `${subdomain}`;
 
         // 4. Generate AI Image (Avatar)
         const bio = identities[0]?.bio || `Etherene Node ${subdomain}`;
@@ -119,42 +119,44 @@ Deno.serve(async (req) => {
             })
         );
 
-        // B. SNS Subdomain Minting
-        // Parent: etherene.sol
-        // We need to derive the parent account key.
-        // TLD for .sol is '58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11' (Mainnet) or similar.
-        // On Devnet, it might be different or we use a custom parent.
-        // Assuming standard SNS on Mainnet/Devnet:
-        // Note: 'etherene' is the parent name.
+        // B. SNS Name Minting (Root Name)
+        // We mint a root name directly to ensure success without parent domain setup
         
-        const parentDomain = "etherene";
-        const { pubkey: parentNameKey } = await getDomainKey(parentDomain);
-        
-        // Instruction to create subdomain
-        // The space required for the name registry
-        const space = 1000; // ample space for data
+        // Instruction to create name
+        const space = 1000;
         const lamports = await connection.getMinimumBalanceForRentExemption(space);
 
-        const createSubdomainIx = await createNameRegistry(
+        const createNameIx = await createNameRegistry(
             connection,
             subdomain,
             space,
             userPublicKey, // Payer
-            userPublicKey, // Owner of the new subdomain
+            userPublicKey, // Owner
             lamports,
             new PublicKey("11111111111111111111111111111111"), // Class (None)
-            parentNameKey // Parent name account
+            undefined // No parent
         );
 
-        // Important: The serverKeypair must sign this because it owns 'etherene'
-        transaction.add(createSubdomainIx);
+        transaction.add(createNameIx);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
         transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-        // Partial Sign by Server (Authority of parent domain)
-        transaction.partialSign(serverKeypair);
+        // Server only signs if it's the fee receiver (it is) or parent owner (it isn't here)
+        // But since we are transferring TO the server, the server doesn't strictly need to sign the transfer.
+        // HOWEVER: If we used the server as the payer for rent, it would need to sign.
+        // Here user pays rent. 
+        // We included serverKeypair in the previous logic for parent auth. 
+        // Now it's not needed for the instruction, BUT we can keep it as a cosigner if we want to enforce server authority later.
+        // For now, removing the partialSign requirement if it's not a signer in any instruction avoids errors.
+        
+        // Check if serverKeypair is actually required as a signer in any instruction
+        // 1. Transfer: user -> server (server is not signer)
+        // 2. CreateRegistry: user pays (server is not signer, no parent)
+        
+        // So we DON'T need server signature on the transaction itself anymore.
+        // transaction.partialSign(serverKeypair);
 
         const serializedTransaction = transaction.serialize({
             requireAllSignatures: false,
@@ -164,7 +166,7 @@ Deno.serve(async (req) => {
         return Response.json({ 
             success: true, 
             transaction: Buffer.from(serializedTransaction).toString('base64'),
-            subdomain: `${subdomain}.etherene.sol`,
+            subdomain: `${subdomain}.sol`,
             imageUrl: imageRes.url
         });
 
