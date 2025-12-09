@@ -17,8 +17,7 @@ import {
 } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   getDomainKey, 
-  createNameRegistry,
-  Numberu64
+  createNameRegistry
 } from 'npm:@bonfida/spl-name-service@^2.3.1';
 import bs58 from 'npm:bs58@5.0.0';
 
@@ -44,11 +43,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: `Invalid public key: ${userAddress}` }, { status: 400 });
         }
 
-        // 1. Load Server Key (Parent Domain Owner & Fee Receiver)
+        // 1. Load Server Key
+        console.log("Loading server key...");
         const privateKeyString = Deno.env.get("SOLANA_PAYER_PRIVATE_KEY");
-        if (!privateKeyString) {
-            return Response.json({ error: 'Server Missing Payer Key' }, { status: 500 });
-        }
+        if (!privateKeyString) throw new Error("Missing SOLANA_PAYER_PRIVATE_KEY");
         
         let serverKeypair;
         try {
@@ -57,8 +55,7 @@ Deno.serve(async (req) => {
                 : bs58.decode(privateKeyString.trim());
             serverKeypair = Keypair.fromSecretKey(secretKey);
         } catch (e) {
-            console.error("Key parse failed", e);
-            return Response.json({ error: 'Server Configuration Error' }, { status: 500 });
+            throw new Error(`Key parse failed: ${e.message}`);
         }
 
         // 2. Fetch User Context for AI
@@ -120,12 +117,12 @@ Deno.serve(async (req) => {
         );
 
         // B. SNS Subdomain Minting
-        // Parent: etherene.sol
-        // We must derive the key relative to the .sol TLD
+        console.log("Deriving parent key...");
         const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
         const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
-        
-        // Instruction to create subdomain
+        console.log("Parent key derived:", parentNameKey.toBase58());
+
+        console.log("Creating registry instruction...");
         const space = 1000; 
         const lamports = await connection.getMinimumBalanceForRentExemption(space);
 
@@ -134,12 +131,11 @@ Deno.serve(async (req) => {
             subdomain,
             space,
             userPublicKey, // Payer
-            userPublicKey, // Owner of the new subdomain
+            userPublicKey, // Owner
             lamports,
-            new PublicKey("11111111111111111111111111111111"), // Class (None)
-            parentNameKey // Parent name account
+            new PublicKey("11111111111111111111111111111111"), 
+            parentNameKey
         );
-
         transaction.add(createSubdomainIx);
 
         // 6. Finalize

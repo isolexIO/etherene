@@ -252,9 +252,14 @@ export default function Profile() {
       window.location.reload();
 
       } catch (err) {
-      console.error("Mint failed:", err);
-      const msg = err.response?.data?.error || err.message || "Unknown error";
-      toast.error(`Minting failed: ${msg}`, { duration: 8000 });
+      console.error("Mint failed detailed:", err);
+      let msg = "Unknown error";
+      if (err.response?.data?.error) {
+          msg = err.response.data.error;
+      } else if (err.message) {
+          msg = err.message;
+      }
+      toast.error(`Minting failed: ${msg}`, { duration: 10000 });
       } finally {
       setIsMinting(false);
       }
