@@ -230,7 +230,7 @@ export default function Profile() {
       const { signature } = await solana.signAndSendTransaction(transaction);
 
       // 3. Wait for Confirmation
-      const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
       const confirmation = await connection.confirmTransaction(signature, "confirmed");
 
       if (confirmation.value.err) {
@@ -241,14 +241,14 @@ export default function Profile() {
       await base44.entities.Identity.create({
            address: account, 
            subdomain: data.subdomain,
-           network: 'Solana Devnet',
+           network: 'Solana Mainnet',
            status: 'minted',
            bio: `Solana Identity: ${data.subdomain}`,
            avatar_url: data.imageUrl,
            cover_image: data.imageUrl
       });
 
-      window.open(`https://explorer.solana.com/tx/${signature}?cluster=devnet`, '_blank');
+      window.open(`https://explorer.solana.com/tx/${signature}`, '_blank');
       window.location.reload();
 
       } catch (err) {
