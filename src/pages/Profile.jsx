@@ -192,8 +192,39 @@ export default function Profile() {
   const [showRecover, setShowRecover] = useState(false);
   const [recoverTx, setRecoverTx] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
+  const [foundOnChain, setFoundOnChain] = useState(null);
+
+  // Check on-chain identity when wallet connects
+  useEffect(() => {
+    if (!account || profileData) return;
+    
+    const checkChain = async () => {
+        try {
+            const res = await base44.functions.invoke('checkSolanaIdentity', { userAddress: account });
+            if (res.data?.found) {
+                setFoundOnChain(res.data);
+                toast.info("We found your identity on-chain! Click 'Sync Identity' to restore it.", { duration: 8000 });
+                setShowRecover(true);
+            }
+        } catch(e) { console.error(e); }
+    };
+    checkChain();
+  }, [account, profileData]);
 
   const handleRecover = async () => {
+      // If we found it on chain but don't have a TX, we can try to "Recover" by just re-creating the record
+      // This requires the backend to verify again (which recoverIdentity does via TX check)
+      // BUT if we have the address from checkSolanaIdentity, we might want a simpler "Sync" path.
+      // For now, let's guide them to use the TX hash if they have it, OR if we found the name, we can autofill.
+      
+      if (foundOnChain && foundOnChain.subdomain && !recoverTx) {
+          // If we found the name, we can just create the record directly without TX hash logic?
+          // No, safer to verify. But 'recoverIdentity' endpoint expects txHash.
+          // Let's assume the user enters the TX for now, or we enhance 'recoverIdentity' later.
+          // Or we just update the UI to prompt them.
+      }
+
+      if (!recoverTx) {
       if (!recoverTx) {
           toast.error("Please enter a transaction signature");
           return;
@@ -519,9 +550,9 @@ export default function Profile() {
                                   <div className="mt-4">
                                       <button 
                                           onClick={() => setShowRecover(!showRecover)}
-                                          className="text-xs text-slate-400 hover:text-indigo-600 underline"
+                                          className={`text-xs underline ${foundOnChain ? 'text-green-600 font-bold animate-pulse' : 'text-slate-400 hover:text-indigo-600'}`}
                                       >
-                                          Already minted? Recover Identity
+                                          {foundOnChain ? "⚠️ Found Identity On-Chain! Sync Now" : "Already minted? Recover Identity"}
                                       </button>
 
                                       {showRecover && (
@@ -530,6 +561,12 @@ export default function Profile() {
                                               animate={{ opacity: 1, height: 'auto' }}
                                               className="mt-2 bg-slate-50 p-3 rounded-lg border border-slate-200"
                                           >
+                                              {foundOnChain && (
+                                                  <div className="mb-2 text-xs text-green-700 bg-green-50 p-2 rounded">
+                                                      Found: {foundOnChain.subdomain || "Unnamed Identity"} <br/>
+                                                      <span className="opacity-70">Address: {foundOnChain.registryAddress?.slice(0,8)}...</span>
+                                                  </div>
+                                              )}
                                               <input 
                                                   type="text" 
                                                   placeholder="Paste Transaction Signature"
