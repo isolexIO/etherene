@@ -202,14 +202,15 @@ Deno.serve(async (req) => {
             const updateDataIx = updateInstruction(
                 NAME_PROGRAM_ID,
                 subdomainKey,
-                96, // Offset (Primitive number, not Object)
-                Buffer.from(subdomain), // Data
-                userPublicKey // Signer (Owner)
+                new Number(96), // Offset must be a Number object for borsh serialization in this SDK version
+                Buffer.from(subdomain), 
+                userPublicKey 
             );
             transaction.add(updateDataIx);
         } catch (updateErr) {
              console.error("Failed to create update instruction:", updateErr);
-             throw new Error("Failed to construct data update instruction");
+             // Propagate the actual error message
+             throw new Error(`Failed to construct data update instruction: ${updateErr.message}`);
         }
 
         // 6. Finalize
