@@ -57,15 +57,48 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Strategy D: If we can't find the name but the TX was successful and involves Name Service
-        // We might have to punt and ask the user, or use a placeholder.
-        // BUT, if the minting used `createNameRegistry` from the SDK with a parent, it often uses `hashed_name` if passing to the program directly.
-        // However, our `mintSolanaIdentity` code uses `createNameRegistry`.
-        // If it used the default flow, it might have used a hashed name.
-        
-        // Fallback: If we can't find the text name, we verify the user owns a name account in the TX.
-        // We can look at the account keys created.
-        
+        // Strategy D: Fetch data from the created account directly (Fallback)
+        // If we can identify the Name Registry account, we can check if the name is stored in its data.
+        if (!foundSubdomain) {
+             console.log("Strategy D: checking account data of created accounts...");
+             const accountKeys = tx.transaction.message.accountKeys;
+             const NAME_PROGRAM_STR = "namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX";
+
+             // Identify potential registry accounts: Writable, Not Signer (usually), Not System, Not Name Program
+             for (const acc of accountKeys) {
+                 const pubkeyStr = acc.pubkey.toBase58 ? acc.pubkey.toBase58() : acc.pubkey.toString();
+                 const signer = acc.signer;
+                 const writable = acc.writable;
+                 
+                 // Skip known programs and payer
+                 if (pubkeyStr === '11111111111111111111111111111111') continue;
+                 if (pubkeyStr === NAME_PROGRAM_STR) continue;
+                 if (signer) continue; // The registry itself doesn't sign usually
+                 if (!writable) continue; // Must be writable to be created
+
+                 try {
+                     const info = await connection.getAccountInfo(new PublicKey(pubkeyStr));
+                     // Check if owned by Name Service
+                     if (info && info.owner.toBase58() === NAME_PROGRAM_STR) {
+                         // Check data at offset 96 (where we store name now)
+                         if (info.data.length > 96) {
+                             const dataSlice = info.data.slice(96);
+                             // Clean up nulls
+                             const text = new TextDecoder().decode(dataSlice).replace(/\0/g, '');
+                             // Basic validation
+                             if (text && text.length > 2 && /^[a-zA-Z0-9-]+$/.test(text)) {
+                                 foundSubdomain = text;
+                                 console.log("Found subdomain in account data:", foundSubdomain);
+                                 break;
+                             }
+                         }
+                     }
+                 } catch (e) {
+                     console.log("Failed to check account:", pubkeyStr, e.message);
+                 }
+             }
+        }
+
         const NAME_PROGRAM_ID = "namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX";
         // Verify this TX actually interacted with Name Service
         const involvedNameService = tx.transaction.message.accountKeys.some(k => k.pubkey.toBase58 ? k.pubkey.toBase58() === NAME_PROGRAM_ID : k.pubkey === NAME_PROGRAM_ID);
