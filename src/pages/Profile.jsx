@@ -524,14 +524,23 @@ export default function Profile() {
                   {!profileData && (
                       <div className="flex flex-col gap-4 items-center w-full max-w-xs">
                           {account ? (
-                            <button 
-                                onClick={handleMint} 
-                                disabled={isMinting} 
-                                className="w-full px-6 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {isMinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-                                {isMinting ? "Minting Identity..." : "Mint Identity Token"}
-                            </button>
+                            <div className="w-full space-y-3">
+                                <div className="flex justify-between text-xs text-slate-500 px-4">
+                                    <span>Platform Fee</span>
+                                    <span className="font-medium">$3.00 USD</span>
+                                </div>
+                                <button 
+                                    onClick={handleMint} 
+                                    disabled={isMinting} 
+                                    className="w-full px-6 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {isMinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                                    {isMinting ? "Minting Identity..." : "Mint Identity Token"}
+                                </button>
+                                <p className="text-center text-xs text-slate-400">
+                                    + Network transaction fees (~0.0001 SOL)
+                                </p>
+                            </div>
                           ) : (
                             <button onClick={connectWallet} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
                                         <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 

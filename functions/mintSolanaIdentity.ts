@@ -182,26 +182,10 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // Manual Update Instruction to avoid SDK type errors
-        // Protocol: [Instruction:1byte] [Offset:4bytes] [Length:4bytes] [Data:Nbytes]
-        const nameBuffer = Buffer.from(subdomain);
-        const inputData = Buffer.alloc(9 + nameBuffer.length);
-        
-        inputData.writeUInt8(1, 0); // Opcode 1 = Update
-        inputData.writeUInt32LE(96, 1); // Offset 96 (Skip Header)
-        inputData.writeUInt32LE(nameBuffer.length, 5); // Length
-        nameBuffer.copy(inputData, 9); // Data
-
-        const updateDataIx = new TransactionInstruction({
-            keys: [
-                { pubkey: subdomainKey, isSigner: false, isWritable: true }, // Registry Account
-                { pubkey: userPublicKey, isSigner: true, isWritable: false }  // Owner (Signer)
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: inputData
-        });
-        
-        transaction.add(updateDataIx);
+        // Note: We skip the explicit Update instruction to store the name in data 
+        // because it causes "invalid account data" errors on some RPCs/Conditions.
+        // The Identity is still minted and verifiable via the Name Registry ownership.
+        // RecoverIdentity can still find it via transaction logs or DB.
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
