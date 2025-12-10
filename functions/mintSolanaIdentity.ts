@@ -195,8 +195,7 @@ Deno.serve(async (req) => {
         const updateDataIx = new TransactionInstruction({
             keys: [
                 { pubkey: subdomainKey, isSigner: false, isWritable: true }, // Registry Account
-                { pubkey: userPublicKey, isSigner: true, isWritable: false }, // Owner (Signer)
-                { pubkey: parentNameKey, isSigner: false, isWritable: false } // Parent (Optional but good practice if checking)
+                { pubkey: userPublicKey, isSigner: true, isWritable: false }  // Owner (Signer)
             ],
             programId: NAME_PROGRAM_ID,
             data: inputData
