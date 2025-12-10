@@ -194,6 +194,59 @@ export default function Profile() {
   const [isRecovering, setIsRecovering] = useState(false);
   const [foundOnChain, setFoundOnChain] = useState(null);
 
+  // Reclaim State
+  const [stuckAccounts, setStuckAccounts] = useState([]);
+  const [loadingStuck, setLoadingStuck] = useState(false);
+  const [closingAccount, setClosingAccount] = useState(null);
+
+  const findStuckAccounts = async () => {
+      if (!account) return;
+      setLoadingStuck(true);
+      try {
+          const res = await base44.functions.invoke('findStuckAccounts', { userAddress: account });
+          setStuckAccounts(res.data?.accounts || []);
+          if (res.data?.accounts?.length === 0) {
+              toast.info("No stuck accounts found.");
+          }
+      } catch (e) {
+          console.error(e);
+          toast.error("Failed to scan for stuck accounts");
+      } finally {
+          setLoadingStuck(false);
+      }
+  };
+
+  const closeStuck = async (accountKey) => {
+      setClosingAccount(accountKey);
+      try {
+           const res = await base44.functions.invoke('closeStuckAccount', { 
+               accountKey, 
+               userAddress: account 
+           });
+           const { transaction: txBase64 } = res.data;
+
+           // Sign and Send
+           const { Transaction, Connection } = await import('@solana/web3.js');
+           const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+           const transactionBuffer = Buffer.from(txBase64, 'base64');
+           const transaction = Transaction.from(transactionBuffer);
+
+           const { solana } = window;
+           const { signature } = await solana.signAndSendTransaction(transaction);
+
+           await connection.confirmTransaction(signature, "confirmed");
+           toast.success("Account closed and SOL reclaimed!");
+
+           // Remove from list
+           setStuckAccounts(prev => prev.filter(a => a.pubkey !== accountKey));
+      } catch (e) {
+          console.error(e);
+          toast.error("Failed to close account");
+      } finally {
+          setClosingAccount(null);
+      }
+  };
+
   // Check on-chain identity when wallet connects
   useEffect(() => {
     if (!account || profileData) return;
@@ -582,9 +635,43 @@ export default function Profile() {
                                               >
                                                   {isRecovering ? <Loader2 className="w-3 h-3 animate-spin"/> : "Sync"}
                                               </button>
-                                          </motion.div>
-                                      )}
-                                  </div>
+
+                                              <div className="mt-3 pt-3 border-t border-slate-200">
+                                                  <div className="flex justify-between items-center mb-2">
+                                                      <span className="text-[10px] uppercase text-slate-400 font-bold">Cleanup</span>
+                                                      <button 
+                                                          onClick={findStuckAccounts}
+                                                          disabled={loadingStuck}
+                                                          className="text-[10px] text-indigo-600 hover:underline"
+                                                      >
+                                                          {loadingStuck ? "Scanning..." : "Scan for stuck SOL"}
+                                                      </button>
+                                                  </div>
+                                                  {stuckAccounts.length > 0 && (
+                                                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                          {stuckAccounts.map(acc => (
+                                                              <div key={acc.pubkey} className="flex justify-between items-center bg-white p-2 rounded border border-red-100">
+                                                                  <div className="text-[10px] text-slate-500 truncate w-20" title={acc.pubkey}>
+                                                                      {acc.pubkey.slice(0,4)}...{acc.pubkey.slice(-4)}
+                                                                  </div>
+                                                                  <div className="text-[10px] text-slate-400">
+                                                                      {(acc.lamports / 1000000000).toFixed(3)} SOL
+                                                                  </div>
+                                                                  <button 
+                                                                      onClick={() => closeStuck(acc.pubkey)}
+                                                                      disabled={closingAccount === acc.pubkey}
+                                                                      className="px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-[10px] font-medium"
+                                                                  >
+                                                                      {closingAccount === acc.pubkey ? <Loader2 className="w-3 h-3 animate-spin"/> : "Reclaim"}
+                                                                  </button>
+                                                              </div>
+                                                          ))}
+                                                      </div>
+                                                  )}
+                                              </div>
+                                              </motion.div>
+                                              )}
+                                              </div>
                               </div>
                             )}
                 </>
