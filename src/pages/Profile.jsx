@@ -230,30 +230,15 @@ export default function Profile() {
 
       // Phantom specific signing
       const { solana } = window;
-      let signedTransaction;
-      try {
-          // Use signTransaction for better compatibility and debugging of partial signatures
-          signedTransaction = await solana.signTransaction(transaction);
-          console.log("Transaction signed by wallet");
-      } catch (signErr) {
-          console.error("Signing failed:", signErr);
-          throw new Error(`Wallet Signing Failed: ${signErr.message || "User rejected or wallet error"}`);
-      }
-
-      // 3. Send and Confirm
       let signature;
       try {
-          const rawTransaction = signedTransaction.serialize();
-          signature = await connection.sendRawTransaction(rawTransaction, {
-              skipPreflight: false,
-              preflightCommitment: 'confirmed'
-          });
-          console.log("Transaction sent. Signature:", signature);
-      } catch (sendErr) {
-          console.error("Send failed:", sendErr);
-          // Try to extract logs if available
-          const logs = sendErr.logs ? ` Logs: ${sendErr.logs.join('\n')}` : '';
-          throw new Error(`Broadcast Failed: ${sendErr.message}${logs}`);
+          // Use signAndSendTransaction to leverage the wallet's RPC (avoids 403 on public nodes)
+          const result = await solana.signAndSendTransaction(transaction);
+          signature = result.signature;
+          console.log("Transaction sent via wallet. Signature:", signature);
+      } catch (signErr) {
+          console.error("Signing/Sending failed:", signErr);
+          throw new Error(`Wallet Transaction Failed: ${signErr.message || "User rejected or wallet error"}`);
       }
 
       const confirmation = await connection.confirmTransaction(signature, "confirmed");
