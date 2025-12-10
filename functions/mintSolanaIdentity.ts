@@ -183,52 +183,17 @@ Deno.serve(async (req) => {
 
         // EXTRA: Store the name in the data for easy retrieval/reverse lookup simulation
         const nameBuffer = Buffer.from(subdomain);
+        
+        // Fix: Use primitive number for offset and userPublicKey as signer (since user owns the new registry)
         const updateDataIx = await updateInstruction(
             NAME_PROGRAM_ID,
             subdomainKey,
-            new Number(0), // offset
+            0, // offset
             nameBuffer,
-            parentNameKey, // parent is the authority? No, owner is authority now?
-            // Wait, who is the owner? User is the owner after createNameRegistry.
-            // But this transaction is signed by User (payer) and Server (parent owner).
-            // Initially, createNameRegistry sets owner to User.
-            // So User must sign the update. User IS signing the transaction.
-            // But updateInstruction checks if signer is owner.
-            // We need to verify `updateInstruction` signature.
-            // It usually takes (programId, nameAccountKey, offset, input_data, parent_owner_key_if_needed??)
-            // Actually `updateInstruction` in spl-name-service v2 signatures:
-            // (programId, nameAccountKey, offset, input_data, nameUpdateSigner, parentNameKey?)
-            // If the account has no class, the owner can update.
+            userPublicKey
         );
         
-        // Manual construction of update instruction to be safe, or use `updateInstruction` if reliable.
-        // Let's rely on standard data write if we can.
-        // Simplified: Just creating it with space is enough for now, 
-        // we can add the update instruction if we can construct it properly.
-        // If we skip this, `checkSolanaIdentity` won't find the name string, but will find the account.
-        
-        // Let's add the instruction to write the name.
-        // Re-implementing update manually to avoid import issues or signature mismatches
-        // Name Service Update Instruction: 1 (Update) + 4 (offset) + 4 (len) + data
-        const data = Buffer.alloc(4 + 4 + nameBuffer.length);
-        data.writeUInt8(1, 0); // Instruction: Update
-        data.writeUInt32LE(0, 1); // Offset
-        data.writeUInt32LE(nameBuffer.length, 5); // Length
-        nameBuffer.copy(data, 9);
-
-        const updateIx = {
-            keys: [
-                { pubkey: subdomainKey, isSigner: false, isWritable: true },
-                { pubkey: userPublicKey, isSigner: true, isWritable: false }, // Owner signer
-                { pubkey: parentNameKey, isSigner: false, isWritable: false } // Parent (sometimes needed for checking)
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: data
-        };
-        // transaction.add(new TransactionInstruction(updateIx)); 
-        // We'll skip the update in this iteration to reduce complexity and potential failure points 
-        // since we haven't imported TransactionInstruction. 
-        // The checkSolanaIdentity will find the account by ownership anyway.
+        transaction.add(updateDataIx);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
