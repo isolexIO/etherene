@@ -241,11 +241,39 @@ export default function Profile() {
           throw new Error(`Wallet Transaction Failed: ${signErr.message || "User rejected or wallet error"}`);
       }
 
-      const confirmation = await connection.confirmTransaction(signature, "confirmed");
+      // Robust Confirmation Strategy
+      let confirmed = false;
+      try {
+          const confirmation = await connection.confirmTransaction(signature, "confirmed");
+          if (confirmation.value.err) {
+              throw new Error(JSON.stringify(confirmation.value.err));
+          }
+          confirmed = true;
+      } catch (confirmErr) {
+          console.warn("Confirmation initial failure:", confirmErr);
+          // Fallback check for timeout
+          try {
+              const status = await connection.getSignatureStatus(signature);
+              console.log("Fallback status check:", status);
+              if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
+                  if (status.value.err) throw new Error(JSON.stringify(status.value.err));
+                  confirmed = true;
+              }
+          } catch (statusErr) {
+              console.error("Status check failed:", statusErr);
+          }
+      }
 
-      if (confirmation.value.err) {
-          console.error("Confirmation error:", confirmation.value.err);
-          throw new Error(`Transaction failed on chain: ${JSON.stringify(confirmation.value.err)}`);
+      if (!confirmed) {
+          // Don't fail the whole flow if we have a signature, just warn and let them check
+          console.warn("Transaction unconfirmed but sent");
+          toast.warning("Transaction sent but waiting for confirmation. Check Explorer.", {
+              action: {
+                  label: 'Explorer',
+                  onClick: () => window.open(`https://explorer.solana.com/tx/${signature}`, '_blank')
+              },
+              duration: 10000
+          });
       }
 
       // 4. Create DB Record
