@@ -160,7 +160,9 @@ Deno.serve(async (req) => {
         
         // 1. Calculate Rent & Requirements
         const space = 2000; // 2KB space
-        const rentLamports = await connection.getMinimumBalanceForRentExemption(space);
+        // We calculate rent for space + 96 (Header) to be safe, ensuring account is rent-exempt
+        // even if the SDK allocates extra for the header.
+        const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
         
         // 2. Check User Balance (Pre-flight check)
         const userBalance = await connection.getBalance(userPublicKey);
