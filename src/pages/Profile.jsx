@@ -189,9 +189,42 @@ export default function Profile() {
       }
   };
 
+  const [showRecover, setShowRecover] = useState(false);
+  const [recoverTx, setRecoverTx] = useState('');
+  const [isRecovering, setIsRecovering] = useState(false);
+
+  const handleRecover = async () => {
+      if (!recoverTx) {
+          toast.error("Please enter a transaction signature");
+          return;
+      }
+      setIsRecovering(true);
+      try {
+          const response = await base44.functions.invoke('recoverIdentity', {
+              txHash: recoverTx.trim(),
+              userAddress: account
+          });
+          const data = response.data;
+
+          if (data.success) {
+              toast.success(`Recovered Identity: ${data.subdomain}`);
+              window.location.reload();
+          } else if (data.reason === 'unknown_name') {
+               toast.warning("Verified transaction, but could not read subdomain name. Please contact support or try minting again.");
+          } else {
+              toast.error(data.error || "Recovery failed");
+          }
+      } catch (e) {
+          console.error(e);
+          toast.error(e.response?.data?.error || "Recovery failed");
+      } finally {
+          setIsRecovering(false);
+      }
+  };
+
   const handleMint = async () => {
     if (!isOwner) return;
-    
+
     setIsMinting(true);
     try {
       // Ensure Solana Wallet is connected
@@ -478,12 +511,44 @@ export default function Profile() {
                             </button>
                           ) : (
                             <button onClick={connectWallet} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
-                                <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 
-                                Connect Phantom
-                            </button>
-                          )}
-                      </div>
-                  )}
+                                        <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 
+                                        Connect Phantom
+                                    </button>
+                                  )}
+
+                                  <div className="mt-4">
+                                      <button 
+                                          onClick={() => setShowRecover(!showRecover)}
+                                          className="text-xs text-slate-400 hover:text-indigo-600 underline"
+                                      >
+                                          Already minted? Recover Identity
+                                      </button>
+
+                                      {showRecover && (
+                                          <motion.div 
+                                              initial={{ opacity: 0, height: 0 }}
+                                              animate={{ opacity: 1, height: 'auto' }}
+                                              className="mt-2 bg-slate-50 p-3 rounded-lg border border-slate-200"
+                                          >
+                                              <input 
+                                                  type="text" 
+                                                  placeholder="Paste Transaction Signature"
+                                                  value={recoverTx}
+                                                  onChange={(e) => setRecoverTx(e.target.value)}
+                                                  className="w-full text-xs p-2 border rounded mb-2 font-mono"
+                                              />
+                                              <button 
+                                                  onClick={handleRecover}
+                                                  disabled={isRecovering}
+                                                  className="w-full py-1 bg-slate-200 text-slate-700 text-xs rounded hover:bg-slate-300 flex justify-center"
+                                              >
+                                                  {isRecovering ? <Loader2 className="w-3 h-3 animate-spin"/> : "Sync"}
+                                              </button>
+                                          </motion.div>
+                                      )}
+                                  </div>
+                              </div>
+                            )}
                 </>
             )}
           </div>
