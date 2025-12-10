@@ -58,7 +58,7 @@ export default function Layout({ children, currentPageName }) {
     setError(null);
     try {
       const { solana } = window;
-      if (solana && solana.isPhantom) {
+      if (solana) {
         const response = await solana.connect();
         setAccount(response.publicKey.toString());
         // Listen for disconnect
@@ -71,6 +71,14 @@ export default function Layout({ children, currentPageName }) {
             }
         });
       } else {
+        // Mobile Deep Link Support
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+             const url = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.origin)}`;
+             window.location.href = url;
+             return;
+        }
+
         setError("Please install Phantom Wallet or a compatible Solana wallet.");
         window.open("https://phantom.app/", "_blank");
       }
@@ -98,7 +106,7 @@ export default function Layout({ children, currentPageName }) {
     // Check if already connected (eagerly)
     const checkConnection = async () => {
       const { solana } = window;
-      if (solana && solana.isPhantom) {
+      if (solana) {
         try {
           const response = await solana.connect({ onlyIfTrusted: true });
           setAccount(response.publicKey.toString());

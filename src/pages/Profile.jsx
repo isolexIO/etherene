@@ -142,7 +142,7 @@ export default function Profile() {
   useEffect(() => {
       const checkSolana = async () => {
            const { solana } = window;
-           if (solana && solana.isPhantom) {
+           if (solana) {
                try {
                    // Eager connect (silent)
                    const response = await solana.connect({ onlyIfTrusted: true });
@@ -160,12 +160,19 @@ export default function Profile() {
   const connectSolana = async () => {
       try {
           const { solana } = window;
-          if (solana && solana.isPhantom) {
+          if (solana) {
               const response = await solana.connect();
               setSolanaAddress(response.publicKey.toString());
-              toast.success("Phantom wallet connected");
+              toast.success("Wallet connected");
               return response.publicKey.toString();
           } else {
+              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+              if (isMobile) {
+                  const url = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.origin)}`;
+                  window.location.href = url;
+                  return null;
+              }
+
               toast.error("Please install Phantom Wallet!");
               window.open("https://phantom.app/", "_blank");
           }
