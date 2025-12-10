@@ -217,14 +217,6 @@ export default function Profile() {
       // BUT if we have the address from checkSolanaIdentity, we might want a simpler "Sync" path.
       // For now, let's guide them to use the TX hash if they have it, OR if we found the name, we can autofill.
       
-      if (foundOnChain && foundOnChain.subdomain && !recoverTx) {
-          // If we found the name, we can just create the record directly without TX hash logic?
-          // No, safer to verify. But 'recoverIdentity' endpoint expects txHash.
-          // Let's assume the user enters the TX for now, or we enhance 'recoverIdentity' later.
-          // Or we just update the UI to prompt them.
-      }
-
-      if (!recoverTx) {
       if (!recoverTx) {
           toast.error("Please enter a transaction signature");
           return;
