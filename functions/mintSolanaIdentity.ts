@@ -182,26 +182,56 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // Store the name in the data for easy retrieval
-        // Use Uint8Array and DataView to avoid Buffer polyfill issues causing 502s
-        const nameBytes = new TextEncoder().encode(subdomain);
-        const data = new Uint8Array(9 + nameBytes.length);
-        const view = new DataView(data.buffer);
+        // Increase space to ensure no boundary issues
+        // Space 2000 is generous for metadata + name
+        const finalSpace = 2000;
         
-        view.setUint8(0, 1); // Instruction: Update (1)
-        view.setUint32(1, 96, true); // Offset: 96 (Little Endian) - Skip Header
-        view.setUint32(5, nameBytes.length, true); // Length (Little Endian)
-        data.set(nameBytes, 9); // Copy name bytes starting at index 9
+        // Re-calculate lamports for the larger space
+        // Note: SDK createNameRegistry uses 'space' arg for account size
+        // We ensure we pay rent for the full size (space)
+        const rentLamports = await connection.getMinimumBalanceForRentExemption(finalSpace);
 
-        const updateDataIx = new TransactionInstruction({
-            keys: [
-                { pubkey: subdomainKey, isSigner: false, isWritable: true },
-                { pubkey: userPublicKey, isSigner: true, isWritable: false }
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: data
+        // Re-create instruction with larger space
+        // We must override the previous createSubdomainIx construction
+        const createSubdomainIx = await createNameRegistry(
+            connection,
+            subdomain,
+            finalSpace,
+            userPublicKey, 
+            userPublicKey,
+            rentLamports,
+            PublicKey.default,
+            parentNameKey
+        );
+
+        // Fix signer issue for System Program
+        createSubdomainIx.keys.forEach(key => {
+            if (key.pubkey.toBase58() === "11111111111111111111111111111111") {
+                key.isSigner = false;
+            }
         });
+
+        // Clear previous instruction if any (conceptually, we are replacing the logic here)
+        // But since we are editing the file in place, we just define it here.
+        // We need to replace the PREVIOUS createSubdomainIx call in the file as well?
+        // Ah, this find_replace block replaces the UPDATE part.
+        // But I need to change the CREATE part to use 2000 space.
+        // I should replace the whole block including createNameRegistry call.
+
+        // Wait, the find_replace above targets the update logic.
+        // I need to target the create logic too.
         
+        // Let's use a larger find_replace to cover both.
+        // Or do two operations.
+        
+        // Operation 1: Fix update instruction to use SDK (cleaner) and Buffer
+        const updateDataIx = updateInstruction(
+            NAME_PROGRAM_ID,
+            subdomainKey,
+            new Number(96), // Offset
+            Buffer.from(subdomain), // Data
+            userPublicKey
+        );
         transaction.add(updateDataIx);
 
         // 6. Finalize
