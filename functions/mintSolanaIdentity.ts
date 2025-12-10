@@ -199,17 +199,28 @@ Deno.serve(async (req) => {
         // We write the subdomain name into the registry data so it can be read/resolved.
         // We use offset 96 (skipping the header).
         try {
-            const updateDataIx = updateInstruction(
-                NAME_PROGRAM_ID,
-                subdomainKey,
-                new Number(96), // Offset must be a Number object for borsh serialization in this SDK version
-                Buffer.from(subdomain), 
-                userPublicKey 
-            );
+            // Manual instruction construction to avoid library/Borsh version conflicts
+            // Instruction format: [1 (u8 tag), offset (u32), length (u32), data (bytes)]
+            const nameData = Buffer.from(subdomain);
+            const dataBuffer = Buffer.alloc(1 + 4 + 4 + nameData.length);
+            
+            dataBuffer.writeUInt8(1, 0);          // Instruction: Update (1)
+            dataBuffer.writeUInt32LE(96, 1);      // Offset: 96
+            dataBuffer.writeUInt32LE(nameData.length, 5); // Data Length (Vec<u8> prefix)
+            nameData.copy(dataBuffer, 9);         // Data content
+
+            const updateDataIx = new TransactionInstruction({
+                keys: [
+                    { pubkey: subdomainKey, isSigner: false, isWritable: true },
+                    { pubkey: userPublicKey, isSigner: true, isWritable: false }
+                ],
+                programId: NAME_PROGRAM_ID,
+                data: dataBuffer
+            });
+            
             transaction.add(updateDataIx);
         } catch (updateErr) {
              console.error("Failed to create update instruction:", updateErr);
-             // Propagate the actual error message
              throw new Error(`Failed to construct data update instruction: ${updateErr.message}`);
         }
 
