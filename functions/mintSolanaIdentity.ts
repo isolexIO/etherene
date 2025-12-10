@@ -182,15 +182,25 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // Update instruction to store the name
-        // We use the SDK helper but pass Buffer explicitly to be safe
-        // Offset 96 skips the NameRegistry header
-        const updateDataIx = updateInstruction(
-            NAME_PROGRAM_ID,
-            subdomainKey,
-            { offset: 96, data: Buffer.from(subdomain) },
-            userPublicKey
-        );
+        // Manual Update Instruction to avoid SDK type errors
+        // Protocol: [Instruction:1byte] [Offset:4bytes] [Length:4bytes] [Data:Nbytes]
+        const nameBuffer = Buffer.from(subdomain);
+        const inputData = Buffer.alloc(9 + nameBuffer.length);
+        
+        inputData.writeUInt8(1, 0); // Opcode 1 = Update
+        inputData.writeUInt32LE(96, 1); // Offset 96 (Skip Header)
+        inputData.writeUInt32LE(nameBuffer.length, 5); // Length
+        nameBuffer.copy(inputData, 9); // Data
+
+        const updateDataIx = new TransactionInstruction({
+            keys: [
+                { pubkey: subdomainKey, isSigner: false, isWritable: true }, // Registry Account
+                { pubkey: userPublicKey, isSigner: true, isWritable: false }, // Owner (Signer)
+                { pubkey: parentNameKey, isSigner: false, isWritable: false } // Parent (Optional but good practice if checking)
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: inputData
+        });
         
         transaction.add(updateDataIx);
 
