@@ -199,15 +199,19 @@ Deno.serve(async (req) => {
         // We write the subdomain name into the registry data so it can be read/resolved.
         // We use offset 96 (skipping the header).
         try {
-            // Manual instruction construction to avoid library/Borsh version conflicts
+            // Manual instruction construction using Uint8Array/DataView (safer for Deno)
             // Instruction format: [1 (u8 tag), offset (u32), length (u32), data (bytes)]
-            const nameData = Buffer.from(subdomain);
-            const dataBuffer = Buffer.alloc(1 + 4 + 4 + nameData.length);
+            const nameBytes = new TextEncoder().encode(subdomain);
+            const dataLength = nameBytes.length;
+            const bufferSize = 1 + 4 + 4 + dataLength;
             
-            dataBuffer.writeUInt8(1, 0);          // Instruction: Update (1)
-            dataBuffer.writeUInt32LE(96, 1);      // Offset: 96
-            dataBuffer.writeUInt32LE(nameData.length, 5); // Data Length (Vec<u8> prefix)
-            nameData.copy(dataBuffer, 9);         // Data content
+            const dataArr = new Uint8Array(bufferSize);
+            const view = new DataView(dataArr.buffer);
+
+            view.setUint8(0, 1);                  // Instruction: Update (1)
+            view.setUint32(1, 96, true);          // Offset: 96 (Little Endian)
+            view.setUint32(5, dataLength, true);  // Length (Little Endian)
+            dataArr.set(nameBytes, 9);            // Data content
 
             const updateDataIx = new TransactionInstruction({
                 keys: [
@@ -215,7 +219,7 @@ Deno.serve(async (req) => {
                     { pubkey: userPublicKey, isSigner: true, isWritable: false }
                 ],
                 programId: NAME_PROGRAM_ID,
-                data: dataBuffer
+                data: dataArr
             });
             
             transaction.add(updateDataIx);
