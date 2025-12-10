@@ -183,17 +183,15 @@ Deno.serve(async (req) => {
         transaction.add(createSubdomainIx);
 
         // Store the name in the data for easy retrieval
-        // We use manual instruction construction to ensure correct offset and avoid library issues.
-        const nameBuffer = Buffer.from(subdomain);
+        // Use Uint8Array and DataView to avoid Buffer polyfill issues causing 502s
+        const nameBytes = new TextEncoder().encode(subdomain);
+        const data = new Uint8Array(9 + nameBytes.length);
+        const view = new DataView(data.buffer);
         
-        // Name Service Update Instruction: 
-        // Opcode 1 (Update) + Offset (4 bytes) + Length (4 bytes) + Data
-        // CRITICAL: Offset must be 96 to skip the 96-byte NameRegistry header
-        const data = Buffer.alloc(9 + nameBuffer.length);
-        data.writeUInt8(1, 0);
-        data.writeUInt32LE(96, 1); // Offset = 96
-        data.writeUInt32LE(nameBuffer.length, 5); // Length
-        nameBuffer.copy(data, 9);
+        view.setUint8(0, 1); // Instruction: Update (1)
+        view.setUint32(1, 96, true); // Offset: 96 (Little Endian) - Skip Header
+        view.setUint32(5, nameBytes.length, true); // Length (Little Endian)
+        data.set(nameBytes, 9); // Copy name bytes starting at index 9
 
         const updateDataIx = new TransactionInstruction({
             keys: [
