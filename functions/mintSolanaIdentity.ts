@@ -185,14 +185,23 @@ Deno.serve(async (req) => {
         // EXTRA: Store the name in the data for easy retrieval
         const nameBuffer = Buffer.from(subdomain);
         
-        // Use SDK helper to ensure correct serialization (no length prefix for Vec<u8> in SNS)
-        const updateDataIx = updateInstruction(
-            NAME_PROGRAM_ID,
-            subdomainKey,
-            0, // offset (primitive number)
-            nameBuffer,
-            userPublicKey
-        );
+        // Manual update instruction to avoid library issues and ensure correct offset
+        // Opcode 1 (Update) + Offset (4 bytes) + Length (4 bytes) + Data
+        // Offset must be 96 to skip the NameRegistry header
+        const data = Buffer.alloc(9 + nameBuffer.length);
+        data.writeUInt8(1, 0);
+        data.writeUInt32LE(96, 1); // Offset = 96 (After 96-byte header)
+        data.writeUInt32LE(nameBuffer.length, 5); // Length
+        nameBuffer.copy(data, 9);
+
+        const updateDataIx = new TransactionInstruction({
+            keys: [
+                { pubkey: subdomainKey, isSigner: false, isWritable: true },
+                { pubkey: userPublicKey, isSigner: true, isWritable: false }
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: data
+        });
         
         transaction.add(updateDataIx);
 
