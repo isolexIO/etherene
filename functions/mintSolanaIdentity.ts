@@ -157,10 +157,10 @@ Deno.serve(async (req) => {
         }
 
         console.log("Creating registry instruction...");
-        // 1KB space to store metadata/name/reverse lookup info if needed
-        const space = 1000; 
-        // Rent must cover space + NameRegistryState.HEADER_LEN (96 bytes)
-        const lamports = await connection.getMinimumBalanceForRentExemption(space + 96);
+        // Space must be large enough. Header is 96 bytes.
+        // We allocate 2000 bytes total to avoid "invalid account data" (out of bounds) errors.
+        const space = 2000; 
+        const lamports = await connection.getMinimumBalanceForRentExemption(space);
 
         const createSubdomainIx = await createNameRegistry(
             connection,
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
             userPublicKey, // Payer
             userPublicKey, // Owner
             lamports,
-            PublicKey.default, // Class (SystemProgram - effectively no class)
+            PublicKey.default, 
             parentNameKey
         );
 
@@ -182,56 +182,16 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // Increase space to ensure no boundary issues
-        // Space 2000 is generous for metadata + name
-        const finalSpace = 2000;
-        
-        // Re-calculate lamports for the larger space
-        // Note: SDK createNameRegistry uses 'space' arg for account size
-        // We ensure we pay rent for the full size (space)
-        const rentLamports = await connection.getMinimumBalanceForRentExemption(finalSpace);
-
-        // Re-create instruction with larger space
-        // We must override the previous createSubdomainIx construction
-        const createSubdomainIx = await createNameRegistry(
-            connection,
-            subdomain,
-            finalSpace,
-            userPublicKey, 
-            userPublicKey,
-            rentLamports,
-            PublicKey.default,
-            parentNameKey
-        );
-
-        // Fix signer issue for System Program
-        createSubdomainIx.keys.forEach(key => {
-            if (key.pubkey.toBase58() === "11111111111111111111111111111111") {
-                key.isSigner = false;
-            }
-        });
-
-        // Clear previous instruction if any (conceptually, we are replacing the logic here)
-        // But since we are editing the file in place, we just define it here.
-        // We need to replace the PREVIOUS createSubdomainIx call in the file as well?
-        // Ah, this find_replace block replaces the UPDATE part.
-        // But I need to change the CREATE part to use 2000 space.
-        // I should replace the whole block including createNameRegistry call.
-
-        // Wait, the find_replace above targets the update logic.
-        // I need to target the create logic too.
-        
-        // Let's use a larger find_replace to cover both.
-        // Or do two operations.
-        
-        // Operation 1: Fix update instruction to use SDK (cleaner) and Buffer
+        // Update instruction to store the name
+        // We use the SDK helper but pass Buffer explicitly to be safe
+        // Offset 96 skips the NameRegistry header
         const updateDataIx = updateInstruction(
             NAME_PROGRAM_ID,
             subdomainKey,
-            new Number(96), // Offset
-            Buffer.from(subdomain), // Data
+            { offset: 96, data: Buffer.from(subdomain) },
             userPublicKey
         );
+        
         transaction.add(updateDataIx);
 
         // 6. Finalize
