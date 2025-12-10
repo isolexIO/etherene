@@ -158,7 +158,8 @@ Deno.serve(async (req) => {
         console.log("Creating registry instruction...");
         // 1KB space to store metadata/name/reverse lookup info if needed
         const space = 1000; 
-        const lamports = await connection.getMinimumBalanceForRentExemption(space);
+        // Rent must cover space + NameRegistryState.HEADER_LEN (96 bytes)
+        const lamports = await connection.getMinimumBalanceForRentExemption(space + 96);
 
         const createSubdomainIx = await createNameRegistry(
             connection,
