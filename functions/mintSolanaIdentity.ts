@@ -13,8 +13,9 @@ import {
   Transaction, 
   SystemProgram, 
   LAMPORTS_PER_SOL,
-  ComputeBudgetProgram
-} from 'npm:@solana/web3.js@^1.91.0';
+  ComputeBudgetProgram,
+  TransactionInstruction
+  } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   getDomainKey, 
   createNameRegistry,
@@ -181,17 +182,25 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // EXTRA: Store the name in the data for easy retrieval/reverse lookup simulation
+        // EXTRA: Store the name in the data for easy retrieval
         const nameBuffer = Buffer.from(subdomain);
         
-        // Fix: Use primitive number for offset and userPublicKey as signer (since user owns the new registry)
-        const updateDataIx = await updateInstruction(
-            NAME_PROGRAM_ID,
-            subdomainKey,
-            0, // offset
-            nameBuffer,
-            userPublicKey
-        );
+        // Manual update instruction to avoid library issues
+        // Opcode 1 (Update) + Offset (4 bytes) + Length (4 bytes) + Data
+        const data = Buffer.alloc(9 + nameBuffer.length);
+        data.writeUInt8(1, 0);
+        data.writeUInt32LE(0, 1); // Offset
+        data.writeUInt32LE(nameBuffer.length, 5); // Length
+        nameBuffer.copy(data, 9);
+
+        const updateDataIx = new TransactionInstruction({
+            keys: [
+                { pubkey: subdomainKey, isSigner: false, isWritable: true },
+                { pubkey: userPublicKey, isSigner: true, isWritable: false }
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: data
+        });
         
         transaction.add(updateDataIx);
 
