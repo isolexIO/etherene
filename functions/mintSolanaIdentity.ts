@@ -157,23 +157,34 @@ Deno.serve(async (req) => {
         }
 
         console.log("Creating registry instruction...");
-        // Space must be large enough. Header is 96 bytes.
-        // We allocate 2000 bytes total to avoid "invalid account data" (out of bounds) errors.
-        const space = 2000; 
-        const lamports = await connection.getMinimumBalanceForRentExemption(space);
+        
+        // 1. Calculate Rent & Requirements
+        const space = 2000; // 2KB space
+        const rentLamports = await connection.getMinimumBalanceForRentExemption(space);
+        
+        // 2. Check User Balance (Pre-flight check)
+        const userBalance = await connection.getBalance(userPublicKey);
+        const estimatedTxFee = 10000; // Buffer for signature fees
+        const requiredFunds = lamportsForFee + rentLamports + estimatedTxFee;
 
+        if (userBalance < requiredFunds) {
+            const missing = (requiredFunds - userBalance) / LAMPORTS_PER_SOL;
+            throw new Error(`Insufficient funds. You need ${requiredFunds/LAMPORTS_PER_SOL} SOL but have ${userBalance/LAMPORTS_PER_SOL} SOL. Missing ~${missing.toFixed(4)} SOL.`);
+        }
+
+        // 3. Create Name Registry Instruction
         const createSubdomainIx = await createNameRegistry(
             connection,
             subdomain,
             space,
             userPublicKey, // Payer
             userPublicKey, // Owner
-            lamports,
+            rentLamports,
             PublicKey.default, 
             parentNameKey
         );
 
-        // CRITICAL FIX: Ensure SystemProgram (Class) is NOT marked as a signer
+        // Fix signer issue for System Program
         createSubdomainIx.keys.forEach(key => {
             if (key.pubkey.toBase58() === "11111111111111111111111111111111") {
                 key.isSigner = false;
@@ -182,10 +193,8 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // Note: We skip the explicit Update instruction to store the name in data 
-        // because it causes "invalid account data" errors on some RPCs/Conditions.
-        // The Identity is still minted and verifiable via the Name Registry ownership.
-        // RecoverIdentity can still find it via transaction logs or DB.
+        // Note: Update instruction skipped to avoid invalid account data errors.
+        // Identity is established by the registry creation.
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
