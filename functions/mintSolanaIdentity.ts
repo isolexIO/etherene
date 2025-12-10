@@ -17,7 +17,8 @@ import {
 } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   getDomainKey, 
-  createNameRegistry
+  createNameRegistry,
+  NameRegistryState
 } from 'npm:@bonfida/spl-name-service@^2.3.1';
 import bs58 from 'npm:bs58@5.0.0';
 
@@ -126,10 +127,20 @@ Deno.serve(async (req) => {
         const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
         console.log("Parent key derived:", parentNameKey.toBase58());
 
+        // 1. Verify Parent Ownership
+        try {
+            const { registry } = await NameRegistryState.retrieve(connection, parentNameKey);
+            if (!registry.owner.equals(serverKeypair.publicKey)) {
+                console.error(`Parent owner mismatch. Expected: ${registry.owner.toBase58()}, Server: ${serverKeypair.publicKey.toBase58()}`);
+                throw new Error("Server key does not own the parent 'etherene.sol' domain. Cannot mint subdomain.");
+            }
+        } catch (e) {
+            console.error("Parent verification failed:", e);
+            throw new Error(`Failed to verify parent domain 'etherene.sol': ${e.message}`);
+        }
+
         // Check Balance
         const balance = await connection.getBalance(serverKeypair.publicKey);
-        console.log("Server balance:", balance);
-        // Server only signs, user pays fees. Just ensure account exists.
         if (balance < 0.001 * LAMPORTS_PER_SOL) {
              console.warn(`Server balance low: ${balance / LAMPORTS_PER_SOL} SOL`);
         }
@@ -145,9 +156,17 @@ Deno.serve(async (req) => {
             userPublicKey, // Payer
             userPublicKey, // Owner
             lamports,
-            undefined, // Class
+            PublicKey.default, // Class (SystemProgram - effectively no class)
             parentNameKey
         );
+
+        // CRITICAL FIX: Ensure SystemProgram (Class) is NOT marked as a signer
+        createSubdomainIx.keys.forEach(key => {
+            if (key.pubkey.toBase58() === "11111111111111111111111111111111") {
+                key.isSigner = false;
+            }
+        });
+
         transaction.add(createSubdomainIx);
 
         // 6. Finalize
