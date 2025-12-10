@@ -195,8 +195,22 @@ Deno.serve(async (req) => {
 
         transaction.add(createSubdomainIx);
 
-        // Note: Update instruction skipped to avoid invalid account data errors.
-        // Identity is established by the registry creation.
+        // 4. Update Registry Data with Name
+        // We write the subdomain name into the registry data so it can be read/resolved.
+        // We use offset 96 (skipping the header).
+        try {
+            const updateDataIx = updateInstruction(
+                NAME_PROGRAM_ID,
+                subdomainKey,
+                96, // Offset (Primitive number, not Object)
+                Buffer.from(subdomain), // Data
+                userPublicKey // Signer (Owner)
+            );
+            transaction.add(updateDataIx);
+        } catch (updateErr) {
+             console.error("Failed to create update instruction:", updateErr);
+             throw new Error("Failed to construct data update instruction");
+        }
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
