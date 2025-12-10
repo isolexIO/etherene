@@ -119,7 +119,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Agora', path: 'Agora' },
     { name: 'White Paper', path: 'Whitepaper' },
     { name: 'Explorer', path: 'BlockExplorer' },
-    { name: 'Admin', path: 'Admin' },
     { name: 'Identity', path: 'Profile' },
     ];
 
