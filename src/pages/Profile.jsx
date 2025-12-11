@@ -141,11 +141,11 @@ export default function Profile() {
 
   useEffect(() => {
       const checkSolana = async () => {
-           const { solana } = window;
-           if (solana) {
+           const provider = window.solana || window.phantom?.solana;
+           if (provider) {
                try {
                    // Eager connect (silent)
-                   const response = await solana.connect({ onlyIfTrusted: true });
+                   const response = await provider.connect({ onlyIfTrusted: true });
                    setSolanaAddress(response.publicKey.toString());
                } catch (e) {
                    // User not connected yet
@@ -159,9 +159,9 @@ export default function Profile() {
 
   const connectSolana = async () => {
       try {
-          const { solana } = window;
-          if (solana) {
-              const response = await solana.connect();
+          const provider = window.solana || window.phantom?.solana;
+          if (provider) {
+              const response = await provider.connect();
               setSolanaAddress(response.publicKey.toString());
               toast.success("Wallet connected");
               return response.publicKey.toString();
@@ -178,16 +178,16 @@ export default function Profile() {
           }
       } catch (err) {
           console.error(err);
-          toast.error("Connection cancelled");
+          toast.error(err.message || "Connection cancelled");
       }
       return null;
   };
 
   const disconnectSolana = async () => {
       try {
-          const { solana } = window;
-          if (solana) {
-              await solana.disconnect();
+          const provider = window.solana || window.phantom?.solana;
+          if (provider) {
+              await provider.disconnect();
               setSolanaAddress(null);
               toast.success("Disconnected from Solana");
           }

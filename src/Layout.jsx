@@ -2,7 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Menu, X, Hexagon, Sparkles } from 'lucide-react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { createPageUrl } from './components/utils';
 
 // Web3 Context (Solana)
@@ -57,13 +57,13 @@ export default function Layout({ children, currentPageName }) {
     setIsConnecting(true);
     setError(null);
     try {
-      const { solana } = window;
-      if (solana) {
-        const response = await solana.connect();
+      const provider = window.solana || window.phantom?.solana;
+      if (provider) {
+        const response = await provider.connect();
         setAccount(response.publicKey.toString());
         // Listen for disconnect
-        solana.on('disconnect', () => setAccount(null));
-        solana.on('accountChanged', (publicKey) => {
+        provider.on('disconnect', () => setAccount(null));
+        provider.on('accountChanged', (publicKey) => {
             if (publicKey) {
                 setAccount(publicKey.toString());
             } else {
@@ -79,12 +79,16 @@ export default function Layout({ children, currentPageName }) {
              return;
         }
 
-        setError("Please install Phantom Wallet or a compatible Solana wallet.");
+        const msg = "Please install Phantom Wallet or a compatible Solana wallet.";
+        setError(msg);
+        toast.error(msg);
         window.open("https://phantom.app/", "_blank");
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to connect wallet");
+      const msg = err.message || "Failed to connect wallet";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsConnecting(false);
     }
@@ -105,10 +109,10 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     // Check if already connected (eagerly)
     const checkConnection = async () => {
-      const { solana } = window;
-      if (solana) {
+      const provider = window.solana || window.phantom?.solana;
+      if (provider) {
         try {
-          const response = await solana.connect({ onlyIfTrusted: true });
+          const response = await provider.connect({ onlyIfTrusted: true });
           setAccount(response.publicKey.toString());
         } catch (error) {
           // User not connected yet, ignore
