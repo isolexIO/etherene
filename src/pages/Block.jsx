@@ -20,13 +20,12 @@ export default function Block() {
             const { base44 } = await import('@/api/base44Client');
             
             // Reconstruct Date from Block Number (Days since Genesis 2024-01-01)
-            const genesis = moment('2024-01-01');
+            const genesis = moment.utc('2024-01-01');
             const blockDate = genesis.add(Number(number), 'days');
             
             // Format for filtering (YYYY-MM-DD)
             const dateStr = blockDate.format('YYYY-MM-DD');
-            const nextDayStr = moment(blockDate).add(1, 'days').format('YYYY-MM-DD');
-
+            
             // Fetch activities for this day
             // Note: Filters might need "gte" and "lt" but standard filter is equality. 
             // We'll fetch all and filter client side for now as simpler query
@@ -37,8 +36,8 @@ export default function Block() {
             ]);
 
             const filterByDate = (item) => {
-                const itemDate = moment(item.created_date);
-                return itemDate.isBetween(blockDate.startOf('day'), blockDate.endOf('day'));
+                const itemDate = moment.utc(item.created_date);
+                return itemDate.isBetween(blockDate.clone().startOf('day'), blockDate.clone().endOf('day'));
             };
 
             const dayTxs = [
@@ -50,7 +49,7 @@ export default function Block() {
             setBlockData({
                 number: number,
                 hash: "0x" + Math.abs(dateStr.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(16).padStart(64, '0'), // Pseudo hash from date
-                timestamp: blockDate.format('MMMM Do YYYY, h:mm:ss a') + " (EST)",
+                timestamp: blockDate.format('MMMM Do YYYY, h:mm:ss a') + " (UTC)",
                 transactions: dayTxs.length,
                 miner: "Chronos (Time itself)",
                 gasUsed: (dayTxs.length * 21000).toString(),

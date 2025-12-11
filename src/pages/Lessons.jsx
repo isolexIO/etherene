@@ -57,7 +57,7 @@ export default function Lessons() {
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm tracking-wider uppercase mb-4">
                             <Sparkles className="w-4 h-4" />
-                            Lesson of the Day • {moment(today.date).format('MMMM Do, YYYY')}
+                            Lesson of the Day • {moment.utc(today.date).format('MMMM Do, YYYY')}
                         </div>
 
                         <h2 className="text-3xl font-bold text-slate-900 mb-6">{today.title}</h2>
@@ -106,7 +106,7 @@ export default function Lessons() {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <div className="text-xs text-slate-400 mb-1">
-                                            {moment(lesson.date).format('MMM D, YYYY')}
+                                            {moment.utc(lesson.date).format('MMM D, YYYY')}
                                         </div>
                                         <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                                             {lesson.title}
@@ -155,7 +155,7 @@ export default function Lessons() {
 
                             <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm tracking-wider uppercase mb-4">
                                 <Calendar className="w-4 h-4" />
-                                {moment(selectedLesson.date).format('MMMM Do, YYYY')}
+                                {moment.utc(selectedLesson.date).format('MMMM Do, YYYY')}
                             </div>
 
                             <h2 className="text-2xl font-bold text-slate-900 mb-4 pr-8">{selectedLesson.title}</h2>

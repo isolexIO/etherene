@@ -79,8 +79,8 @@ export default function BlockExplorer() {
 
             // Calculate "Block Height" (Days since Genesis)
             const genesisDate = settingsList[0]?.genesis_date || '2024-01-01';
-            const genesis = moment(genesisDate);
-            const now = moment();
+            const genesis = moment.utc(genesisDate);
+            const now = moment.utc();
             const blockHeight = now.diff(genesis, 'days');
 
             const totalActivity = identities.length + transmissions.length + interactions.length;
@@ -123,7 +123,7 @@ export default function BlockExplorer() {
 
             setTransactions(allTxs.slice(0, 15).map(tx => ({
                 ...tx,
-                age: moment(tx.created_date).fromNow()
+                age: moment.utc(tx.created_date).fromNow()
             })));
 
         } catch (error) {
@@ -133,7 +133,7 @@ export default function BlockExplorer() {
 
     // Initial Graph
     setGraphData(Array.from({ length: 20 }, (_, i) => ({
-      time: new Date(Date.now() - (20 - i) * 2000).toLocaleTimeString(),
+      time: new Date(Date.now() - (20 - i) * 2000).toISOString().substr(11, 8),
       tps: 5
     })));
 
@@ -144,7 +144,7 @@ export default function BlockExplorer() {
     const graphInterval = setInterval(() => {
         setGraphData(prev => {
             const newData = [...prev.slice(1), { 
-              time: new Date().toLocaleTimeString(), 
+              time: new Date().toISOString().substr(11, 8), 
               value: Math.floor(Math.random() * 10) + 2
             }];
             return newData;

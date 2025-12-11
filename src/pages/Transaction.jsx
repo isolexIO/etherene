@@ -52,8 +52,8 @@ export default function Transaction() {
 
             if (entity) {
                 // Calculate "Block" (Days since Genesis)
-                const genesis = moment('2024-01-01');
-                const txDate = moment(entity.created_date);
+                const genesis = moment.utc('2024-01-01');
+                const txDate = moment.utc(entity.created_date);
                 const blockNumber = txDate.diff(genesis, 'days');
 
                 setTxData({
