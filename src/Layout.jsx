@@ -264,9 +264,9 @@ export default function Layout({ children, currentPageName }) {
                 <span>© 2024 Etherene Protocol</span>
               </div>
               <div className="flex gap-6 text-sm text-slate-500">
-                <a href="#" className="hover:text-indigo-600 transition-colors">Manifesto</a>
-                <a href="#" className="hover:text-indigo-600 transition-colors">Contract</a>
-                <a href="#" className="hover:text-indigo-600 transition-colors">Governance</a>
+                <a href="Whitepaper" className="hover:text-indigo-600 transition-colors">Manifesto</a>
+                <a href="BlockExplorer" className="hover:text-indigo-600 transition-colors">Contract</a>
+                <a href="Agora" className="hover:text-indigo-600 transition-colors">Governance</a>
               </div>
             </div>
           </div>
