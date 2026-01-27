@@ -222,90 +222,97 @@ export default function Profile() {
           return;
       }
 
-      const userPK = validateSolanaPK(account);
-      console.debug("Minting with valid PK:", userPK.toBase58());
+      // Step 1: User sends payment directly
+      toast.info("Please send $4 in SOL to complete your mint request...", { duration: 3000 });
 
-      const response = await base44.functions.invoke('mintSolanaIdentity', {
-          userAddress: userPK.toBase58(),
-          userEthereneAddress: account
-      });
-      const data = response.data;
-      console.log("Mint Backend Response:", data);
-
-      if (!data.success) throw new Error(data.error || "Setup failed");
-
-      if (data.feeAmount) {
-          toast.info(`Platform fee: ${data.feeAmount.toFixed(4)} SOL (~$${data.feeAmountUSD} USD)`, { duration: 5000 });
-      }
-
-      const { Transaction, Connection } = await import('@solana/web3.js');
+      const { SystemProgram, Transaction, Connection, PublicKey, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
       const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
-      const transactionBuffer = Buffer.from(data.transaction, 'base64');
-      const transaction = Transaction.from(transactionBuffer);
-
-      console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
-
-      let signature;
+      // Calculate SOL amount for $4
+      let lamportsForFee = 20_000_000; // fallback
       try {
-          const walletAdapter = wallet?.adapter;
-          if (!walletAdapter || !walletAdapter.signTransaction) {
-              throw new Error("Wallet not connected or doesn't support signing");
+          const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+          const data = await priceReq.json();
+          if (data.solana?.usd) {
+              lamportsForFee = Math.round((4 / data.solana.usd) * LAMPORTS_PER_SOL);
           }
-
-          console.log("Requesting user to sign transaction...");
-          
-          // Sign the partially-signed transaction with user's wallet
-          const signedTransaction = await walletAdapter.signTransaction(transaction);
-          
-          console.log("Transaction signed by user, broadcasting to network...");
-          
-          // Send the fully-signed transaction to the network
-          const rawTransaction = signedTransaction.serialize();
-          signature = await connection.sendRawTransaction(rawTransaction, {
-              skipPreflight: true,
-              maxRetries: 3,
-              preflightCommitment: 'confirmed'
-          });
-          
-          console.log("Transaction broadcast. Signature:", signature);
-          
-          toast.info("Confirming transaction on Solana...", { duration: 5000 });
-          await connection.confirmTransaction(signature, 'confirmed');
-      } catch (signErr) {
-          console.error("Signing/Sending failed:", signErr);
-          const errorMsg = signErr.message || signErr.toString();
-          throw new Error(`Transaction Failed: ${errorMsg.includes('User rejected') ? 'User rejected the transaction' : errorMsg}`);
+      } catch (e) {
+          console.error("Price fetch failed");
       }
 
-      await base44.entities.Identity.create({
-           address: account, 
-           subdomain: data.subdomain,
-           network: 'Solana Mainnet',
-           status: 'minted',
-           bio: `Solana Identity: ${data.subdomain}`,
-           avatar_url: data.imageUrl,
-           cover_image: data.imageUrl,
-           fee_charged: true
+      const feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
+      toast.info(`Sending ${feeInSol.toFixed(4)} SOL (~$4 USD) to admin wallet...`, { duration: 3000 });
+
+      // Create payment transaction
+      const adminWallet = new PublicKey("5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8");
+      const userPubkey = new PublicKey(account);
+
+      const transaction = new Transaction().add(
+          SystemProgram.transfer({
+              fromPubkey: userPubkey,
+              toPubkey: adminWallet,
+              lamports: lamportsForFee
+          })
+      );
+
+      const { blockhash } = await connection.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = userPubkey;
+
+      // Sign and send payment
+      const walletAdapter = wallet?.adapter;
+      if (!walletAdapter || !walletAdapter.signTransaction) {
+          throw new Error("Wallet not connected");
+      }
+
+      const signedTransaction = await walletAdapter.signTransaction(transaction);
+      const rawTransaction = signedTransaction.serialize();
+      const signature = await connection.sendRawTransaction(rawTransaction, {
+          skipPreflight: false,
+          maxRetries: 3
       });
 
-      toast.success("Identity minted successfully!");
+      toast.info("Confirming payment...", { duration: 3000 });
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      // Step 2: Submit mint request to backend
+      const response = await base44.functions.invoke('requestMint', {
+          userAddress: account,
+          paymentSignature: signature
+      });
+
+      const result = response.data;
+      if (!result.success) throw new Error(result.error);
+
+      // Create pending identity record
+      await base44.entities.Identity.create({
+          address: account,
+          subdomain: result.subdomain,
+          network: 'Solana Mainnet',
+          status: 'declared',
+          bio: `Pending mint: ${result.subdomain}`,
+          avatar_url: result.imageUrl,
+          cover_image: result.imageUrl,
+          fee_charged: true
+      });
+
+      toast.success(result.message || "Mint request submitted! You'll be notified when complete.", { duration: 8000 });
       window.open(`https://explorer.solana.com/tx/${signature}`, '_blank');
       window.location.reload();
 
-      } catch (err) {
-      console.error("Mint failed detailed:", err);
+    } catch (err) {
+      console.error("Mint request failed:", err);
       let msg = "Unknown error";
       if (err.response?.data?.error) {
           msg = err.response.data.error;
       } else if (err.message) {
           msg = err.message;
       }
-      toast.error(`Minting failed: ${msg}`, { duration: 10000 });
-      } finally {
+      toast.error(`Mint request failed: ${msg}`, { duration: 10000 });
+    } finally {
       setIsMinting(false);
-      }
-      };
+    }
+  };
 
   const handleFollow = async () => {
       if (!account) return;
