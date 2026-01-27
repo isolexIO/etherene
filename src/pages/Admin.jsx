@@ -12,7 +12,12 @@ import {
     Save, 
     AlertTriangle,
     DollarSign,
-    Calendar
+    Calendar,
+    FileText,
+    Clock,
+    XCircle,
+    CheckCircle2,
+    ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -121,6 +126,25 @@ export default function AdminPage() {
         }
     });
 
+    // --- Mint Requests ---
+    const { data: mintRequests, refetch: refetchMintRequests } = useQuery({
+        queryKey: ['mintRequests'],
+        queryFn: () => base44.entities.MintRequest.list('-created_date')
+    });
+
+    const updateMintStatusMutation = useMutation({
+        mutationFn: async ({ id, status }) => {
+            return base44.entities.MintRequest.update(id, { status });
+        },
+        onSuccess: () => {
+            refetchMintRequests();
+            toast.success("Mint request updated");
+        }
+    });
+
+    const pendingRequests = mintRequests?.filter(r => r.status === 'pending') || [];
+    const historicalRequests = mintRequests?.filter(r => r.status !== 'pending') || [];
+
     return (
         <div className="min-h-screen bg-slate-50 p-8 pt-24">
             <div className="max-w-7xl mx-auto">
@@ -155,6 +179,23 @@ export default function AdminPage() {
                     >
                         <div className="flex items-center gap-2">
                             <Users className="w-4 h-4" /> User Management
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('mints')}
+                        className={`pb-4 px-2 font-medium transition-colors border-b-2 ${
+                            activeTab === 'mints' 
+                                ? 'border-indigo-600 text-indigo-600' 
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4" /> Mint Requests
+                            {pendingRequests.length > 0 && (
+                                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                    {pendingRequests.length}
+                                </span>
+                            )}
                         </div>
                     </button>
                     <button
@@ -271,6 +312,173 @@ export default function AdminPage() {
                                 </tbody>
                             </table>
                         </div>
+                    </motion.div>
+                )}
+
+                {/* Mint Requests Tab */}
+                {activeTab === 'mints' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                        
+                        {/* Pending Requests */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div className="px-6 py-4 bg-red-50 border-b border-red-100">
+                                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-red-600" />
+                                    Pending Mint Requests ({pendingRequests.length})
+                                </h3>
+                                <p className="text-sm text-slate-600 mt-1">Requires manual minting on Solana Name Service</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Subdomain</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">User</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Payment</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Requested</th>
+                                            <th className="px-6 py-4 text-right text-sm font-semibold text-slate-600">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {pendingRequests.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                                                    No pending mint requests
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            pendingRequests.map((request) => (
+                                                <tr key={request.id} className="hover:bg-slate-50/50">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-slate-900">{request.subdomain}</div>
+                                                        {request.image_url && (
+                                                            <a 
+                                                                href={request.image_url} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="text-xs text-indigo-600 hover:underline flex items-center gap-1 mt-1"
+                                                            >
+                                                                View Avatar <ExternalLink className="w-3 h-3" />
+                                                            </a>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">
+                                                            {request.user_address.slice(0, 8)}...{request.user_address.slice(-6)}
+                                                        </code>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-sm font-medium text-green-700">
+                                                            {request.amount_paid_sol?.toFixed(4)} SOL
+                                                        </div>
+                                                        <a 
+                                                            href={`https://explorer.solana.com/tx/${request.payment_signature}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-xs text-indigo-600 hover:underline flex items-center gap-1"
+                                                        >
+                                                            View TX <ExternalLink className="w-3 h-3" />
+                                                        </a>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">
+                                                        {format(new Date(request.created_date), 'MMM d, h:mm a')}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => updateMintStatusMutation.mutate({ id: request.id, status: 'minted' })}
+                                                                className="text-sm font-medium px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
+                                                            >
+                                                                <CheckCircle2 className="w-4 h-4" /> Mark Minted
+                                                            </button>
+                                                            <button
+                                                                onClick={() => updateMintStatusMutation.mutate({ id: request.id, status: 'failed' })}
+                                                                className="text-sm font-medium px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors flex items-center gap-1"
+                                                            >
+                                                                <XCircle className="w-4 h-4" /> Mark Failed
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Historical Requests */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-slate-600" />
+                                    Historical Requests ({historicalRequests.length})
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Subdomain</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">User</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Status</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600">Date</th>
+                                            <th className="px-6 py-4 text-right text-sm font-semibold text-slate-600">Payment</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {historicalRequests.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
+                                                    No historical requests yet
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            historicalRequests.map((request) => (
+                                                <tr key={request.id} className="hover:bg-slate-50/50">
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-slate-900">{request.subdomain}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">
+                                                            {request.user_address.slice(0, 8)}...{request.user_address.slice(-6)}
+                                                        </code>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {request.status === 'minted' ? (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                <CheckCircle className="w-3 h-3" /> Minted
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                                <XCircle className="w-3 h-3" /> Failed
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">
+                                                        {format(new Date(request.created_date), 'MMM d, yyyy')}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="text-sm text-slate-600">
+                                                            {request.amount_paid_sol?.toFixed(4)} SOL
+                                                        </div>
+                                                        <a 
+                                                            href={`https://explorer.solana.com/tx/${request.payment_signature}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-xs text-indigo-600 hover:underline"
+                                                        >
+                                                            View TX
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </motion.div>
                 )}
 
