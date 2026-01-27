@@ -254,20 +254,25 @@ export default function Profile() {
           })
       );
 
-      // Use wallet's sendTransaction WITHOUT connection param (uses wallet's internal RPC)
-      const walletAdapter = wallet?.adapter;
-      if (!walletAdapter || !walletAdapter.sendTransaction) {
-          throw new Error("Wallet not connected");
+      // Sign transaction with wallet
+      const { solana } = window;
+      if (!solana?.isPhantom && !solana?.isSolflare) {
+          throw new Error("Solana wallet not detected");
       }
 
-      const signature = await walletAdapter.sendTransaction(transaction);
+      const signed = await solana.signTransaction(transaction);
 
+      // Send via backend to avoid RPC restrictions
+      const sendResponse = await base44.functions.invoke('sendPaymentTransaction', {
+          signedTransaction: Buffer.from(signed.serialize()).toString('base64')
+      });
+
+      if (!sendResponse.data.success) {
+          throw new Error(sendResponse.data.error || "Transaction send failed");
+      }
+
+      const signature = sendResponse.data.signature;
       toast.info("Payment sent! Confirming...", { duration: 5000 });
-
-      // Use wallet's connection for confirmation
-      const { Connection } = await import('@solana/web3.js');
-      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
-      await connection.confirmTransaction(signature, 'confirmed');
 
       // Step 2: Submit mint request to backend
       const response = await base44.functions.invoke('requestMint', {
