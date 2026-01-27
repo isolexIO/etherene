@@ -26,10 +26,6 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
-  // View mode logic: If paramAddress exists, we are viewing that user. 
-  // If not, we view 'account' (current user).
-  // If neither (and no param), we show empty/connect state.
-  
   const viewAddress = paramAddress || account;
   const isOwner = account && viewAddress && account.toLowerCase() === viewAddress.toLowerCase();
 
@@ -40,22 +36,17 @@ export default function Profile() {
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Follow State
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   
-  // Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [showImport, setShowImport] = useState(false);
   
-  // Tabs State
   const [activeTab, setActiveTab] = useState('all');
 
-  // Messaging State
   const [selectedConversationUser, setSelectedConversationUser] = useState(null);
 
-  // Handle messages tab from URL or other interactions
   useEffect(() => {
       if (searchParams.get('tab') === 'messages') {
           setActiveTab('messages');
@@ -73,7 +64,6 @@ export default function Profile() {
     window.location.reload();
   };
 
-  // Load Data
   useEffect(() => {
       const loadProfile = async () => {
           if (!viewAddress) {
@@ -83,12 +73,10 @@ export default function Profile() {
 
           setIsLoading(true);
           try {
-              // 1. Fetch Identity
               const identities = await base44.entities.Identity.filter({ address: viewAddress });
               const identity = identities[0] || null;
               setProfileData(identity);
 
-              // 2. Fetch Activities & Social Graph (Parallel)
               const [transmissions, interactions, mints, resonances, followers, following, myFollow] = await Promise.all([
                   base44.entities.Transmission.filter({ author_address: viewAddress }),
                   base44.entities.OracleInteraction.filter({ user_address: viewAddress }),
@@ -123,14 +111,11 @@ export default function Profile() {
   }, [viewAddress]);
 
 
-  // Solana wallet is now managed by wallet adapter in Layout
-
   const [showRecover, setShowRecover] = useState(false);
   const [recoverTx, setRecoverTx] = useState('');
   const [isRecovering, setIsRecovering] = useState(false);
   const [foundOnChain, setFoundOnChain] = useState(null);
 
-  // Reclaim State
   const [stuckAccounts, setStuckAccounts] = useState([]);
   const [loadingStuck, setLoadingStuck] = useState(false);
   const [closingAccount, setClosingAccount] = useState(null);
@@ -161,7 +146,6 @@ export default function Profile() {
            });
            const { transaction: txBase64 } = res.data;
 
-           // Sign and Send
            const { Transaction, Connection } = await import('@solana/web3.js');
            const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
            const transactionBuffer = Buffer.from(txBase64, 'base64');
@@ -173,7 +157,6 @@ export default function Profile() {
            await connection.confirmTransaction(signature, "confirmed");
            toast.success("Account closed and SOL reclaimed!");
 
-           // Remove from list
            setStuckAccounts(prev => prev.filter(a => a.pubkey !== accountKey));
       } catch (e) {
           console.error(e);
@@ -183,7 +166,6 @@ export default function Profile() {
       }
   };
 
-  // Check on-chain identity when wallet connects
   useEffect(() => {
     if (!account || profileData) return;
     
@@ -201,11 +183,6 @@ export default function Profile() {
   }, [account, profileData]);
 
   const handleRecover = async () => {
-      // If we found it on chain but don't have a TX, we can try to "Recover" by just re-creating the record
-      // This requires the backend to verify again (which recoverIdentity does via TX check)
-      // BUT if we have the address from checkSolanaIdentity, we might want a simpler "Sync" path.
-      // For now, let's guide them to use the TX hash if they have it, OR if we found the name, we can autofill.
-      
       if (!recoverTx) {
           toast.error("Please enter a transaction signature");
           return;
@@ -239,18 +216,15 @@ export default function Profile() {
 
     setIsMinting(true);
     try {
-      // Ensure Solana Wallet is connected
       if (!account) {
           await connectWallet();
           setIsMinting(false);
           return;
       }
 
-      // Validate Public Key before sending to backend
       const userPK = validateSolanaPK(account);
       console.debug("Minting with valid PK:", userPK.toBase58());
 
-      // 1. Get Transaction from Backend (Generates AI Art + Transaction)
       const response = await base44.functions.invoke('mintSolanaIdentity', {
           userAddress: userPK.toBase58(),
           userEthereneAddress: account
@@ -260,38 +234,36 @@ export default function Profile() {
 
       if (!data.success) throw new Error(data.error || "Setup failed");
 
-      // Show fee info to user
       if (data.feeAmount) {
           toast.info(`Platform fee: ${data.feeAmount.toFixed(4)} SOL (~$${data.feeAmountUSD} USD)`, { duration: 5000 });
       }
 
-      // 2. Decode and Sign with Wallet
       const { Transaction, Connection } = await import('@solana/web3.js');
       const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
-      // Decode base64 to Uint8Array using Buffer
       const transactionBuffer = Buffer.from(data.transaction, 'base64');
       const transaction = Transaction.from(transactionBuffer);
 
       console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
 
-      // Use wallet adapter's sendTransaction (uses wallet's RPC, avoids 403)
       let signature;
       try {
           const walletAdapter = wallet?.adapter;
-          if (!walletAdapter) {
-              throw new Error("Wallet not connected");
+          if (!walletAdapter || !walletAdapter.signTransaction) {
+              throw new Error("Wallet not connected or does not support signing");
           }
 
-          console.log("Requesting wallet to sign and send transaction...");
+          console.log("Requesting wallet signature...");
+          const signedTx = await walletAdapter.signTransaction(transaction);
           
-          // Use sendTransaction which signs and sends via wallet's RPC
-          // The transaction is already partially signed by the server
-          signature = await walletAdapter.sendTransaction(transaction, connection);
+          console.log("Transaction signed, sending to network...");
+          signature = await connection.sendRawTransaction(signedTx.serialize(), {
+              skipPreflight: false,
+              preflightCommitment: 'confirmed'
+          });
           
-          console.log("Transaction sent via wallet. Signature:", signature);
+          console.log("Transaction sent. Signature:", signature);
           
-          // Wait for confirmation
           toast.info("Confirming transaction on Solana...", { duration: 3000 });
           await connection.confirmTransaction(signature, 'confirmed');
       } catch (signErr) {
@@ -300,7 +272,6 @@ export default function Profile() {
           throw new Error(`Transaction Failed: ${errorMsg.includes('User rejected') ? 'User rejected the transaction' : errorMsg}`);
       }
 
-      // 4. Create DB Record
       await base44.entities.Identity.create({
            address: account, 
            subdomain: data.subdomain,
@@ -334,7 +305,6 @@ export default function Profile() {
       if (!account) return;
       try {
           if (isFollowing) {
-              // Unfollow
               const records = await base44.entities.Follow.filter({ follower_address: account, following_address: viewAddress });
               if (records.length > 0) {
                   await base44.entities.Follow.delete(records[0].id);
@@ -343,7 +313,6 @@ export default function Profile() {
                   toast.success("Unfollowed successfully");
               }
           } else {
-              // Follow
               await base44.entities.Follow.create({
                   follower_address: account,
                   following_address: viewAddress
