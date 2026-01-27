@@ -222,11 +222,10 @@ export default function Profile() {
           return;
       }
 
-      // Step 1: User sends payment directly
-      toast.info("Please send $4 in SOL to complete your mint request...", { duration: 3000 });
+      // Step 1: User sends payment using wallet's built-in connection
+      toast.info("Please approve payment of $4 in SOL...", { duration: 3000 });
 
-      const { SystemProgram, Transaction, Connection, PublicKey, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
-      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+      const { SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
 
       // Calculate SOL amount for $4
       let lamportsForFee = 20_000_000; // fallback
@@ -241,7 +240,7 @@ export default function Profile() {
       }
 
       const feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
-      toast.info(`Sending ${feeInSol.toFixed(4)} SOL (~$4 USD) to admin wallet...`, { duration: 3000 });
+      toast.info(`Sending ${feeInSol.toFixed(4)} SOL (~$4 USD)...`, { duration: 3000 });
 
       // Create payment transaction
       const adminWallet = new PublicKey("5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8");
@@ -255,24 +254,19 @@ export default function Profile() {
           })
       );
 
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = userPubkey;
-
-      // Sign and send payment
+      // Use wallet's sendTransaction (uses wallet's RPC connection)
       const walletAdapter = wallet?.adapter;
-      if (!walletAdapter || !walletAdapter.signTransaction) {
+      if (!walletAdapter || !walletAdapter.sendTransaction) {
           throw new Error("Wallet not connected");
       }
 
-      const signedTransaction = await walletAdapter.signTransaction(transaction);
-      const rawTransaction = signedTransaction.serialize();
-      const signature = await connection.sendRawTransaction(rawTransaction, {
-          skipPreflight: false,
-          maxRetries: 3
-      });
+      // Get connection from Layout
+      const { Connection } = await import('@solana/web3.js');
+      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
-      toast.info("Confirming payment...", { duration: 3000 });
+      const signature = await walletAdapter.sendTransaction(transaction, connection);
+
+      toast.info("Confirming payment...", { duration: 5000 });
       await connection.confirmTransaction(signature, 'confirmed');
 
       // Step 2: Submit mint request to backend
