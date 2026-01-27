@@ -275,27 +275,35 @@ export default function Profile() {
 
       console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
 
-      // Sign and send using wallet adapter's sendTransaction method (uses wallet's RPC)
+      // Sign with user's wallet, then send
       let signature;
       try {
           const walletAdapter = wallet?.adapter;
-          if (!walletAdapter || !walletAdapter.sendTransaction) {
+          if (!walletAdapter || !walletAdapter.signTransaction) {
               throw new Error("Wallet adapter not available");
           }
 
-          // Send transaction using wallet's method (avoids 403 from public RPC)
-          signature = await walletAdapter.sendTransaction(transaction, connection, {
+          console.log("Requesting user signature...");
+          // Sign the partially-signed transaction with user's wallet
+          const signedTx = await walletAdapter.signTransaction(transaction);
+          
+          console.log("User signed. Sending transaction...");
+          // Send the fully signed transaction
+          signature = await connection.sendRawTransaction(signedTx.serialize(), {
               skipPreflight: false,
-              preflightCommitment: 'confirmed'
+              preflightCommitment: 'confirmed',
+              maxRetries: 3
           });
           
-          console.log("Transaction sent via wallet RPC. Signature:", signature);
+          console.log("Transaction sent. Signature:", signature);
           
           // Wait for confirmation
+          toast.info("Confirming transaction on Solana...", { duration: 3000 });
           await connection.confirmTransaction(signature, 'confirmed');
       } catch (signErr) {
           console.error("Signing/Sending failed:", signErr);
-          throw new Error(`Wallet Transaction Failed: ${signErr.message || "User rejected or wallet error"}`);
+          const errorMsg = signErr.message || signErr.toString();
+          throw new Error(`Transaction Failed: ${errorMsg.includes('User rejected') ? 'User rejected the transaction' : errorMsg}`);
       }
 
       // 4. Create DB Record
