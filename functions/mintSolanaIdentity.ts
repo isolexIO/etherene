@@ -108,11 +108,19 @@ Deno.serve(async (req) => {
 
         // Calculate Fee ($3)
         let lamportsForFee = 20_000_000;
+        let feeInSol = 0.02;
         try {
             const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
             const data = await priceReq.json();
-            if (data.solana?.usd) lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
-        } catch (e) {}
+            if (data.solana?.usd) {
+                lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
+                feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
+            }
+        } catch (e) {
+            feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
+        }
+
+        console.log(`Platform fee: ${feeInSol.toFixed(4)} SOL (~$3 USD)`);
 
         // A. Fee Transfer (FIRST - before minting)
         const feeInstruction = SystemProgram.transfer({
@@ -121,8 +129,6 @@ Deno.serve(async (req) => {
             lamports: lamportsForFee
         });
         transaction.add(feeInstruction);
-
-        console.log(`Platform fee: ${(lamportsForFee/LAMPORTS_PER_SOL).toFixed(4)} SOL (~$3 USD)`);
 
         // B. SNS Subdomain Minting
         console.log("Deriving parent key...");
@@ -214,7 +220,9 @@ Deno.serve(async (req) => {
             success: true, 
             transaction: Buffer.from(serializedTransaction).toString('base64'),
             subdomain: `${subdomain}.etherene.sol`,
-            imageUrl: imageRes.url
+            imageUrl: imageRes.url,
+            feeAmount: feeInSol,
+            feeAmountUSD: 3
         });
 
     } catch (error) {

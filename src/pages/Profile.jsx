@@ -260,7 +260,12 @@ export default function Profile() {
 
       if (!data.success) throw new Error(data.error || "Setup failed");
 
-      // 2. Decode and Sign with Phantom
+      // Show fee info to user
+      if (data.feeAmount) {
+          toast.info(`Platform fee: ${data.feeAmount.toFixed(4)} SOL (~$${data.feeAmountUSD} USD)`, { duration: 5000 });
+      }
+
+      // 2. Decode and Sign with Wallet
       const { Transaction, Connection } = await import('@solana/web3.js');
       const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
@@ -270,25 +275,21 @@ export default function Profile() {
 
       console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
 
-      // Sign and send using wallet adapter
+      // Sign and send using wallet adapter's sendTransaction method (uses wallet's RPC)
       let signature;
       try {
-          // Get wallet adapter from window
           const walletAdapter = wallet?.adapter;
-          if (!walletAdapter) {
+          if (!walletAdapter || !walletAdapter.sendTransaction) {
               throw new Error("Wallet adapter not available");
           }
 
-          // Sign transaction
-          const signed = await walletAdapter.signTransaction(transaction);
-          
-          // Send using connection
-          signature = await connection.sendRawTransaction(signed.serialize(), {
+          // Send transaction using wallet's method (avoids 403 from public RPC)
+          signature = await walletAdapter.sendTransaction(transaction, connection, {
               skipPreflight: false,
               preflightCommitment: 'confirmed'
           });
           
-          console.log("Transaction sent. Signature:", signature);
+          console.log("Transaction sent via wallet RPC. Signature:", signature);
           
           // Wait for confirmation
           await connection.confirmTransaction(signature, 'confirmed');
