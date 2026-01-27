@@ -165,29 +165,35 @@ Deno.serve(async (req) => {
             throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
-        // 3. Create subdomain instruction - returns array of instructions
-        const instructions = await createSubdomain(
-            connection,
-            subdomain,
-            userPublicKey, // Owner
-            space,
-            userPublicKey, // Payer
-            rentLamports,
-            undefined, // Class
-            parentNameKey
-        );
-
-        // createSubdomain returns an array of instructions
-        if (Array.isArray(instructions)) {
-            instructions.forEach(ix => {
-                if (!ix.programId) ix.programId = NAME_PROGRAM_ID;
-                transaction.add(ix);
-            });
-        } else {
-            // Single instruction
-            if (!instructions.programId) instructions.programId = NAME_PROGRAM_ID;
-            transaction.add(instructions);
-        }
+        // 3. Create subdomain instruction manually
+        const { getHashedName, getNameAccountKey } = await import('npm:@bonfida/spl-name-service@^2.3.1');
+        
+        const hashedName = await getHashedName(subdomain);
+        const subdomainKey = await getNameAccountKey(hashedName, undefined, parentNameKey);
+        
+        console.log("Subdomain account:", subdomainKey.toBase58());
+        
+        // Create instruction data: [0, hashed_name (32 bytes), space (4 bytes), lamports (8 bytes)]
+        const instructionData = Buffer.alloc(1 + 32 + 4 + 8);
+        instructionData.writeUInt8(0, 0); // Create instruction
+        hashedName.copy(instructionData, 1);
+        instructionData.writeUInt32LE(space + 96, 33); // Total space
+        instructionData.writeBigUInt64LE(BigInt(rentLamports), 37);
+        
+        const createInstruction = new TransactionInstruction({
+            keys: [
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+                { pubkey: userPublicKey, isSigner: true, isWritable: true }, // Payer
+                { pubkey: subdomainKey, isSigner: false, isWritable: true }, // New account
+                { pubkey: userPublicKey, isSigner: false, isWritable: false }, // Owner
+                { pubkey: parentNameKey, isSigner: false, isWritable: false }, // Parent
+                { pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }, // Parent owner (authority)
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: instructionData
+        });
+        
+        transaction.add(createInstruction);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
