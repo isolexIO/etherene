@@ -221,7 +221,7 @@ export default function Profile() {
 
            // Sign and Send
            const { Transaction, Connection } = await import('@solana/web3.js');
-           const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=9e88661d-2dc2-43d7-89d1-d13d612c3f91", "confirmed");
+           const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
            const transactionBuffer = Buffer.from(txBase64, 'base64');
            const transaction = Transaction.from(transactionBuffer);
 

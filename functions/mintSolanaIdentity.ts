@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
 
         // 5. Setup Transaction
         console.log("Connecting to Solana...");
-        const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=9e88661d-2dc2-43d7-89d1-d13d612c3f91", "confirmed");
+        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
         const transaction = new Transaction();
 
         // Add Compute Budget (Priority Fee might be needed, but standard limit helps)
