@@ -114,8 +114,14 @@ Deno.serve(async (req) => {
             if (data.solana?.usd) lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
         } catch (e) {}
 
-        // A. Fee Transfer - REMOVED (will charge after successful mint)
-        // Fee will be collected separately after on-chain verification
+        // A. Fee Transfer (FIRST - before minting)
+        transaction.add(
+            SystemProgram.transfer({
+                fromPubkey: userPublicKey,
+                toPubkey: serverKeypair.publicKey,
+                lamports: lamportsForFee
+            })
+        );
 
         // B. SNS Subdomain Minting
         console.log("Deriving parent key...");
@@ -149,14 +155,14 @@ Deno.serve(async (req) => {
         const space = 1000;
         const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
         
-        // 2. Check User Balance (only for rent + fees, not platform fee)
+        // 2. Check User Balance (rent + platform fee + tx fees)
         const userBalance = await connection.getBalance(userPublicKey);
         const estimatedTxFee = 10000;
-        const requiredFunds = rentLamports + estimatedTxFee;
+        const requiredFunds = rentLamports + lamportsForFee + estimatedTxFee;
 
         if (userBalance < requiredFunds) {
             const missing = (requiredFunds - userBalance) / LAMPORTS_PER_SOL;
-            throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
+            throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL (${(lamportsForFee/LAMPORTS_PER_SOL).toFixed(4)} platform fee + ${(rentLamports/LAMPORTS_PER_SOL).toFixed(4)} rent + fees) but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
         // 3. Create subdomain instruction manually
