@@ -254,19 +254,19 @@ export default function Profile() {
           })
       );
 
-      // Use wallet's sendTransaction (uses wallet's RPC connection)
+      // Use wallet's sendTransaction WITHOUT connection param (uses wallet's internal RPC)
       const walletAdapter = wallet?.adapter;
       if (!walletAdapter || !walletAdapter.sendTransaction) {
           throw new Error("Wallet not connected");
       }
 
-      // Get connection from Layout
+      const signature = await walletAdapter.sendTransaction(transaction);
+
+      toast.info("Payment sent! Confirming...", { duration: 5000 });
+
+      // Use wallet's connection for confirmation
       const { Connection } = await import('@solana/web3.js');
       const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
-
-      const signature = await walletAdapter.sendTransaction(transaction, connection);
-
-      toast.info("Confirming payment...", { duration: 5000 });
       await connection.confirmTransaction(signature, 'confirmed');
 
       // Step 2: Submit mint request to backend
