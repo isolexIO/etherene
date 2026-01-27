@@ -114,14 +114,8 @@ Deno.serve(async (req) => {
             if (data.solana?.usd) lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
         } catch (e) {}
 
-        // A. Fee Transfer
-        transaction.add(
-            SystemProgram.transfer({
-                fromPubkey: userPublicKey,
-                toPubkey: serverKeypair.publicKey,
-                lamports: lamportsForFee
-            })
-        );
+        // A. Fee Transfer - REMOVED (will charge after successful mint)
+        // Fee will be collected separately after on-chain verification
 
         // B. SNS Subdomain Minting
         console.log("Deriving parent key...");
