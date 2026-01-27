@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useWeb3 } from '../Layout';
 import { 
     Shield, 
     Settings, 
@@ -17,7 +18,8 @@ import {
     Clock,
     XCircle,
     CheckCircle2,
-    ExternalLink
+    ExternalLink,
+    Lock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -33,9 +35,52 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 
+const ADMIN_WALLET = "5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8";
+
 export default function AdminPage() {
+    const { account, connectWallet } = useWeb3();
     const [activeTab, setActiveTab] = useState('analytics');
     const queryClient = useQueryClient();
+
+    // Check admin access
+    const isAdmin = account && account === ADMIN_WALLET;
+
+    if (!account) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
+                <div className="bg-white rounded-2xl p-12 shadow-lg border border-slate-200 text-center max-w-md">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Lock className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
+                    <p className="text-slate-500 mb-8">Connect your wallet to access the admin dashboard.</p>
+                    <button 
+                        onClick={connectWallet}
+                        className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                        Connect Wallet
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isAdmin) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
+                <div className="bg-white rounded-2xl p-12 shadow-lg border border-red-200 text-center max-w-md">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Shield className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
+                    <p className="text-slate-600 mb-4">This area is restricted to authorized administrators only.</p>
+                    <code className="text-xs bg-slate-100 px-3 py-1 rounded text-slate-500 font-mono">
+                        {account.slice(0, 8)}...{account.slice(-6)}
+                    </code>
+                </div>
+            </div>
+        );
+    }
 
     // --- Analytics Data ---
     const { data: analyticsData } = useQuery({
