@@ -249,18 +249,14 @@ export default function Profile() {
       let signature;
       try {
           const walletAdapter = wallet?.adapter;
-          if (!walletAdapter || !walletAdapter.signTransaction) {
-              throw new Error("Wallet not connected or does not support signing");
+          if (!walletAdapter || !walletAdapter.sendTransaction) {
+              throw new Error("Wallet not connected");
           }
 
-          console.log("Requesting wallet signature...");
-          const signedTx = await walletAdapter.signTransaction(transaction);
+          console.log("Requesting wallet to sign and send...");
           
-          console.log("Transaction signed, sending to network...");
-          signature = await connection.sendRawTransaction(signedTx.serialize(), {
-              skipPreflight: false,
-              preflightCommitment: 'confirmed'
-          });
+          // Use wallet's sendTransaction (no connection param = uses wallet's RPC)
+          signature = await walletAdapter.sendTransaction(transaction);
           
           console.log("Transaction sent. Signature:", signature);
           
