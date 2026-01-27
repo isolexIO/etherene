@@ -16,6 +16,8 @@ import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
 import ConversationList from '../components/messaging/ConversationList';
 import ChatWindow from '../components/messaging/ChatWindow';
+import ProfileEditor from '../components/profile/ProfileEditor';
+import ImportIdentity from '../components/profile/ImportIdentity';
 import moment from 'moment';
 import { toast } from 'sonner';
 
@@ -45,7 +47,7 @@ export default function Profile() {
   
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ display_name: '', bio: '' });
+  const [showImport, setShowImport] = useState(false);
   
   // Tabs State
   const [activeTab, setActiveTab] = useState('all');
@@ -62,28 +64,13 @@ export default function Profile() {
       }
   }, [searchParams]);
 
-  const startEditing = () => {
-    if (!profileData) return;
-    setEditForm({
-      display_name: profileData.display_name || '',
-      bio: profileData.bio || ''
-    });
-    setIsEditing(true);
+  const handleSaveProfile = (updatedData) => {
+    setProfileData(updatedData);
+    setIsEditing(false);
   };
 
-  const saveProfile = async () => {
-    try {
-      await base44.entities.Identity.update(profileData.id, {
-        display_name: editForm.display_name,
-        bio: editForm.bio
-      });
-      setProfileData({ ...profileData, ...editForm });
-      setIsEditing(false);
-      toast.success("Profile updated successfully");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to update profile");
-    }
+  const handleImportSuccess = () => {
+    window.location.reload();
   };
 
   // Load Data
@@ -499,25 +486,11 @@ export default function Profile() {
           </div>
 
           {isEditing ? (
-              <div className="w-full max-w-md mx-auto mb-6 space-y-4">
-                  <input
-                      type="text"
-                      value={editForm.display_name}
-                      onChange={(e) => setEditForm({...editForm, display_name: e.target.value})}
-                      className="w-full text-center text-3xl font-bold text-slate-900 border-b-2 border-indigo-200 focus:border-indigo-600 outline-none bg-transparent placeholder:text-slate-300"
-                      placeholder="Display Name"
-                  />
-                  <div className="flex justify-center mb-2">
-                       <div className="flex items-center gap-2 text-slate-500 font-mono text-sm bg-slate-100 px-3 py-1 rounded-full">
-                          <Hash className="w-3 h-3" />
-                          {viewAddress.slice(0,6)}...{viewAddress.slice(-4)}
-                      </div>
-                  </div>
-                  <textarea
-                      value={editForm.bio}
-                      onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-                      className="w-full text-center text-slate-600 border rounded-lg p-3 focus:ring-2 focus:ring-indigo-100 outline-none resize-none h-24"
-                      placeholder="Tell us about your journey..."
+              <div className="w-full max-w-2xl mx-auto mb-6">
+                  <ProfileEditor 
+                      profileData={profileData}
+                      onSave={handleSaveProfile}
+                      onCancel={() => setIsEditing(false)}
                   />
               </div>
           ) : (
@@ -537,10 +510,14 @@ export default function Profile() {
           )}
 
           {/* Socials */}
-          <div className="flex gap-3 mb-8">
-              {socials.twitter && <a href={`https://twitter.com/${socials.twitter}`} target="_blank" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors"><Globe className="w-4 h-4"/></a>}
-              {socials.website && <a href={socials.website} target="_blank" className="p-2 bg-slate-100 rounded-full hover:bg-green-100 hover:text-green-600 transition-colors"><Globe className="w-4 h-4"/></a>}
-          </div>
+          {Object.keys(socials).filter(key => socials[key]).length > 0 && (
+              <div className="flex gap-3 mb-8">
+                  {socials.website && <a href={socials.website} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-indigo-100 hover:text-indigo-600 transition-colors" title="Website"><Globe className="w-4 h-4"/></a>}
+                  {socials.twitter && <a href={`https://twitter.com/${socials.twitter}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Twitter"><MessageSquare className="w-4 h-4"/></a>}
+                  {socials.linkedin && <a href={`https://linkedin.com/in/${socials.linkedin}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors" title="LinkedIn"><Globe className="w-4 h-4"/></a>}
+                  {socials.github && <a href={`https://github.com/${socials.github}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors" title="GitHub"><Globe className="w-4 h-4"/></a>}
+              </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3">
@@ -567,17 +544,8 @@ export default function Profile() {
             )}
             {isOwner && (
                 <>
-                  {isEditing ? (
-                      <div className="flex gap-2">
-                           <button onClick={saveProfile} className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
-                              <Save className="w-4 h-4" /> Save
-                           </button>
-                           <button onClick={() => setIsEditing(false)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
-                              <X className="w-4 h-4" /> Cancel
-                           </button>
-                      </div>
-                  ) : (
-                      <button onClick={startEditing} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+                  {!isEditing && (
+                      <button onClick={() => setIsEditing(true)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
                           <PenTool className="w-4 h-4" /> Edit Profile
                       </button>
                   )}
@@ -626,22 +594,30 @@ export default function Profile() {
                                                   <div className="mb-2 text-xs text-green-700 bg-green-50 p-2 rounded">
                                                       Found: {foundOnChain.subdomain || "Unnamed Identity"} <br/>
                                                       <span className="opacity-70">Address: {foundOnChain.registryAddress?.slice(0,8)}...</span>
-                                                  </div>
-                                              )}
-                                              <input 
-                                                  type="text" 
-                                                  placeholder="Paste Transaction Signature"
-                                                  value={recoverTx}
-                                                  onChange={(e) => setRecoverTx(e.target.value)}
-                                                  className="w-full text-xs p-2 border rounded mb-2 font-mono"
-                                              />
-                                              <button 
-                                                  onClick={handleRecover}
-                                                  disabled={isRecovering}
-                                                  className="w-full py-1 bg-slate-200 text-slate-700 text-xs rounded hover:bg-slate-300 flex justify-center"
-                                              >
-                                                  {isRecovering ? <Loader2 className="w-3 h-3 animate-spin"/> : "Sync"}
-                                              </button>
+                                                                  </div>
+                                                              )}
+                                                              <input 
+                                                                  type="text" 
+                                                                  placeholder="Paste Transaction Signature"
+                                                                  value={recoverTx}
+                                                                  onChange={(e) => setRecoverTx(e.target.value)}
+                                                                  className="w-full text-xs p-2 border rounded mb-2 font-mono"
+                                                              />
+                                                              <div className="flex gap-2">
+                                                                  <button 
+                                                                      onClick={handleRecover}
+                                                                      disabled={isRecovering}
+                                                                      className="flex-1 py-1 bg-slate-200 text-slate-700 text-xs rounded hover:bg-slate-300 flex justify-center"
+                                                                  >
+                                                                      {isRecovering ? <Loader2 className="w-3 h-3 animate-spin"/> : "Sync"}
+                                                                  </button>
+                                                                  <button 
+                                                                      onClick={() => setShowImport(true)}
+                                                                      className="flex-1 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
+                                                                  >
+                                                                      Import Identity
+                                                                  </button>
+                                                              </div>
 
                                               <div className="mt-3 pt-3 border-t border-slate-200">
                                                   <div className="flex justify-between items-center mb-2">
@@ -686,8 +662,24 @@ export default function Profile() {
           </div>
       </div>
 
+      {/* Import Identity Modal */}
+      {showImport && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div 
+                  className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                  onClick={() => setShowImport(false)}
+              />
+              <div className="relative max-w-lg w-full">
+                  <ImportIdentity 
+                      account={account}
+                      onSuccess={handleImportSuccess}
+                  />
+              </div>
+          </div>
+      )}
+
       <div className="grid lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column: Stats & Identity */}
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
