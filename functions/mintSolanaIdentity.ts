@@ -115,13 +115,14 @@ Deno.serve(async (req) => {
         } catch (e) {}
 
         // A. Fee Transfer (FIRST - before minting)
-        transaction.add(
-            SystemProgram.transfer({
-                fromPubkey: userPublicKey,
-                toPubkey: serverKeypair.publicKey,
-                lamports: lamportsForFee
-            })
-        );
+        const feeInstruction = SystemProgram.transfer({
+            fromPubkey: userPublicKey,
+            toPubkey: serverKeypair.publicKey,
+            lamports: lamportsForFee
+        });
+        transaction.add(feeInstruction);
+
+        console.log(`Platform fee: ${(lamportsForFee/LAMPORTS_PER_SOL).toFixed(4)} SOL (~$3 USD)`);
 
         // B. SNS Subdomain Minting
         console.log("Deriving parent key...");

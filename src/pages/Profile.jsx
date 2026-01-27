@@ -22,7 +22,7 @@ import moment from 'moment';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const { account, connectWallet } = useWeb3();
+  const { account, connectWallet, wallet } = useWeb3();
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
@@ -123,65 +123,7 @@ export default function Profile() {
   }, [viewAddress]);
 
 
-  // Solana Wallet Integration
-  const [solanaAddress, setSolanaAddress] = useState(null);
-
-  useEffect(() => {
-      const checkSolana = async () => {
-           const provider = window.solana || window.phantom?.solana;
-           if (provider) {
-               try {
-                   // Eager connect (silent)
-                   const response = await provider.connect({ onlyIfTrusted: true });
-                   setSolanaAddress(response.publicKey.toString());
-               } catch (e) {
-                   // User not connected yet
-               }
-           }
-      };
-      // Give time for wallet injection
-      const timer = setTimeout(checkSolana, 500);
-      return () => clearTimeout(timer);
-  }, []);
-
-  const connectSolana = async () => {
-      try {
-          const provider = window.solana || window.phantom?.solana;
-          if (provider) {
-              const response = await provider.connect();
-              setSolanaAddress(response.publicKey.toString());
-              toast.success("Wallet connected");
-              return response.publicKey.toString();
-          } else {
-              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-              if (isMobile) {
-                  const url = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.origin)}`;
-                  window.location.href = url;
-                  return null;
-              }
-
-              toast.error("Please install Phantom Wallet!");
-              window.open("https://phantom.app/", "_blank");
-          }
-      } catch (err) {
-          console.error(err);
-          toast.error(err.message || "Connection cancelled");
-      }
-      return null;
-  };
-
-  const disconnectSolana = async () => {
-      try {
-          const provider = window.solana || window.phantom?.solana;
-          if (provider) {
-              await provider.disconnect();
-              setSolanaAddress(null);
-              toast.success("Disconnected from Solana");
-          }
-      } catch (err) {
-          console.error(err);
-      }
-  };
+  // Solana wallet is now managed by wallet adapter in Layout
 
   const [showRecover, setShowRecover] = useState(false);
   const [recoverTx, setRecoverTx] = useState('');
@@ -298,17 +240,14 @@ export default function Profile() {
     setIsMinting(true);
     try {
       // Ensure Solana Wallet is connected
-      let targetAddressStr = solanaAddress;
-      if (!targetAddressStr) {
-          targetAddressStr = await connectSolana();
-          if (!targetAddressStr) {
-             setIsMinting(false);
-             return;
-          }
+      if (!account) {
+          await connectWallet();
+          setIsMinting(false);
+          return;
       }
 
       // Validate Public Key before sending to backend
-      const userPK = validateSolanaPK(targetAddressStr);
+      const userPK = validateSolanaPK(account);
       console.debug("Minting with valid PK:", userPK.toBase58());
 
       // 1. Get Transaction from Backend (Generates AI Art + Transaction)
@@ -331,14 +270,28 @@ export default function Profile() {
 
       console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
 
-      // Phantom specific signing
-      const { solana } = window;
+      // Sign and send using wallet adapter
       let signature;
       try {
-          // Use signAndSendTransaction to leverage the wallet's RPC (avoids 403 on public nodes)
-          const result = await solana.signAndSendTransaction(transaction);
-          signature = result.signature;
-          console.log("Transaction sent via wallet. Signature:", signature);
+          // Get wallet adapter from window
+          const walletAdapter = wallet?.adapter;
+          if (!walletAdapter) {
+              throw new Error("Wallet adapter not available");
+          }
+
+          // Sign transaction
+          const signed = await walletAdapter.signTransaction(transaction);
+          
+          // Send using connection
+          signature = await connection.sendRawTransaction(signed.serialize(), {
+              skipPreflight: false,
+              preflightCommitment: 'confirmed'
+          });
+          
+          console.log("Transaction sent. Signature:", signature);
+          
+          // Wait for confirmation
+          await connection.confirmTransaction(signature, 'confirmed');
       } catch (signErr) {
           console.error("Signing/Sending failed:", signErr);
           throw new Error(`Wallet Transaction Failed: ${signErr.message || "User rejected or wallet error"}`);
@@ -539,7 +492,7 @@ export default function Profile() {
                           ) : (
                             <button onClick={connectWallet} className="w-full px-6 py-3 bg-purple-600 text-white rounded-full font-medium hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 flex items-center justify-center gap-2 group">
                                         <span className="w-2 h-2 bg-white rounded-full group-hover:scale-125 transition-transform" /> 
-                                        Connect Phantom
+                                        Connect Wallet
                                     </button>
                                   )}
 
