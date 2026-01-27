@@ -275,27 +275,21 @@ export default function Profile() {
 
       console.log("Transaction decoded. Existing signatures:", transaction.signatures.map(s => s.publicKey.toBase58()));
 
-      // Sign with user's wallet, then send
+      // Use wallet adapter's sendTransaction (uses wallet's RPC, avoids 403)
       let signature;
       try {
           const walletAdapter = wallet?.adapter;
-          if (!walletAdapter || !walletAdapter.signTransaction) {
-              throw new Error("Wallet adapter not available");
+          if (!walletAdapter) {
+              throw new Error("Wallet not connected");
           }
 
-          console.log("Requesting user signature...");
-          // Sign the partially-signed transaction with user's wallet
-          const signedTx = await walletAdapter.signTransaction(transaction);
+          console.log("Requesting wallet to sign and send transaction...");
           
-          console.log("User signed. Sending transaction...");
-          // Send the fully signed transaction
-          signature = await connection.sendRawTransaction(signedTx.serialize(), {
-              skipPreflight: false,
-              preflightCommitment: 'confirmed',
-              maxRetries: 3
-          });
+          // Use sendTransaction which signs and sends via wallet's RPC
+          // The transaction is already partially signed by the server
+          signature = await walletAdapter.sendTransaction(transaction, connection);
           
-          console.log("Transaction sent. Signature:", signature);
+          console.log("Transaction sent via wallet. Signature:", signature);
           
           // Wait for confirmation
           toast.info("Confirming transaction on Solana...", { duration: 3000 });
