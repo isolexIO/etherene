@@ -19,10 +19,8 @@ import {
 import { 
   getDomainKey, 
   NameRegistryState,
-  getHashedName,
-  getNameAccountKey
+  createSubdomain
 } from 'npm:@bonfida/spl-name-service@^2.3.1';
-import { serialize } from 'npm:borsh@^1.0.0';
 import bs58 from 'npm:bs58@5.0.0';
 
 Deno.serve(async (req) => {
@@ -101,8 +99,8 @@ Deno.serve(async (req) => {
         }
 
         // 5. Setup Transaction
-        console.log("Connecting to Solana Mainnet...");
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        console.log("Connecting to Solana...");
+        const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=9e88661d-2dc2-43d7-89d1-d13d612c3f91", "confirmed");
         const transaction = new Transaction();
 
         // Add Compute Budget (Priority Fee might be needed, but standard limit helps)
@@ -151,10 +149,10 @@ Deno.serve(async (req) => {
 
 
 
-        console.log("Creating subdomain registry...");
+        console.log("Creating subdomain...");
         
         // 1. Calculate Space & Rent
-        const space = 2000; // 2KB for subdomain data
+        const space = 1000;
         const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
         
         // 2. Check User Balance
@@ -167,54 +165,19 @@ Deno.serve(async (req) => {
             throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
-        // 3. Derive subdomain account with proper seed
-        const hashedName = await getHashedName(subdomain);
-        const subdomainPDA = await getNameAccountKey(hashedName, undefined, parentNameKey);
-        
-        console.log("Subdomain PDA:", subdomainPDA.toBase58());
+        // 3. Create subdomain using SDK function
+        const createSubdomainIx = await createSubdomain(
+            connection,
+            subdomain,
+            userPublicKey, // Owner
+            space,
+            userPublicKey, // Payer
+            rentLamports,
+            undefined, // Class
+            parentNameKey
+        );
 
-        // 4. Create subdomain account instruction (SNS Create instruction tag: 0)
-        const headerSpace = 96; // SNS header size
-        const totalSpace = headerSpace + space;
-        
-        // Build Create instruction manually
-        const instructionData = Buffer.alloc(1 + 32 + 4 + 4);
-        instructionData.writeUInt8(0, 0); // Create instruction tag
-        hashedName.copy(instructionData, 1); // Hashed name (32 bytes)
-        instructionData.writeUInt32LE(totalSpace, 33); // Space
-        instructionData.writeUInt32LE(0, 37); // lamports (will be calculated by program)
-        
-        const createIx = new TransactionInstruction({
-            keys: [
-                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-                { pubkey: userPublicKey, isSigner: true, isWritable: true }, // Payer
-                { pubkey: subdomainPDA, isSigner: false, isWritable: true }, // New account
-                { pubkey: userPublicKey, isSigner: true, isWritable: false }, // Owner
-                { pubkey: parentNameKey, isSigner: false, isWritable: false }, // Parent
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: instructionData
-        });
-
-        transaction.add(createIx);
-
-        // 5. Update subdomain data to write the name
-        const nameBytes = new TextEncoder().encode(subdomain);
-        const updateData = Buffer.alloc(1 + 4 + nameBytes.length);
-        updateData.writeUInt8(1, 0); // Update instruction tag
-        updateData.writeUInt32LE(0, 1); // Offset 0
-        nameBytes.copy(updateData, 5);
-
-        const updateIx = new TransactionInstruction({
-            keys: [
-                { pubkey: subdomainPDA, isSigner: false, isWritable: true },
-                { pubkey: userPublicKey, isSigner: true, isWritable: false }
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: updateData
-        });
-        
-        transaction.add(updateIx);
+        transaction.add(createSubdomainIx);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;

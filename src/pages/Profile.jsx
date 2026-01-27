@@ -221,7 +221,7 @@ export default function Profile() {
 
            // Sign and Send
            const { Transaction, Connection } = await import('@solana/web3.js');
-           const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+           const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=9e88661d-2dc2-43d7-89d1-d13d612c3f91", "confirmed");
            const transactionBuffer = Buffer.from(txBase64, 'base64');
            const transaction = Transaction.from(transactionBuffer);
 
@@ -344,40 +344,8 @@ export default function Profile() {
           throw new Error(`Wallet Transaction Failed: ${signErr.message || "User rejected or wallet error"}`);
       }
 
-      // Robust Confirmation Strategy
-      let confirmed = false;
-      try {
-          const confirmation = await connection.confirmTransaction(signature, "confirmed");
-          if (confirmation.value.err) {
-              throw new Error(JSON.stringify(confirmation.value.err));
-          }
-          confirmed = true;
-      } catch (confirmErr) {
-          console.warn("Confirmation initial failure:", confirmErr);
-          // Fallback check for timeout
-          try {
-              const status = await connection.getSignatureStatus(signature);
-              console.log("Fallback status check:", status);
-              if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
-                  if (status.value.err) throw new Error(JSON.stringify(status.value.err));
-                  confirmed = true;
-              }
-          } catch (statusErr) {
-              console.error("Status check failed:", statusErr);
-          }
-      }
-
-      if (!confirmed) {
-          // Don't fail the whole flow if we have a signature, just warn and let them check
-          console.warn("Transaction unconfirmed but sent");
-          toast.warning("Transaction sent but waiting for confirmation. Check Explorer.", {
-              action: {
-                  label: 'Explorer',
-                  onClick: () => window.open(`https://explorer.solana.com/tx/${signature}`, '_blank')
-              },
-              duration: 10000
-          });
-      }
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, "confirmed");
 
       // 4. Create DB Record
       await base44.entities.Identity.create({
