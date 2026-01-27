@@ -344,11 +344,26 @@ export default function Profile() {
           throw new Error(`Wallet Transaction Failed: ${signErr.message || "User rejected or wallet error"}`);
       }
 
-      // Transaction sent successfully - create DB record immediately
-      // Note: Confirmation uses WebSocket which may be blocked in browsers
-      // The transaction is likely successful if signature was returned
+      // 4. Charge platform fee (separate transaction after mint succeeds)
+      try {
+          const feeResponse = await base44.functions.invoke('chargeMintFee', {
+              userAddress: userPK.toBase58(),
+              mintTxSignature: signature
+          });
+          
+          if (feeResponse.data.success && feeResponse.data.feeTransaction) {
+              const feeBuffer = Buffer.from(feeResponse.data.feeTransaction, 'base64');
+              const feeTransaction = Transaction.from(feeBuffer);
+              
+              const { signature: feeSignature } = await solana.signAndSendTransaction(feeTransaction);
+              console.log("Fee charged:", feeSignature);
+          }
+      } catch (feeErr) {
+          console.error("Fee collection failed (non-fatal):", feeErr);
+          toast.warning("Identity minted but fee payment failed. Please contact support.");
+      }
       
-      // 4. Create DB Record
+      // 5. Create DB Record
       await base44.entities.Identity.create({
            address: account, 
            subdomain: data.subdomain,
@@ -356,9 +371,11 @@ export default function Profile() {
            status: 'minted',
            bio: `Solana Identity: ${data.subdomain}`,
            avatar_url: data.imageUrl,
-           cover_image: data.imageUrl
+           cover_image: data.imageUrl,
+           fee_charged: true
       });
 
+      toast.success("Identity minted successfully!");
       window.open(`https://explorer.solana.com/tx/${signature}`, '_blank');
       window.location.reload();
 
