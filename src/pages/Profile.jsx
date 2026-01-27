@@ -249,21 +249,28 @@ export default function Profile() {
       let signature;
       try {
           const walletAdapter = wallet?.adapter;
-          if (!walletAdapter || !walletAdapter.sendTransaction) {
-              throw new Error("Wallet not connected");
+          if (!walletAdapter || !walletAdapter.signTransaction) {
+              throw new Error("Wallet not connected or doesn't support signing");
           }
 
-          console.log("Requesting wallet to sign and send...");
+          console.log("Requesting user to sign transaction...");
           
-          // Use wallet's sendTransaction with options to skip preflight
-          signature = await walletAdapter.sendTransaction(transaction, connection, {
+          // Sign the partially-signed transaction with user's wallet
+          const signedTransaction = await walletAdapter.signTransaction(transaction);
+          
+          console.log("Transaction signed by user, broadcasting to network...");
+          
+          // Send the fully-signed transaction to the network
+          const rawTransaction = signedTransaction.serialize();
+          signature = await connection.sendRawTransaction(rawTransaction, {
               skipPreflight: true,
-              maxRetries: 3
+              maxRetries: 3,
+              preflightCommitment: 'confirmed'
           });
           
-          console.log("Transaction sent. Signature:", signature);
+          console.log("Transaction broadcast. Signature:", signature);
           
-          toast.info("Confirming transaction on Solana...", { duration: 3000 });
+          toast.info("Confirming transaction on Solana...", { duration: 5000 });
           await connection.confirmTransaction(signature, 'confirmed');
       } catch (signErr) {
           console.error("Signing/Sending failed:", signErr);
