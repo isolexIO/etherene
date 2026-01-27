@@ -254,6 +254,13 @@ export default function Profile() {
           })
       );
 
+      // Set recent blockhash (required for signing)
+      const { Connection } = await import('@solana/web3.js');
+      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+      const { blockhash } = await connection.getLatestBlockhash('finalized');
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = userPubkey;
+
       // Sign transaction with wallet
       const { solana } = window;
       if (!solana?.isPhantom && !solana?.isSolflare) {
