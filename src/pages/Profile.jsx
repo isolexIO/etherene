@@ -255,8 +255,11 @@ export default function Profile() {
 
           console.log("Requesting wallet to sign and send...");
           
-          // Use wallet's sendTransaction (no connection param = uses wallet's RPC)
-          signature = await walletAdapter.sendTransaction(transaction);
+          // Use wallet's sendTransaction with options to skip preflight
+          signature = await walletAdapter.sendTransaction(transaction, connection, {
+              skipPreflight: true,
+              maxRetries: 3
+          });
           
           console.log("Transaction sent. Signature:", signature);
           
