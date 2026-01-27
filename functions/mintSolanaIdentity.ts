@@ -149,10 +149,10 @@ Deno.serve(async (req) => {
         const space = 1000;
         const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
         
-        // 2. Check User Balance
+        // 2. Check User Balance (only for rent + fees, not platform fee)
         const userBalance = await connection.getBalance(userPublicKey);
         const estimatedTxFee = 10000;
-        const requiredFunds = lamportsForFee + rentLamports + estimatedTxFee;
+        const requiredFunds = rentLamports + estimatedTxFee;
 
         if (userBalance < requiredFunds) {
             const missing = (requiredFunds - userBalance) / LAMPORTS_PER_SOL;
