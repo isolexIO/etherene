@@ -165,19 +165,24 @@ Deno.serve(async (req) => {
             throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
-        // 3. Create subdomain using SDK function
-        const createSubdomainIx = await createSubdomain(
+        // 3. Create subdomain instruction
+        const instruction = await createSubdomain(
             connection,
             subdomain,
             userPublicKey, // Owner
             space,
-            userPublicKey, // Payer
+            userPublicKey, // Payer (not signer for authority)
             rentLamports,
             undefined, // Class
             parentNameKey
         );
 
-        transaction.add(createSubdomainIx);
+        // Ensure programId is set
+        if (!instruction.programId) {
+            instruction.programId = NAME_PROGRAM_ID;
+        }
+
+        transaction.add(instruction);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
