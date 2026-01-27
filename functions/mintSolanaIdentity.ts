@@ -167,27 +167,24 @@ Deno.serve(async (req) => {
         
         console.log("Subdomain account:", subdomainKey.toBase58());
         
-        // Create instruction data: [0, hashed_name (32 bytes), space (4 bytes), lamports (8 bytes)]
-        const instructionData = Buffer.alloc(1 + 32 + 4 + 8);
-        instructionData.writeUInt8(0, 0); // Create instruction
-        hashedName.copy(instructionData, 1);
-        instructionData.writeUInt32LE(space + 96, 33); // Total space
-        instructionData.writeBigUInt64LE(BigInt(rentLamports), 37);
+        // Use createSubdomain SDK helper which handles all instruction details
+        const subdoainInstructions = await createSubdomain(
+            connection,
+            subdomain,
+            userPublicKey, // Owner of the new subdomain
+            space,
+            userPublicKey, // Payer for rent
+            rentLamports,
+            undefined, // No class
+            parentNameKey // Parent domain
+        );
         
-        const createInstruction = new TransactionInstruction({
-            keys: [
-                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-                { pubkey: userPublicKey, isSigner: true, isWritable: true }, // Payer
-                { pubkey: subdomainKey, isSigner: false, isWritable: true }, // New account
-                { pubkey: userPublicKey, isSigner: false, isWritable: false }, // Owner
-                { pubkey: parentNameKey, isSigner: false, isWritable: false }, // Parent
-                { pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false }, // Parent owner (authority)
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: instructionData
-        });
-        
-        transaction.add(createInstruction);
+        // SDK returns array of instructions
+        if (Array.isArray(subdoainInstructions)) {
+            subdoainInstructions.forEach(ix => transaction.add(ix));
+        } else {
+            transaction.add(subdoainInstructions);
+        }
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
