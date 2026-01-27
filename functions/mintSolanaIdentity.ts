@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
         const { blockhash } = await connection.getLatestBlockhash('finalized');
         transaction.recentBlockhash = blockhash;
 
-        // Partial Sign by Server (Authority of parent domain)
+        // Server must sign as the parent domain owner (authority for subdomain creation)
         transaction.partialSign(serverKeypair);
 
         const serializedTransaction = transaction.serialize({
