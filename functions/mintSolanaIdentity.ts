@@ -18,9 +18,9 @@ import {
   } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   getDomainKey, 
-  createNameRegistry,
   NameRegistryState,
-  updateInstruction
+  getHashedName,
+  getNameAccountKey
 } from 'npm:@bonfida/spl-name-service@^2.3.1';
 import { serialize } from 'npm:borsh@^1.0.0';
 import bs58 from 'npm:bs58@5.0.0';
@@ -149,84 +149,72 @@ Deno.serve(async (req) => {
              console.warn(`Server balance low: ${balance / LAMPORTS_PER_SOL} SOL`);
         }
 
-        // Check if subdomain already exists (collision check)
-        const { pubkey: subdomainKey } = await getDomainKey(subdomain, parentNameKey);
-        const subdomainInfo = await connection.getAccountInfo(subdomainKey);
-        if (subdomainInfo) {
-            return Response.json({ error: `Subdomain '${subdomain}' already exists. Please try again.` }, { status: 409 });
-        }
 
-        console.log("Creating registry instruction...");
+
+        console.log("Creating subdomain registry...");
         
-        // 1. Calculate Rent & Requirements
-        const space = 2000; // 2KB space
-        // We calculate rent for space + 96 (Header) to be safe, ensuring account is rent-exempt
-        // even if the SDK allocates extra for the header.
+        // 1. Calculate Space & Rent
+        const space = 2000; // 2KB for subdomain data
         const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
         
-        // 2. Check User Balance (Pre-flight check)
+        // 2. Check User Balance
         const userBalance = await connection.getBalance(userPublicKey);
-        const estimatedTxFee = 10000; // Buffer for signature fees
+        const estimatedTxFee = 10000;
         const requiredFunds = lamportsForFee + rentLamports + estimatedTxFee;
 
         if (userBalance < requiredFunds) {
             const missing = (requiredFunds - userBalance) / LAMPORTS_PER_SOL;
-            throw new Error(`Insufficient funds. You need ${requiredFunds/LAMPORTS_PER_SOL} SOL but have ${userBalance/LAMPORTS_PER_SOL} SOL. Missing ~${missing.toFixed(4)} SOL.`);
+            throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
-        // 3. Create Name Registry Instruction
-        const createSubdomainIx = await createNameRegistry(
-            connection,
-            subdomain,
-            space,
-            userPublicKey, // Payer
-            userPublicKey, // Owner
-            rentLamports,
-            PublicKey.default, 
-            parentNameKey
-        );
+        // 3. Derive subdomain account with proper seed
+        const hashedName = await getHashedName(subdomain);
+        const subdomainPDA = await getNameAccountKey(hashedName, undefined, parentNameKey);
+        
+        console.log("Subdomain PDA:", subdomainPDA.toBase58());
 
-        // Fix signer issue for System Program
-        createSubdomainIx.keys.forEach(key => {
-            if (key.pubkey.toBase58() === "11111111111111111111111111111111") {
-                key.isSigner = false;
-            }
+        // 4. Create subdomain account instruction (SNS Create instruction tag: 0)
+        const headerSpace = 96; // SNS header size
+        const totalSpace = headerSpace + space;
+        
+        // Build Create instruction manually
+        const instructionData = Buffer.alloc(1 + 32 + 4 + 4);
+        instructionData.writeUInt8(0, 0); // Create instruction tag
+        hashedName.copy(instructionData, 1); // Hashed name (32 bytes)
+        instructionData.writeUInt32LE(totalSpace, 33); // Space
+        instructionData.writeUInt32LE(0, 37); // lamports (will be calculated by program)
+        
+        const createIx = new TransactionInstruction({
+            keys: [
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+                { pubkey: userPublicKey, isSigner: true, isWritable: true }, // Payer
+                { pubkey: subdomainPDA, isSigner: false, isWritable: true }, // New account
+                { pubkey: userPublicKey, isSigner: true, isWritable: false }, // Owner
+                { pubkey: parentNameKey, isSigner: false, isWritable: false }, // Parent
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: instructionData
         });
 
-        transaction.add(createSubdomainIx);
+        transaction.add(createIx);
 
-        // 4. Update Registry Data with Name
-        // We write the subdomain name into the registry data so it can be read/resolved.
-        // We use offset 96 (skipping the header).
-        try {
-            // Manual instruction construction using Uint8Array/DataView (safer for Deno)
-            // Instruction format: [1 (u8 tag), offset (u32), length (u32), data (bytes)]
-            const nameBytes = new TextEncoder().encode(subdomain);
-            const dataLength = nameBytes.length;
-            const bufferSize = 1 + 4 + 4 + dataLength;
-            
-            const dataArr = new Uint8Array(bufferSize);
-            const view = new DataView(dataArr.buffer);
+        // 5. Update subdomain data to write the name
+        const nameBytes = new TextEncoder().encode(subdomain);
+        const updateData = Buffer.alloc(1 + 4 + nameBytes.length);
+        updateData.writeUInt8(1, 0); // Update instruction tag
+        updateData.writeUInt32LE(0, 1); // Offset 0
+        nameBytes.copy(updateData, 5);
 
-            view.setUint8(0, 1);                  // Instruction: Update (1)
-            view.setUint32(1, 96, true);          // Offset: 96 (Little Endian)
-            view.setUint32(5, dataLength, true);  // Length (Little Endian)
-            dataArr.set(nameBytes, 9);            // Data content
-
-            const updateDataIx = new TransactionInstruction({
-                keys: [
-                    { pubkey: subdomainKey, isSigner: false, isWritable: true },
-                    { pubkey: userPublicKey, isSigner: true, isWritable: false }
-                ],
-                programId: NAME_PROGRAM_ID,
-                data: dataArr
-            });
-            
-            transaction.add(updateDataIx);
-        } catch (updateErr) {
-             console.error("Failed to create update instruction:", updateErr);
-             throw new Error(`Failed to construct data update instruction: ${updateErr.message}`);
-        }
+        const updateIx = new TransactionInstruction({
+            keys: [
+                { pubkey: subdomainPDA, isSigner: false, isWritable: true },
+                { pubkey: userPublicKey, isSigner: true, isWritable: false }
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: updateData
+        });
+        
+        transaction.add(updateIx);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
