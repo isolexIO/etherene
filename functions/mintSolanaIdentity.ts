@@ -150,11 +150,11 @@ Deno.serve(async (req) => {
 
 
         console.log("Creating subdomain...");
-        
+
         // 1. Calculate Space & Rent
         const space = 1000;
         const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
-        
+
         // 2. Check User Balance (rent + platform fee + tx fees)
         const userBalance = await connection.getBalance(userPublicKey);
         const estimatedTxFee = 10000;
@@ -167,30 +167,33 @@ Deno.serve(async (req) => {
 
         // 3. Create subdomain instruction manually
         const { getHashedName, getNameAccountKey } = await import('npm:@bonfida/spl-name-service@^2.3.1');
-        
+
         const hashedName = await getHashedName(subdomain);
         const subdomainKey = await getNameAccountKey(hashedName, undefined, parentNameKey);
-        
+
         console.log("Subdomain account:", subdomainKey.toBase58());
-        
-        // Use createSubdomain SDK helper which handles all instruction details
-        const subdoainInstructions = await createSubdomain(
-            connection,
-            subdomain,
-            userPublicKey, // Owner of the new subdomain
-            space,
-            userPublicKey, // Payer for rent
-            rentLamports,
-            undefined, // No class
-            parentNameKey // Parent domain
-        );
-        
-        // SDK returns array of instructions
-        if (Array.isArray(subdoainInstructions)) {
-            subdoainInstructions.forEach(ix => transaction.add(ix));
-        } else {
-            transaction.add(subdoainInstructions);
-        }
+
+        // Build instruction data manually
+        const instructionData = Buffer.alloc(1 + 32 + 4 + 8);
+        instructionData.writeUInt8(0, 0); // Create instruction
+        hashedName.copy(instructionData, 1);
+        instructionData.writeUInt32LE(space + 96, 33);
+        instructionData.writeBigUInt64LE(BigInt(rentLamports), 37);
+
+        const createInstruction = new TransactionInstruction({
+            keys: [
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+                { pubkey: userPublicKey, isSigner: true, isWritable: true },
+                { pubkey: subdomainKey, isSigner: false, isWritable: true },
+                { pubkey: userPublicKey, isSigner: false, isWritable: false },
+                { pubkey: parentNameKey, isSigner: false, isWritable: false },
+                { pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false },
+            ],
+            programId: NAME_PROGRAM_ID,
+            data: instructionData
+        });
+
+        transaction.add(createInstruction);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
