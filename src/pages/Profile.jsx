@@ -255,17 +255,17 @@ export default function Profile() {
       const userPubkey = new PublicKey(account);
       const adminPubkey = new PublicKey(ADMIN_WALLET);
 
-      const transaction = new Transaction({
-          recentBlockhash: blockhash,
-          lastValidBlockHeight,
-          feePayer: userPubkey,
-      }).add(
+      const transaction = new Transaction().add(
           SystemProgram.transfer({
               fromPubkey: userPubkey,
               toPubkey: adminPubkey,
               lamports: lamportsForFee
           })
       );
+
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.feePayer = userPubkey;
 
       // Step 4: Wallet signs and sends
       const { solana } = window;
