@@ -35,15 +35,23 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 
-const ADMIN_WALLET = "5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8";
-
 export default function AdminPage() {
     const { account, connectWallet } = useWeb3();
     const [activeTab, setActiveTab] = useState('analytics');
     const queryClient = useQueryClient();
 
+    // Fetch admin wallet from settings
+    const { data: adminSettings } = useQuery({
+        queryKey: ['adminCheck'],
+        queryFn: async () => {
+            const res = await base44.entities.GlobalSettings.list();
+            return res[0] || {};
+        },
+        enabled: !!account
+    });
+
     // Check admin access
-    const isAdmin = account && account === ADMIN_WALLET;
+    const isAdmin = account && adminSettings?.admin_wallet && account === adminSettings.admin_wallet;
 
     if (!account) {
         return (

@@ -35,6 +35,28 @@ function LayoutContent({ children, currentPageName }) {
 
   const account = publicKey?.toBase58() || null;
 
+  // Google Analytics
+  useEffect(() => {
+    const script1 = document.createElement('script');
+    script1.async = true;
+    script1.src = 'https://www.googletagmanager.com/gtag/js?id=G-SDJ93Z5473';
+    document.head.appendChild(script1);
+
+    const script2 = document.createElement('script');
+    script2.innerHTML = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SDJ93Z5473');
+    `;
+    document.head.appendChild(script2);
+
+    return () => {
+      document.head.removeChild(script1);
+      document.head.removeChild(script2);
+    };
+  }, []);
+
   // Heartbeat for online status
   useEffect(() => {
       if (!account) return;
