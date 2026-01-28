@@ -140,18 +140,24 @@ export default function AdminPage() {
 
     const [genesisDate, setGenesisDate] = useState('');
     const [maintenanceMode, setMaintenanceMode] = useState(false);
+    const [platformFee, setPlatformFee] = useState(3);
+    const [adminWallet, setAdminWallet] = useState('');
 
     useEffect(() => {
         if (settings) {
             setGenesisDate(settings.genesis_date || '2024-01-01');
             setMaintenanceMode(settings.maintenance_mode || false);
+            setPlatformFee(settings.platform_fee_usd || 3);
+            setAdminWallet(settings.admin_wallet || '5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8');
         }
     }, [settings]);
 
     const handleSaveSettings = () => {
         updateSettingsMutation.mutate({
             genesis_date: genesisDate,
-            maintenance_mode: maintenanceMode
+            maintenance_mode: maintenanceMode,
+            platform_fee_usd: platformFee,
+            admin_wallet: adminWallet
         });
     };
 
@@ -553,11 +559,33 @@ export default function AdminPage() {
                             <div className="border-t border-slate-100 pt-6">
                                 <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
                                     <DollarSign className="w-5 h-5 text-indigo-600" />
-                                    Financials
+                                    Payment Configuration
                                 </h3>
-                                <p className="text-slate-500 text-sm mb-4">Platform fee configuration.</p>
-                                <div className="bg-slate-50 p-4 rounded-xl text-sm text-slate-600">
-                                    Current Platform Fee: <span className="font-bold text-slate-900">$3.00 USD</span> (Hardcoded in contract)
+                                <p className="text-slate-500 text-sm mb-4">Configure platform fee and payment vault.</p>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">Platform Fee (USD)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={platformFee}
+                                            onChange={(e) => setPlatformFee(parseFloat(e.target.value))}
+                                            className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none mt-2"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">Admin Wallet Address</label>
+                                        <input
+                                            type="text"
+                                            value={adminWallet}
+                                            onChange={(e) => setAdminWallet(e.target.value)}
+                                            placeholder="Solana wallet address"
+                                            className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none mt-2 font-mono text-sm"
+                                        />
+                                        <p className="text-xs text-slate-400 mt-1">This wallet will receive all mint payments</p>
+                                    </div>
                                 </div>
                             </div>
 
