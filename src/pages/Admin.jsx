@@ -39,6 +39,7 @@ export default function AdminPage() {
     const { account, connectWallet } = useWeb3();
     const [activeTab, setActiveTab] = useState('analytics');
     const queryClient = useQueryClient();
+    const [newRequestCount, setNewRequestCount] = useState(0);
 
     // Fetch admin wallet from settings
     const { data: adminSettings } = useQuery({
@@ -160,11 +161,35 @@ export default function AdminPage() {
         }
     });
 
-    const pendingRequests = mintRequests?.filter(r => r.status === 'pending') || [];
-    const historicalRequests = mintRequests?.filter(r => r.status !== 'pending') || [];
+    const pendingRequests = mintRequests?.filter(r => r.status === 'pending' || r.status === 'processing') || [];
+    const historicalRequests = mintRequests?.filter(r => r.status === 'minted' || r.status === 'failed') || [];
 
     // Check admin access
     const isAdmin = account && adminSettings?.admin_wallet && account === adminSettings.admin_wallet;
+
+    // Real-time notifications for new mint requests
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        const unsubscribe = base44.entities.MintRequest.subscribe((event) => {
+            if (event.type === 'create' && event.data.status === 'pending') {
+                setNewRequestCount(prev => prev + 1);
+                toast.info(`New mint request: ${event.data.subdomain}`, {
+                    duration: 10000,
+                    action: {
+                        label: 'View',
+                        onClick: () => {
+                            setActiveTab('mints');
+                            setNewRequestCount(0);
+                        }
+                    }
+                });
+                queryClient.invalidateQueries(['mintRequests']);
+            }
+        });
+
+        return unsubscribe;
+    }, [isAdmin, queryClient]);
 
     if (!account) {
         return (
@@ -240,7 +265,10 @@ export default function AdminPage() {
                         </div>
                     </button>
                     <button
-                        onClick={() => setActiveTab('mints')}
+                        onClick={() => {
+                            setActiveTab('mints');
+                            setNewRequestCount(0);
+                        }}
                         className={`pb-4 px-2 font-medium transition-colors border-b-2 ${
                             activeTab === 'mints' 
                                 ? 'border-indigo-600 text-indigo-600' 
@@ -250,8 +278,13 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4" /> Mint Requests
                             {pendingRequests.length > 0 && (
-                                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
                                     {pendingRequests.length}
+                                </span>
+                            )}
+                            {newRequestCount > 0 && (
+                                <span className="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full animate-bounce">
+                                    +{newRequestCount}
                                 </span>
                             )}
                         </div>
@@ -377,14 +410,14 @@ export default function AdminPage() {
                 {activeTab === 'mints' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                         
-                        {/* Pending Requests */}
+                        {/* Pending/Processing Requests */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="px-6 py-4 bg-red-50 border-b border-red-100">
+                            <div className="px-6 py-4 bg-amber-50 border-b border-amber-100">
                                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-red-600" />
-                                    Pending Mint Requests ({pendingRequests.length})
+                                    <Clock className="w-5 h-5 text-amber-600" />
+                                    Active Mint Requests ({pendingRequests.length})
                                 </h3>
-                                <p className="text-sm text-slate-600 mt-1">Requires manual minting on Solana Name Service</p>
+                                <p className="text-sm text-slate-600 mt-1">Pending verification or manual minting on Solana Name Service</p>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
@@ -408,7 +441,14 @@ export default function AdminPage() {
                                             pendingRequests.map((request) => (
                                                 <tr key={request.id} className="hover:bg-slate-50/50">
                                                     <td className="px-6 py-4">
-                                                        <div className="font-medium text-slate-900">{request.subdomain}</div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="font-medium text-slate-900">{request.subdomain}</div>
+                                                            {request.status === 'processing' && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                    Processing
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         {request.image_url && (
                                                             <a 
                                                                 href={request.image_url} 
@@ -443,6 +483,14 @@ export default function AdminPage() {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center justify-end gap-2">
+                                                            {request.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => updateMintStatusMutation.mutate({ id: request.id, status: 'processing' })}
+                                                                    className="text-sm font-medium px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <Clock className="w-4 h-4" /> Start Processing
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => updateMintStatusMutation.mutate({ id: request.id, status: 'minted' })}
                                                                 className="text-sm font-medium px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex items-center gap-1"
