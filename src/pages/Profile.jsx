@@ -278,13 +278,14 @@ export default function Profile() {
       transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = userPubkey;
 
-      // Step 5: Wallet signs and sends transaction
-      if (!signTransaction || !sendTransaction) {
+      // Step 5: Create connection and send transaction
+      if (!sendTransaction) {
           throw new Error("Wallet not connected properly");
       }
 
-      const signed = await signTransaction(transaction);
-      const signature = await sendTransaction(signed);
+      const { Connection } = await import('@solana/web3.js');
+      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+      const signature = await sendTransaction(transaction, connection);
 
       toast.success("Payment confirmed!", { duration: 5000 });
 
