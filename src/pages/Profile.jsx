@@ -227,35 +227,44 @@ export default function Profile() {
       // Step 1: User sends payment using wallet's built-in connection
       toast.info("Preparing payment...", { duration: 3000 });
 
-      // Step 1: Get recent blockhash from backend
+      // Step 1: Fetch global settings for fee and admin wallet
+      const settings = await base44.entities.GlobalSettings.list();
+      if (!settings || settings.length === 0) {
+          throw new Error("Global settings not configured");
+      }
+      const { platform_fee_usd, admin_wallet } = settings[0];
+
+      if (!admin_wallet) {
+          throw new Error("Admin wallet not configured");
+      }
+
+      // Step 2: Get recent blockhash from backend
       const blockhashResponse = await base44.functions.invoke('getSolanaBlockhash');
       if (!blockhashResponse.data.success) {
           throw new Error(blockhashResponse.data.error || "Failed to get blockhash");
       }
       const { blockhash, lastValidBlockHeight } = blockhashResponse.data;
 
-      // Step 2: Calculate SOL amount for $3 platform fee
+      // Step 3: Calculate SOL amount
       const { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
-      const ADMIN_WALLET = "5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8";
-      const MINT_FEE_USD = 3;
 
-      let lamportsForFee = Math.round(0.015 * LAMPORTS_PER_SOL); // fallback ~$3
+      let lamportsForFee = Math.round(0.015 * LAMPORTS_PER_SOL); // fallback
       try {
           const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
           const priceData = await priceReq.json();
           if (priceData.solana?.usd) {
-              lamportsForFee = Math.round((MINT_FEE_USD / priceData.solana.usd) * LAMPORTS_PER_SOL);
+              lamportsForFee = Math.round((platform_fee_usd / priceData.solana.usd) * LAMPORTS_PER_SOL);
           }
       } catch (e) {
           console.warn("Using fallback SOL price", e);
       }
 
       const feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
-      toast.info(`Please approve payment of ${feeInSol.toFixed(4)} SOL (~$${MINT_FEE_USD} USD)`, { duration: 3000 });
+      toast.info(`Please approve payment of ${feeInSol.toFixed(4)} SOL (~$${platform_fee_usd} USD)`, { duration: 3000 });
 
-      // Step 3: Build transaction on frontend
+      // Step 4: Build transaction on frontend
       const userPubkey = new PublicKey(account);
-      const adminPubkey = new PublicKey(ADMIN_WALLET);
+      const adminPubkey = new PublicKey(admin_wallet);
 
       const transaction = new Transaction().add(
           SystemProgram.transfer({
@@ -269,7 +278,7 @@ export default function Profile() {
       transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = userPubkey;
 
-      // Step 4: Wallet signs and sends transaction
+      // Step 5: Wallet signs and sends transaction
       if (!signTransaction || !sendTransaction) {
           throw new Error("Wallet not connected properly");
       }

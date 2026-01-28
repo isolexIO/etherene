@@ -7,8 +7,7 @@ if (typeof globalThis.Buffer === 'undefined') {
 
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from 'npm:@solana/web3.js@^1.91.0';
 
-const ADMIN_WALLET = "5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8";
-const MINT_FEE_USD = 4;
+
 
 Deno.serve(async (req) => {
     try {
@@ -18,6 +17,17 @@ Deno.serve(async (req) => {
 
         if (!userAddress || !paymentSignature) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // Fetch global settings
+        const settings = await base44.asServiceRole.entities.GlobalSettings.list();
+        if (!settings || settings.length === 0) {
+            return Response.json({ error: 'Global settings not configured' }, { status: 500 });
+        }
+        const { platform_fee_usd, admin_wallet } = settings[0];
+
+        if (!admin_wallet) {
+            return Response.json({ error: 'Admin wallet not configured' }, { status: 500 });
         }
 
         // Validate user address
@@ -45,7 +55,7 @@ Deno.serve(async (req) => {
         }
 
         // Verify payment details
-        const adminPubkey = new PublicKey(ADMIN_WALLET);
+        const adminPubkey = new PublicKey(admin_wallet);
         const preBalances = transaction.meta.preBalances;
         const postBalances = transaction.meta.postBalances;
         const accountKeys = transaction.transaction.message.getAccountKeys();
@@ -80,9 +90,9 @@ Deno.serve(async (req) => {
         }
 
         const paidUSD = amountPaid * solPrice;
-        if (paidUSD < MINT_FEE_USD * 0.95) { // 5% tolerance
+        if (paidUSD < platform_fee_usd * 0.95) { // 5% tolerance
             return Response.json({ 
-                error: `Insufficient payment. Required: $${MINT_FEE_USD}, Received: $${paidUSD.toFixed(2)}` 
+                error: `Insufficient payment. Required: $${platform_fee_usd}, Received: $${paidUSD.toFixed(2)}` 
             }, { status: 400 });
         }
 
