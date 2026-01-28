@@ -56,15 +56,32 @@ Deno.serve(async (req) => {
 
         // Verify payment details
         const adminPubkey = new PublicKey(admin_wallet);
+        if (!transaction.meta) {
+            return Response.json({ error: 'Transaction metadata not available' }, { status: 400 });
+        }
+
         const preBalances = transaction.meta.preBalances;
         const postBalances = transaction.meta.postBalances;
-        const accountKeys = transaction.transaction.message.getAccountKeys();
+        
+        // Handle both versioned and legacy transactions
+        let accountKeys;
+        if (transaction.transaction.message.getAccountKeys) {
+            accountKeys = transaction.transaction.message.getAccountKeys();
+        } else if (transaction.transaction.message.accountKeys) {
+            accountKeys = {
+                get: (index) => transaction.transaction.message.accountKeys[index],
+                length: transaction.transaction.message.accountKeys.length
+            };
+        } else {
+            return Response.json({ error: 'Unable to read transaction account keys' }, { status: 400 });
+        }
 
         let paymentFound = false;
         let amountPaid = 0;
 
-        for (let i = 0; i < accountKeys.length; i++) {
-            const key = accountKeys.get(i);
+        const keyCount = accountKeys.length || (transaction.transaction.message.accountKeys?.length || 0);
+        for (let i = 0; i < keyCount; i++) {
+            const key = accountKeys.get ? accountKeys.get(i) : accountKeys[i];
             if (key.equals(adminPubkey)) {
                 const balanceChange = postBalances[i] - preBalances[i];
                 if (balanceChange > 0) {
