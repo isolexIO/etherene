@@ -9,6 +9,7 @@ if (typeof window !== 'undefined') {
     window.Buffer = Buffer;
 }
 import { useWeb3 } from '../Layout';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
@@ -23,6 +24,7 @@ import { toast } from 'sonner';
 
 export default function Profile() {
   const { account, connectWallet, wallet } = useWeb3();
+  const { signTransaction, sendTransaction } = useWallet();
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
@@ -267,13 +269,14 @@ export default function Profile() {
       transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = userPubkey;
 
-      // Step 4: Wallet signs and sends
-      const { solana } = window;
-      if (!solana?.isPhantom && !solana?.isSolflare) {
-          throw new Error("Solana wallet not detected");
+      // Step 4: Wallet signs and sends transaction
+      if (!signTransaction || !sendTransaction) {
+          throw new Error("Wallet not connected properly");
       }
 
-      const { signature } = await solana.signAndSendTransaction(transaction);
+      const signed = await signTransaction(transaction);
+      const signature = await sendTransaction(signed);
+
       toast.success("Payment confirmed!", { duration: 5000 });
 
       // Step 2: Submit mint request to backend
