@@ -223,44 +223,58 @@ export default function Profile() {
       }
 
       // Step 1: User sends payment using wallet's built-in connection
-      toast.info("Preparing payment transaction...", { duration: 3000 });
+      toast.info("Preparing payment...", { duration: 3000 });
 
-      // Step 1: Backend creates transaction with blockhash
-      const prepareResponse = await base44.functions.invoke('preparePaymentTransaction', {
-          userAddress: account
-      });
+      // Step 1: Get recent blockhash from backend
+      const blockhashResponse = await base44.functions.invoke('getSolanaBlockhash');
+      if (!blockhashResponse.data.success) {
+          throw new Error(blockhashResponse.data.error || "Failed to get blockhash");
+      }
+      const { blockhash, lastValidBlockHeight } = blockhashResponse.data;
 
-      if (!prepareResponse.data.success) {
-          throw new Error(prepareResponse.data.error || "Failed to prepare transaction");
+      // Step 2: Calculate SOL amount for $3 platform fee
+      const { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
+      const ADMIN_WALLET = "5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8";
+      const MINT_FEE_USD = 3;
+
+      let lamportsForFee = Math.round(0.015 * LAMPORTS_PER_SOL); // fallback ~$3
+      try {
+          const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+          const priceData = await priceReq.json();
+          if (priceData.solana?.usd) {
+              lamportsForFee = Math.round((MINT_FEE_USD / priceData.solana.usd) * LAMPORTS_PER_SOL);
+          }
+      } catch (e) {
+          console.warn("Using fallback SOL price", e);
       }
 
-      const { transaction: txBase64, feeInSol } = prepareResponse.data;
+      const feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
+      toast.info(`Please approve payment of ${feeInSol.toFixed(4)} SOL (~$${MINT_FEE_USD} USD)`, { duration: 3000 });
 
-      toast.info(`Please approve payment of ${feeInSol.toFixed(4)} SOL (~$4 USD)...`, { duration: 3000 });
+      // Step 3: Build transaction on frontend
+      const userPubkey = new PublicKey(account);
+      const adminPubkey = new PublicKey(ADMIN_WALLET);
 
-      // Step 2: User signs transaction
-      const { Transaction } = await import('@solana/web3.js');
-      const txBuffer = Buffer.from(txBase64, 'base64');
-      const transaction = Transaction.from(txBuffer);
+      const transaction = new Transaction({
+          recentBlockhash: blockhash,
+          lastValidBlockHeight,
+          feePayer: userPubkey,
+      }).add(
+          SystemProgram.transfer({
+              fromPubkey: userPubkey,
+              toPubkey: adminPubkey,
+              lamports: lamportsForFee
+          })
+      );
 
+      // Step 4: Wallet signs and sends
       const { solana } = window;
       if (!solana?.isPhantom && !solana?.isSolflare) {
           throw new Error("Solana wallet not detected");
       }
 
-      const signed = await solana.signTransaction(transaction);
-
-      // Step 3: Backend sends signed transaction
-      const sendResponse = await base44.functions.invoke('sendPaymentTransaction', {
-          signedTransaction: Buffer.from(signed.serialize()).toString('base64')
-      });
-
-      if (!sendResponse.data.success) {
-          throw new Error(sendResponse.data.error || "Transaction send failed");
-      }
-
-      const signature = sendResponse.data.signature;
-      toast.info("Payment confirmed!", { duration: 5000 });
+      const { signature } = await solana.signAndSendTransaction(transaction);
+      toast.success("Payment confirmed!", { duration: 5000 });
 
       // Step 2: Submit mint request to backend
       const response = await base44.functions.invoke('requestMint', {
