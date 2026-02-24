@@ -19,6 +19,7 @@ import ConversationList from '../components/messaging/ConversationList';
 import ChatWindow from '../components/messaging/ChatWindow';
 import ProfileEditor from '../components/profile/ProfileEditor';
 import ImportIdentity from '../components/profile/ImportIdentity';
+import LogoDownload from '../components/LogoDownload';
 import moment from 'moment';
 import { toast } from 'sonner';
 
