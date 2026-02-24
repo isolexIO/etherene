@@ -18,8 +18,7 @@ import {
   } from 'npm:@solana/web3.js@^1.91.0';
 import { 
   getDomainKey, 
-  NameRegistryState,
-  createSubdomain
+  NameRegistryState
 } from 'npm:@bonfida/spl-name-service@^2.3.1';
 import bs58 from 'npm:bs58@5.0.0';
 
@@ -131,22 +130,28 @@ Deno.serve(async (req) => {
         transaction.add(feeInstruction);
 
         // B. SNS Subdomain Minting
-        console.log("Deriving parent key...");
-        const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
-        const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
-        console.log("Parent key derived:", parentNameKey.toBase58());
+         console.log("Deriving parent key...");
+         const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
+         let parentNameKey;
+         try {
+             const result = await getDomainKey("etherene", SOL_TLD);
+             parentNameKey = result.pubkey;
+         } catch (e) {
+             throw new Error(`Failed to derive parent domain key: ${e.message}`);
+         }
+         console.log("Parent key derived:", parentNameKey.toBase58());
 
-        // 1. Verify Parent Ownership
-        try {
-            const { registry } = await NameRegistryState.retrieve(connection, parentNameKey);
-            if (!registry.owner.equals(serverKeypair.publicKey)) {
-                console.error(`Parent owner mismatch. Expected: ${registry.owner.toBase58()}, Server: ${serverKeypair.publicKey.toBase58()}`);
-                throw new Error("Server key does not own the parent 'etherene.sol' domain. Cannot mint subdomain.");
-            }
-        } catch (e) {
-            console.error("Parent verification failed:", e);
-            throw new Error(`Failed to verify parent domain 'etherene.sol': ${e.message}`);
-        }
+         // 1. Verify Parent Ownership
+         try {
+             const parentState = await NameRegistryState.retrieve(connection, parentNameKey);
+             if (!parentState.owner.equals(serverKeypair.publicKey)) {
+                 console.error(`Parent owner mismatch. Expected: ${parentState.owner.toBase58()}, Server: ${serverKeypair.publicKey.toBase58()}`);
+                 throw new Error("Server key does not own the parent 'etherene.sol' domain. Cannot mint subdomain.");
+             }
+         } catch (e) {
+             console.error("Parent verification failed:", e.message);
+             throw new Error(`Failed to verify parent domain 'etherene.sol': ${e.message}`);
+         }
 
         // Check Balance
         const balance = await connection.getBalance(serverKeypair.publicKey);
@@ -172,20 +177,26 @@ Deno.serve(async (req) => {
             throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL (${(lamportsForFee/LAMPORTS_PER_SOL).toFixed(4)} platform fee + ${(rentLamports/LAMPORTS_PER_SOL).toFixed(4)} rent + fees) but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
-        // 3. Create subdomain instruction manually
+        // 3. Create subdomain instruction
         const { getHashedName, getNameAccountKey } = await import('npm:@bonfida/spl-name-service@^2.3.1');
 
-        const hashedName = await getHashedName(subdomain);
-        const subdomainKey = await getNameAccountKey(hashedName, undefined, parentNameKey);
+        let hashedName, subdomainKey;
+        try {
+            hashedName = await getHashedName(subdomain);
+            subdomainKey = await getNameAccountKey(hashedName, undefined, parentNameKey);
+        } catch (e) {
+            throw new Error(`Failed to derive subdomain key: ${e.message}`);
+        }
 
         console.log("Subdomain account:", subdomainKey.toBase58());
 
-        // Build instruction data manually
+        // Build instruction data (Create instruction format for SNS)
+        // Format: [1 byte opcode (0=Create)] + [32 bytes hashedName] + [4 bytes space] + [8 bytes rent]
         const instructionData = Buffer.alloc(1 + 32 + 4 + 8);
-        instructionData.writeUInt8(0, 0); // Create instruction
+        instructionData.writeUInt8(0, 0); // Opcode: Create
         hashedName.copy(instructionData, 1);
-        instructionData.writeUInt32LE(space + 96, 33);
-        instructionData.writeBigUInt64LE(BigInt(rentLamports), 37);
+        instructionData.writeUInt32LE(space + 96, 33); // Space
+        instructionData.writeBigUInt64LE(BigInt(rentLamports), 37); // Rent
 
         const createInstruction = new TransactionInstruction({
             keys: [
@@ -204,17 +215,33 @@ Deno.serve(async (req) => {
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
-        // Use finalized blockhash for better validity window
-        const { blockhash } = await connection.getLatestBlockhash('finalized');
-        transaction.recentBlockhash = blockhash;
+        // Get fresh blockhash
+        let blockhash;
+        try {
+            const latestBlock = await connection.getLatestBlockhash('confirmed');
+            blockhash = latestBlock.blockhash;
+            transaction.recentBlockhash = blockhash;
+            transaction.lastValidBlockHeight = latestBlock.lastValidBlockHeight;
+        } catch (e) {
+            throw new Error(`Failed to get blockhash: ${e.message}`);
+        }
 
-        // Server must sign as the parent domain owner (authority for subdomain creation)
-        transaction.partialSign(serverKeypair);
+        // Server signs as the parent domain owner (authority for subdomain creation)
+        try {
+            transaction.partialSign(serverKeypair);
+        } catch (e) {
+            throw new Error(`Failed to sign transaction: ${e.message}`);
+        }
 
-        const serializedTransaction = transaction.serialize({
-            requireAllSignatures: false,
-            verifySignatures: false
-        });
+        let serializedTransaction;
+        try {
+            serializedTransaction = transaction.serialize({
+                requireAllSignatures: false,
+                verifySignatures: false
+            });
+        } catch (e) {
+            throw new Error(`Failed to serialize transaction: ${e.message}`);
+        }
 
         return Response.json({ 
             success: true, 
