@@ -126,10 +126,10 @@ function LayoutContent({ children, currentPageName }) {
       <Toaster position="top-center" richColors />
 
       {/* Neon Solana Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
-         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-500/15 blur-[120px]" />
-         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-500/15 blur-[120px]" />
-         <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[100px]" />
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-500/10 blur-[120px]" />
+         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-500/10 blur-[120px]" />
+         <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-purple-600/5 blur-[100px]" />
       </div>
 
       {/* Navigation */}
