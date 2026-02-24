@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, Menu, X, Home, Radio, Sparkles, User, Download } from 'lucide-react';
+import { Wallet, Menu, X, Home, Radio, Sparkles, User, Download, ChevronLeft } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
@@ -33,7 +33,23 @@ function LayoutContent({ children, currentPageName }) {
   const { publicKey, connected } = useWallet();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [activeTab, setActiveTab] = useState('Home');
+  const [tabStates, setTabStates] = useState({});
   const location = useLocation();
+
+  // Detect if on a child page (show back button)
+  const isChildPage = ['Transaction', 'Block', 'CustomizeProfile'].includes(currentPageName);
+  
+  // Preserve tab state
+  useEffect(() => {
+    setTabStates(prev => ({
+      ...prev,
+      [activeTab]: { scrollPos: window.scrollY, data: null }
+    }));
+    if (['Sanctum', 'Lessons', 'Principles', 'Oracle', 'Agora', 'Home', 'BlockExplorer', 'Profile'].includes(currentPageName)) {
+      setActiveTab(currentPageName);
+    }
+  }, [currentPageName]);
 
   const account = publicKey?.toBase58() || null;
 
@@ -158,8 +174,17 @@ function LayoutContent({ children, currentPageName }) {
               ))}
             </div>
 
-            {/* Wallet Button */}
-            <div className="hidden md:flex items-center">
+            {/* Back Button & Wallet */}
+            <div className="hidden md:flex items-center gap-3">
+              {isChildPage && (
+                <button
+                  onClick={() => window.history.back()}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  title="Go back"
+                >
+                  <ChevronLeft className="w-6 h-6 text-slate-600" />
+                </button>
+              )}
               <WalletMultiButton className="!bg-gradient-to-r !from-cyan-600 !to-fuchsia-600 hover:!from-cyan-500 hover:!to-fuchsia-500 !rounded-full !h-10 !text-sm !font-bold !transition-all hover:!shadow-lg hover:!shadow-fuchsia-500/50" />
             </div>
 
@@ -241,19 +266,28 @@ function LayoutContent({ children, currentPageName }) {
         </div>
       </footer>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation with Back Button */}
       <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-gradient-to-t from-slate-950/95 to-slate-900/90 backdrop-blur-lg border-t border-fuchsia-500/30 safe-area-bottom shadow-lg shadow-fuchsia-500/20">
         <div className="flex items-center justify-around h-16">
-          <Link to={createPageUrl('Home')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Home' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
+          {isChildPage && (
+            <button
+              onClick={() => window.history.back()}
+              className="flex flex-col items-center justify-center flex-1 h-full text-slate-400 hover:text-cyan-300 transition-all min-h-11"
+              title="Go back"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <Link to={createPageUrl('Home')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Home' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Home className="w-6 h-6" />
           </Link>
-          <Link to={createPageUrl('Agora')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Agora' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
+          <Link to={createPageUrl('Agora')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Agora' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Radio className="w-6 h-6" />
           </Link>
-          <Link to={createPageUrl('Oracle')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Oracle' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
+          <Link to={createPageUrl('Oracle')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Oracle' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Sparkles className="w-6 h-6" />
           </Link>
-          <Link to={createPageUrl('Profile')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Profile' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
+          <Link to={createPageUrl('Profile')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Profile' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <User className="w-6 h-6" />
           </Link>
         </div>
