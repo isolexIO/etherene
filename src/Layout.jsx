@@ -225,7 +225,7 @@ function LayoutContent({ children, currentPageName }) {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-fuchsia-500/30 bg-gradient-to-r from-slate-950/50 to-slate-950/50 backdrop-blur-sm mt-auto hidden md:block">
+      <footer className="relative z-10 border-t border-fuchsia-500/30 bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg mt-auto hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2 text-slate-400 text-sm">
