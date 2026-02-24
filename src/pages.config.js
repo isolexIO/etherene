@@ -60,6 +60,9 @@ import Profile from './pages/Profile';
 import Sanctum from './pages/Sanctum';
 import Transaction from './pages/Transaction';
 import Whitepaper from './pages/Whitepaper';
+import License from './pages/License';
+import Copyright from './pages/Copyright';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import __Layout from './Layout.jsx';
 
 
@@ -77,6 +80,9 @@ export const PAGES = {
     "Sanctum": Sanctum,
     "Transaction": Transaction,
     "Whitepaper": Whitepaper,
+    "License": License,
+    "Copyright": Copyright,
+    "PrivacyPolicy": PrivacyPolicy,
 }
 
 export const pagesConfig = {
