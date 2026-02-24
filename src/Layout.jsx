@@ -126,7 +126,7 @@ function LayoutContent({ children, currentPageName }) {
       <Toaster position="top-center" richColors />
 
       {/* Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-white" />
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-slate-100" />
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg border-b border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20">
