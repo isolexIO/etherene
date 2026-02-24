@@ -11,6 +11,7 @@ import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
+import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Solana Network Endpoint
@@ -303,6 +304,7 @@ function LayoutContent({ children, currentPageName }) {
 export default function Layout({ children, currentPageName }) {
   const wallets = useMemo(
     () => [
+      new SolanaMobileWalletAdapter(),
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
     ],
