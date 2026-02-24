@@ -607,6 +607,7 @@ export default function Profile() {
                 </>
             )}
           </div>
+          <LogoDownload />
       </div>
 
       {/* Import Identity Modal */}
