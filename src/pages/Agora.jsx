@@ -9,17 +9,23 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../components/utils';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import NFTGate from '../components/shared/NFTGate';
+import usePullToRefresh from '../components/mobile/usePullToRefresh';
+import PullToRefreshIndicator from '../components/mobile/PullToRefreshIndicator';
 
 export default function Agora() {
   const [feedType, setFeedType] = useState('global'); // 'global' | 'following'
 
-  const { data: activeIdentities } = useQuery({
+  const { data: activeIdentities, refetch: refetchIdentities } = useQuery({
     queryKey: ['activeIdentities'],
     queryFn: async () => {
         const identities = await base44.entities.Identity.list('-last_seen', 20); // Get most recently active
         return identities;
     },
     refetchInterval: 30000
+  });
+
+  const { scrollContainerRef, isRefreshing, pullDistance } = usePullToRefresh(async () => {
+    await refetchIdentities();
   });
 
   const isOnline = (dateStr) => {
@@ -29,7 +35,7 @@ export default function Agora() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen bg-slate-50/50 md:overflow-hidden" ref={scrollContainerRef} style={{ overscrollBehavior: 'contain' }}>
       
       {/* Header */}
       <div className="bg-white border-b border-slate-100 pb-12 pt-16">
@@ -79,10 +85,10 @@ export default function Agora() {
           </motion.div>
 
           {/* Feed Filter */}
-          <div className="flex items-center gap-4 mb-6 px-2 border-b border-slate-100">
+          <div className="flex items-center gap-2 mb-6 px-2 border-b border-slate-100 overflow-x-auto">
               <button 
                   onClick={() => setFeedType('global')}
-                  className={`pb-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border-b-2 ${
+                  className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border-b-2 whitespace-nowrap min-h-11 ${
                       feedType === 'global' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
               >
@@ -91,7 +97,7 @@ export default function Agora() {
               </button>
               <button 
                   onClick={() => setFeedType('following')}
-                  className={`pb-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border-b-2 ${
+                  className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-colors border-b-2 whitespace-nowrap min-h-11 ${
                       feedType === 'following' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
               >
@@ -100,6 +106,8 @@ export default function Agora() {
               </button>
           </div>
 
+          <PullToRefreshIndicator distance={pullDistance} isRefreshing={isRefreshing} />
+
           {/* Feed */}
           <div className="opacity-90">
              <TransmissionFeed feedType={feedType} />
@@ -107,7 +115,7 @@ export default function Agora() {
         </div>
 
         {/* Sidebar (Right) - Active Identities */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="hidden lg:block lg:col-span-4 space-y-6">
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sticky top-24">
                 <div className="flex items-center gap-2 mb-6">
                     <Users className="w-5 h-5 text-indigo-600" />
@@ -139,10 +147,10 @@ export default function Agora() {
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors">
+                                    <p className="font-medium text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors min-h-11 flex items-center">
                                         {identity.display_name || 'Anonymous Node'}
                                     </p>
-                                    <p className="text-xs text-slate-400 font-mono truncate">
+                                    <p className="text-xs text-slate-400 font-mono truncate min-h-11 flex items-center">
                                         {identity.address.slice(0, 6)}...{identity.address.slice(-4)}
                                     </p>
                                 </div>
