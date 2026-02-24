@@ -261,6 +261,9 @@ function LayoutContent({ children, currentPageName }) {
               <a href="Whitepaper" className="hover:text-cyan-400 transition-colors">Manifesto</a>
               <a href="BlockExplorer" className="hover:text-cyan-400 transition-colors">Contract</a>
               <a href="Agora" className="hover:text-cyan-400 transition-colors">Governance</a>
+              <a href={createPageUrl('PrivacyPolicy')} className="hover:text-cyan-400 transition-colors">Privacy</a>
+              <a href={createPageUrl('License')} className="hover:text-cyan-400 transition-colors">License</a>
+              <a href={createPageUrl('Copyright')} className="hover:text-cyan-400 transition-colors">Copyright</a>
             </div>
           </div>
         </div>
