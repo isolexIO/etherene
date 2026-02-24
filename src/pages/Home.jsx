@@ -5,9 +5,11 @@ import ActivityFeed from '../components/ActivityFeed';
 import { useWeb3 } from '../Layout';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../components/utils';
+import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const { account, connectWallet } = useWeb3();
+  const navigate = useNavigate();
 
   const features = [
     {
@@ -123,7 +125,10 @@ export default function Home() {
               <div className="relative z-10">
                 <h3 className="text-xl font-bold mb-2">Join the Network</h3>
                 <p className="text-indigo-100 mb-6 text-sm">Validating truth requires participation.</p>
-                <button className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors">
+                <button 
+                  onClick={() => navigate(createPageUrl('Agora'))}
+                  className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors"
+                >
                   Start Validation
                 </button>
               </div>
