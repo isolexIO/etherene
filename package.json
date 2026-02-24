@@ -88,7 +88,8 @@
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
-    "@solana/wallet-adapter-base": "^0.9.23"
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana-mobile/wallet-adapter-mobile": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
