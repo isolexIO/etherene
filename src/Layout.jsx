@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, Menu, X, Hexagon } from 'lucide-react';
+import { Wallet, Menu, X, Hexagon, Home, Radio, Sparkles, User } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { createPageUrl } from './components/utils';
 import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
@@ -31,9 +31,31 @@ export const useWeb3 = () => {
 function LayoutContent({ children, currentPageName }) {
   const { publicKey, connected } = useWallet();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   const location = useLocation();
 
   const account = publicKey?.toBase58() || null;
+
+  // Dark mode sync with system preferences
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      setIsDark(e.matches);
+      if (e.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    
+    setIsDark(mediaQuery.matches);
+    if (mediaQuery.matches) {
+      document.documentElement.classList.add('dark');
+    }
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // Google Analytics
   useEffect(() => {
@@ -191,7 +213,7 @@ function LayoutContent({ children, currentPageName }) {
       </nav>
 
       {/* Main Content */}
-      <main className="relative z-10 pt-16 min-h-[calc(100vh-4rem)]">
+      <main className="relative z-10 pt-16 min-h-[calc(100vh-4rem)] md:pb-0 pb-20">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentPageName}
@@ -207,7 +229,7 @@ function LayoutContent({ children, currentPageName }) {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-200 bg-white/50 backdrop-blur-sm mt-auto">
+      <footer className="relative z-10 border-t border-slate-200 bg-white/50 backdrop-blur-sm mt-auto hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2 text-slate-500 text-sm">
@@ -222,6 +244,24 @@ function LayoutContent({ children, currentPageName }) {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-white/80 backdrop-blur-md border-t border-slate-200 safe-area-bottom">
+        <div className="flex items-center justify-around h-16">
+          <Link to={createPageUrl('Home')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Home' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Home className="w-6 h-6" />
+          </Link>
+          <Link to={createPageUrl('Agora')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Agora' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Radio className="w-6 h-6" />
+          </Link>
+          <Link to={createPageUrl('Oracle')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Oracle' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Sparkles className="w-6 h-6" />
+          </Link>
+          <Link to={createPageUrl('Profile')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Profile' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+            <User className="w-6 h-6" />
+          </Link>
+        </div>
+      </nav>
       
     </div>
   );
