@@ -348,7 +348,9 @@ export default function AdminPage() {
 
                 {/* User Management Tab */}
                 {activeTab === 'users' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-slate-50 border-b border-slate-200">
@@ -403,6 +405,46 @@ export default function AdminPage() {
                                 </tbody>
                             </table>
                         </div>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-4">
+                            {users?.map((user) => (
+                                <div key={user.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 min-h-11">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-medium text-slate-900">{user.display_name || 'Anonymous'}</p>
+                                            <p className="text-xs text-slate-500">Token #{user.token_id}</p>
+                                        </div>
+                                        {user.banned ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <Ban className="w-3 h-3" /> Banned
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <CheckCircle className="w-3 h-3" /> Active
+                                            </span>
+                                        )}
+                                    </div>
+                                    <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono block break-all">
+                                        {user.address}
+                                    </code>
+                                    <div className="flex justify-between items-center text-sm text-slate-500">
+                                        <span>{new Date(user.created_date).toLocaleDateString()}</span>
+                                        <button
+                                            onClick={() => toggleBanMutation.mutate({ id: user.id, banned: !user.banned })}
+                                            className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors min-h-11 ${
+                                                user.banned
+                                                    ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                                    : 'bg-red-50 text-red-700 hover:bg-red-100'
+                                            }`}
+                                        >
+                                            {user.banned ? 'Unban' : 'Ban'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </motion.div>
                 )}
 
@@ -411,15 +453,17 @@ export default function AdminPage() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                         
                         {/* Pending/Processing Requests */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="px-6 py-4 bg-amber-50 border-b border-amber-100">
+                        <div className="rounded-2xl shadow-sm border border-slate-100">
+                            <div className="px-6 py-4 bg-amber-50 border-b border-amber-100 rounded-t-2xl">
                                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                                     <Clock className="w-5 h-5 text-amber-600" />
                                     Active Mint Requests ({pendingRequests.length})
                                 </h3>
                                 <p className="text-sm text-slate-600 mt-1">Pending verification or manual minting on Solana Name Service</p>
                             </div>
-                            <div className="overflow-x-auto">
+
+                            {/* Desktop Table */}
+                            <div className="hidden md:block bg-white overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
@@ -514,14 +558,16 @@ export default function AdminPage() {
                         </div>
 
                         {/* Historical Requests */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                         <div className="rounded-2xl shadow-sm border border-slate-100">
+                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 rounded-t-2xl">
                                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                                     <FileText className="w-5 h-5 text-slate-600" />
                                     Historical Requests ({historicalRequests.length})
                                 </h3>
                             </div>
-                            <div className="overflow-x-auto">
+
+                            {/* Desktop Table */}
+                            <div className="hidden md:block bg-white overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
@@ -580,13 +626,40 @@ export default function AdminPage() {
                                                 </tr>
                                             ))
                                         )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                        </tbody>
+                                        </table>
+                                        </div>
 
-                    </motion.div>
-                )}
+                                        {/* Mobile Cards */}
+                                        <div className="md:hidden bg-white space-y-3 p-4">
+                                        {historicalRequests.length === 0 ? (
+                                        <p className="text-center text-slate-500 py-8">No historical requests yet</p>
+                                        ) : (
+                                        historicalRequests.map((request) => (
+                                            <div key={request.id} className="border border-slate-200 rounded-lg p-4 space-y-2 min-h-11">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="font-medium text-slate-900">{request.subdomain}</p>
+                                                    {request.status === 'minted' ? (
+                                                        <span className="text-xs font-medium text-green-700">✓ Minted</span>
+                                                    ) : (
+                                                        <span className="text-xs font-medium text-red-700">✗ Failed</span>
+                                                    )}
+                                                </div>
+                                                <code className="text-xs bg-slate-100 px-2 py-1 rounded block break-all">
+                                                    {request.user_address.slice(0, 8)}...{request.user_address.slice(-6)}
+                                                </code>
+                                                <div className="text-sm text-slate-500">
+                                                    <p>{new Date(request.created_date).toLocaleDateString()}</p>
+                                                    <p className="text-green-700 font-medium">{request.amount_paid_sol?.toFixed(4)} SOL</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                        )}
+                                        </div>
+                                        </div>
+
+                                        </motion.div>
+                                        )}
 
                 {/* Settings Tab */}
                 {activeTab === 'settings' && (
