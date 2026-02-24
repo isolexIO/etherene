@@ -70,8 +70,12 @@ export default function Block() {
   if (error || !blockData) return <div className="p-20 text-center text-red-500"><AlertCircle className="w-10 h-10 mx-auto mb-4"/>{error || "Block not found"}</div>;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      <Link to={createPageUrl('BlockExplorer')} className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-600 mb-6 transition-colors">
+    <div className="max-w-5xl mx-auto px-4 py-4 md:py-12">
+      <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-600 mb-4 md:mb-6 transition-colors md:hidden">
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+      <Link to={createPageUrl('BlockExplorer')} className="hidden md:inline-flex items-center gap-2 text-slate-500 hover:text-indigo-600 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" />
         Back to Explorer
       </Link>
