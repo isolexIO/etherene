@@ -229,17 +229,17 @@ function LayoutContent({ children, currentPageName }) {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-200 bg-white/50 backdrop-blur-sm mt-auto hidden md:block">
+      <footer className="relative z-10 border-t border-fuchsia-500/30 bg-gradient-to-r from-slate-950/50 to-slate-950/50 backdrop-blur-sm mt-auto hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm">
-              <Hexagon className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
               <span>© 2024 Etherene Protocol</span>
             </div>
-            <div className="flex gap-6 text-sm text-slate-500">
-              <a href="Whitepaper" className="hover:text-indigo-600 transition-colors">Manifesto</a>
-              <a href="BlockExplorer" className="hover:text-indigo-600 transition-colors">Contract</a>
-              <a href="Agora" className="hover:text-indigo-600 transition-colors">Governance</a>
+            <div className="flex gap-6 text-sm text-slate-400">
+              <a href="Whitepaper" className="hover:text-cyan-400 transition-colors">Manifesto</a>
+              <a href="BlockExplorer" className="hover:text-cyan-400 transition-colors">Contract</a>
+              <a href="Agora" className="hover:text-cyan-400 transition-colors">Governance</a>
             </div>
           </div>
         </div>
