@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 import { useWeb3 } from '../Layout';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users } from 'lucide-react';
+import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users, Trash2 } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
@@ -48,6 +48,8 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('all');
 
   const [selectedConversationUser, setSelectedConversationUser] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
       if (searchParams.get('tab') === 'messages') {
@@ -64,6 +66,22 @@ export default function Profile() {
 
   const handleImportSuccess = () => {
     window.location.reload();
+  };
+
+  const handleDeleteIdentity = async () => {
+    if (!profileData?.id) return;
+    setIsDeleting(true);
+    try {
+      await base44.entities.Identity.delete(profileData.id);
+      toast.success("Identity deleted. You can create a new one anytime.");
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete identity. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   useEffect(() => {
@@ -464,9 +482,19 @@ export default function Profile() {
             {isOwner && (
                 <>
                   {!isEditing && (
-                      <button onClick={() => setIsEditing(true)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
-                          <PenTool className="w-4 h-4" /> Edit Profile
-                      </button>
+                      <div className="flex gap-2 flex-wrap justify-center">
+                        <button onClick={() => setIsEditing(true)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+                            <PenTool className="w-4 h-4" /> Edit Profile
+                        </button>
+                        {profileData && (
+                          <button 
+                            onClick={() => setShowDeleteModal(true)} 
+                            className="px-6 py-2 bg-red-50 border border-red-200 text-red-700 rounded-full font-medium hover:bg-red-100 transition-colors flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete Identity
+                          </button>
+                        )}
+                      </div>
                   )}
                   {!profileData && (
                       <div className="flex flex-col gap-4 items-center w-full max-w-xs">
@@ -593,6 +621,48 @@ export default function Profile() {
                       account={account}
                       onSuccess={handleImportSuccess}
                   />
+              </div>
+          </div>
+      )}
+
+      {/* Delete Identity Modal */}
+      {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div 
+                  className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                  onClick={() => setShowDeleteModal(false)}
+              />
+              <div className="relative max-w-md w-full bg-white rounded-2xl p-6 shadow-2xl">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+                      <Trash2 className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900">Delete Identity?</h2>
+                    <p className="text-slate-500 text-sm mt-2">This action cannot be undone. Your profile data will be permanently removed.</p>
+                  </div>
+                  
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-red-700">
+                      <strong>Subdomain:</strong> {profileData?.subdomain}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowDeleteModal(false)}
+                      className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleDeleteIdentity}
+                      disabled={isDeleting}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      {isDeleting ? "Deleting..." : "Delete Identity"}
+                    </button>
+                  </div>
               </div>
           </div>
       )}
