@@ -10,6 +10,7 @@ import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
+import { MobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Solana Network Endpoint
@@ -230,6 +231,10 @@ function LayoutContent({ children, currentPageName }) {
 export default function Layout({ children, currentPageName }) {
   const wallets = useMemo(
     () => [
+      new MobileWalletAdapter({
+        appIdentity: { name: 'Etherene' },
+        chain: 'mainnet-beta',
+      }),
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
     ],
