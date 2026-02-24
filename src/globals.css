@@ -78,9 +78,9 @@ button:focus-visible {
   :root {
     --background: 6 20% 6%;
     --foreground: 0 0% 95%;
-    --card: 6 18% 10%;
+    --card: 6 20% 12%;
     --card-foreground: 0 0% 95%;
-    --popover: 6 20% 8%;
+    --popover: 6 20% 10%;
     --popover-foreground: 0 0% 95%;
     --primary: 280 100% 65%;
     --primary-foreground: 6 20% 6%;
