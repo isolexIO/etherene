@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, Menu, X, Home, Radio, Sparkles, User } from 'lucide-react';
+import { Wallet, Menu, X, Home, Radio, Sparkles, User, Download } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
@@ -125,12 +125,8 @@ function LayoutContent({ children, currentPageName }) {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
       <Toaster position="top-center" richColors />
 
-      {/* Neon Solana Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-500/10 blur-[120px]" />
-         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-500/10 blur-[120px]" />
-         <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-purple-600/5 blur-[100px]" />
-      </div>
+      {/* Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-white" />
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg border-b border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20">
