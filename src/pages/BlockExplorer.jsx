@@ -9,6 +9,8 @@ import IdentityList from '../components/explorer/IdentityList';
 import ExplorerStats from '../components/explorer/ExplorerStats';
 import NetworkGraph from '../components/explorer/NetworkGraph';
 import AddressWatchlist from '../components/explorer/AddressWatchlist';
+import usePullToRefresh from '../components/mobile/usePullToRefresh';
+import PullToRefreshIndicator from '../components/mobile/PullToRefreshIndicator';
 
 // Initial State removed - using real data
 
@@ -20,6 +22,13 @@ export default function BlockExplorer() {
   const [stats, setStats] = useState({ blocks: 0, gasPrice: 0, identities: 0, tps: 0 });
   const [transactions, setTransactions] = useState([]);
   const [graphData, setGraphData] = useState([]);
+
+  // Pull to refresh
+  const { scrollContainerRef, isRefreshing, pullDistance } = usePullToRefresh(async () => {
+    await refetchWatchlist();
+    await refetchTransactions();
+  });
+
   // Watchlist from DB
   const { data: watchlistItems, refetch: refetchWatchlist } = useQuery({
     queryKey: ['watchlist'],
@@ -61,6 +70,67 @@ export default function BlockExplorer() {
         toast.error("Failed to remove from watchlist");
     }
   };
+
+  // Separate refetch function
+  const refetchTransactions = useCallback(async () => {
+    // Trigger fresh fetch
+    const { base44 } = await import('@/api/base44Client');
+    const moment = (await import('moment')).default;
+    
+    const [identities, transmissions, interactions, settingsList] = await Promise.all([
+        base44.entities.Identity.list(),
+        base44.entities.Transmission.list(),
+        base44.entities.OracleInteraction.list(),
+        base44.entities.GlobalSettings.list()
+    ]);
+
+    const genesisDate = settingsList[0]?.genesis_date || '2024-01-01';
+    const genesis = moment.utc(genesisDate);
+    const now = moment.utc();
+    const blockHeight = now.diff(genesis, 'days');
+
+    const totalActivity = identities.length + transmissions.length + interactions.length;
+    const tps = totalActivity > 0 ? (totalActivity / (blockHeight * 24)).toFixed(2) : 0;
+
+    setStats({
+        blocks: blockHeight,
+        gasPrice: "10",
+        identities: identities.length,
+        tps: tps
+    });
+
+    const allTxs = [
+        ...identities.map(i => ({
+            hash: i.id,
+            from: i.address,
+            to: "Etherene Identity",
+            type: "Identity Mint",
+            created_date: i.created_date,
+            status: "Minted"
+        })),
+        ...transmissions.map(t => ({
+            hash: t.id,
+            from: t.author_address,
+            to: "Agora",
+            type: "Transmission",
+            created_date: t.created_date,
+            status: "Broadcasted"
+        })),
+        ...interactions.map(i => ({
+            hash: i.id,
+            from: i.user_address,
+            to: "Oracle",
+            type: "Oracle Interaction",
+            created_date: i.created_date,
+            status: "Revealed"
+        }))
+    ].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+
+    setTransactions(allTxs.slice(0, 15).map(tx => ({
+        ...tx,
+        age: moment.utc(tx.created_date).fromNow()
+    })));
+  }, []);
 
   // Metaphysical Chain Stats
   useEffect(() => {
@@ -160,7 +230,8 @@ export default function BlockExplorer() {
 
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:overflow-hidden" ref={scrollContainerRef} style={{ overscrollBehavior: 'contain' }}>
+        <PullToRefreshIndicator distance={pullDistance} isRefreshing={isRefreshing} />
         {/* Header & Search */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
             <motion.div
@@ -195,11 +266,11 @@ export default function BlockExplorer() {
         <ExplorerStats globalStats={stats} />
 
         {/* Main Content Grid */}
-        <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+
             {/* Left Column: List & Tabs */}
-            <div className="lg:col-span-2">
-                <div className="flex gap-6 border-b border-slate-200 mb-8">
+            <div className="lg:col-span-2 overflow-y-auto max-h-[calc(100vh-300px)]">
+                <div className="flex gap-3 border-b border-slate-200 mb-8 overflow-x-auto min-h-11">
                     <button 
                         onClick={() => setActiveTab('transactions')}
                         className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'transactions' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
@@ -245,7 +316,7 @@ export default function BlockExplorer() {
             </div>
 
             {/* Right Column: Graph & Watchlist */}
-            <div className="space-y-8 relative">
+            <div className="hidden lg:block space-y-8 relative">
                 <NetworkGraph data={graphData} />
                 <div className="sticky top-24">
                   <AddressWatchlist 
