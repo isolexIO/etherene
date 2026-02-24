@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, Menu, X, Hexagon, Home, Radio, Sparkles, User } from 'lucide-react';
+import { Wallet, Menu, X, Home, Radio, Sparkles, User } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { createPageUrl } from './components/utils';
+import Logo from './components/Logo';
 import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { 
@@ -124,27 +125,22 @@ function LayoutContent({ children, currentPageName }) {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
       <Toaster position="top-center" richColors />
 
-      {/* Sacred Geometry Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/20 blur-[100px]" />
-         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-200/20 blur-[100px]" />
-         <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-sky-100/30 blur-[80px]" />
+      {/* Neon Solana Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
+         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-500/15 blur-[120px]" />
+         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-500/15 blur-[120px]" />
+         <div className="absolute top-[40%] left-[50%] translate-x-[-50%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[100px]" />
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-md border-b border-white/50 shadow-sm">
+      <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg border-b border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             
             {/* Logo */}
-            <Link to={createPageUrl('Home')} className="flex items-center gap-2 group">
-              <div className="relative">
-                <Hexagon className="w-8 h-8 text-indigo-600 fill-indigo-50 group-hover:rotate-90 transition-transform duration-700 ease-in-out" strokeWidth={1.5} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
-                </div>
-              </div>
-              <span className="text-xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+            <Link to={createPageUrl('Home')} className="flex items-center gap-3 group">
+              <Logo className="w-8 h-8 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" />
+              <span className="text-xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-sm">
                 ETHERENE
               </span>
             </Link>
@@ -155,8 +151,10 @@ function LayoutContent({ children, currentPageName }) {
                 <Link
                   key={item.name}
                   to={createPageUrl(item.path)}
-                  className={`text-sm font-medium transition-colors hover:text-indigo-600 ${
-                    currentPageName === item.path ? 'text-indigo-600' : 'text-slate-600'
+                  className={`text-sm font-medium transition-colors ${
+                    currentPageName === item.path 
+                      ? 'text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500' 
+                      : 'text-slate-400 hover:text-cyan-300'
                   }`}
                 >
                   {item.name}
@@ -166,7 +164,7 @@ function LayoutContent({ children, currentPageName }) {
 
             {/* Wallet Button */}
             <div className="hidden md:flex items-center">
-              <WalletMultiButton className="!bg-slate-900 hover:!bg-slate-800 !rounded-full !h-10 !text-sm !font-medium !transition-all hover:!shadow-lg" />
+              <WalletMultiButton className="!bg-gradient-to-r !from-cyan-600 !to-fuchsia-600 hover:!from-cyan-500 hover:!to-fuchsia-500 !rounded-full !h-10 !text-sm !font-bold !transition-all hover:!shadow-lg hover:!shadow-fuchsia-500/50" />
             </div>
 
             {/* Mobile Menu Button */}
@@ -188,7 +186,7 @@ function LayoutContent({ children, currentPageName }) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-white/95 backdrop-blur-md border-b border-slate-100 overflow-hidden"
+              className="md:hidden bg-gradient-to-b from-slate-900/95 to-slate-950/95 backdrop-blur-md border-b border-fuchsia-500/30 overflow-hidden"
             >
               <div className="px-4 py-4 space-y-4">
                 {navItems.map((item) => (
@@ -196,8 +194,10 @@ function LayoutContent({ children, currentPageName }) {
                     key={item.name}
                     to={createPageUrl(item.path)}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`block text-base font-medium px-2 py-1 ${
-                      currentPageName === item.path ? 'text-indigo-600' : 'text-slate-600'
+                    className={`block text-base font-medium px-2 py-1 transition-colors ${
+                      currentPageName === item.path 
+                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-500' 
+                        : 'text-slate-400 hover:text-cyan-300'
                     }`}
                   >
                     {item.name}
@@ -246,18 +246,18 @@ function LayoutContent({ children, currentPageName }) {
       </footer>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-white/80 backdrop-blur-md border-t border-slate-200 safe-area-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-gradient-to-t from-slate-950/95 to-slate-900/90 backdrop-blur-lg border-t border-fuchsia-500/30 safe-area-bottom shadow-lg shadow-fuchsia-500/20">
         <div className="flex items-center justify-around h-16">
-          <Link to={createPageUrl('Home')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Home' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+          <Link to={createPageUrl('Home')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Home' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Home className="w-6 h-6" />
           </Link>
-          <Link to={createPageUrl('Agora')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Agora' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+          <Link to={createPageUrl('Agora')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Agora' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Radio className="w-6 h-6" />
           </Link>
-          <Link to={createPageUrl('Oracle')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Oracle' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+          <Link to={createPageUrl('Oracle')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Oracle' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Sparkles className="w-6 h-6" />
           </Link>
-          <Link to={createPageUrl('Profile')} className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${currentPageName === 'Profile' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+          <Link to={createPageUrl('Profile')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${currentPageName === 'Profile' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <User className="w-6 h-6" />
           </Link>
         </div>
