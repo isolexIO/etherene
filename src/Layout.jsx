@@ -43,17 +43,34 @@ function LayoutContent({ children, currentPageName }) {
   const [tabStates, setTabStates] = useState({});
   const location = useLocation();
 
-  // Detect if on a child page (show back button)
-  const isChildPage = ['Transaction', 'Block', 'CustomizeProfile'].includes(currentPageName);
+  // Dynamically detect if we can go back based on history depth
+  const canGoBack = (window.history.state?.idx ?? 0) > 0;
   
-  // Preserve tab state
+  // Scroll position preservation for main tabs
+  const TAB_PAGES = ['Home', 'Agora', 'Oracle', 'Profile'];
+  const scrollPositions = React.useRef({});
+
   useEffect(() => {
-    setTabStates(prev => ({
-      ...prev,
-      [activeTab]: { scrollPos: window.scrollY, data: null }
-    }));
-    if (['Sanctum', 'Lessons', 'Principles', 'Oracle', 'Agora', 'Home', 'BlockExplorer', 'Profile'].includes(currentPageName)) {
-      setActiveTab(currentPageName);
+    const saveScroll = () => {
+      if (TAB_PAGES.includes(currentPageName)) {
+        scrollPositions.current[currentPageName] = window.scrollY;
+      }
+    };
+    window.addEventListener('scroll', saveScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', saveScroll);
+      if (TAB_PAGES.includes(currentPageName)) {
+        scrollPositions.current[currentPageName] = window.scrollY;
+      }
+    };
+  }, [currentPageName]);
+
+  useEffect(() => {
+    if (TAB_PAGES.includes(currentPageName)) {
+      const pos = scrollPositions.current[currentPageName] ?? 0;
+      requestAnimationFrame(() => window.scrollTo(0, pos));
+    } else {
+      window.scrollTo(0, 0);
     }
   }, [currentPageName]);
 
@@ -182,7 +199,7 @@ function LayoutContent({ children, currentPageName }) {
 
             {/* Back Button & Wallet */}
             <div className="hidden md:flex items-center gap-3">
-              {isChildPage && (
+              {canGoBack && (
                 <button
                   onClick={() => window.history.back()}
                   className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -278,7 +295,7 @@ function LayoutContent({ children, currentPageName }) {
       {/* Mobile Bottom Navigation with Back Button */}
       <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-gradient-to-t from-slate-950/95 to-slate-900/90 backdrop-blur-lg border-t border-fuchsia-500/30 safe-area-bottom shadow-lg shadow-fuchsia-500/20">
         <div className="flex items-center justify-around h-16">
-          {isChildPage && (
+          {canGoBack && (
             <button
               onClick={() => window.history.back()}
               className="flex flex-col items-center justify-center flex-1 h-full text-slate-400 hover:text-cyan-300 transition-all min-h-11"
