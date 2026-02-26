@@ -11,6 +11,12 @@ import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
+import {
+  SolanaMobileWalletAdapter,
+  createDefaultAddressSelector,
+  createDefaultAuthorizationResultCache,
+  createDefaultWalletNotFoundHandler,
+} from '@solana-mobile/wallet-adapter-mobile';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Solana Network Endpoint
