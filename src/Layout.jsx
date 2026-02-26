@@ -315,6 +315,11 @@ function LayoutContent({ children, currentPageName }) {
           <Link to={createPageUrl('Oracle')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Oracle' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Sparkles className="w-6 h-6" />
           </Link>
+          {account && (
+            <div className="flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11">
+              <NotificationBell account={account} />
+            </div>
+          )}
           <Link to={createPageUrl('Profile')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Profile' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <User className="w-6 h-6" />
           </Link>
