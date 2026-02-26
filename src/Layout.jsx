@@ -302,25 +302,10 @@ function LayoutContent({ children, currentPageName }) {
 
 export default function Layout({ children, currentPageName }) {
   const wallets = useMemo(
-    () => {
-      const walletList = [];
-      
-      // Only add mobile adapter if we're in a mobile environment
-      if (typeof window !== 'undefined' && /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
-        try {
-          walletList.push(new SolanaMobileWalletAdapter());
-        } catch (e) {
-          console.warn('Mobile wallet adapter not available', e);
-        }
-      }
-      
-      walletList.push(
-        new PhantomWalletAdapter(),
-        new SolflareWalletAdapter(),
-      );
-      
-      return walletList;
-    },
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+    ],
     []
   );
 
