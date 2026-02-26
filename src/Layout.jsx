@@ -5,6 +5,7 @@ import { Wallet, Menu, X, Home, Radio, Sparkles, User, Download, ChevronLeft } f
 import { Toaster, toast } from 'sonner';
 import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
+import NotificationBell from './components/notifications/NotificationBell';
 import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { 
