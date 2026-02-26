@@ -56,6 +56,7 @@ import CustomizeProfile from './pages/CustomizeProfile';
 import Home from './pages/Home';
 import Lessons from './pages/Lessons';
 import License from './pages/License';
+import NotificationSettings from './pages/NotificationSettings';
 import Oracle from './pages/Oracle';
 import Principles from './pages/Principles';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -63,7 +64,6 @@ import Profile from './pages/Profile';
 import Sanctum from './pages/Sanctum';
 import Transaction from './pages/Transaction';
 import Whitepaper from './pages/Whitepaper';
-import NotificationSettings from './pages/NotificationSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -77,6 +77,7 @@ export const PAGES = {
     "Home": Home,
     "Lessons": Lessons,
     "License": License,
+    "NotificationSettings": NotificationSettings,
     "Oracle": Oracle,
     "Principles": Principles,
     "PrivacyPolicy": PrivacyPolicy,
@@ -84,7 +85,6 @@ export const PAGES = {
     "Sanctum": Sanctum,
     "Transaction": Transaction,
     "Whitepaper": Whitepaper,
-    "NotificationSettings": NotificationSettings,
 }
 
 export const pagesConfig = {
