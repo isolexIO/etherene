@@ -18,17 +18,34 @@ export default function TransmissionItem({ transmission }) {
   
   const amplifyMutation = useMutation({
     mutationFn: async () => {
-      let newAmplifiedBy = transmission.amplified_by || [];
-      if (isAmplified) {
-        newAmplifiedBy = newAmplifiedBy.filter(a => a !== account);
-      } else {
-        newAmplifiedBy = [...newAmplifiedBy, account];
-      }
-      return await base44.entities.Transmission.update(transmission.id, {
-        amplified_by: newAmplifiedBy
-      });
+      const newAmplifiedBy = isAmplified
+        ? (transmission.amplified_by || []).filter(a => a !== account)
+        : [...(transmission.amplified_by || []), account];
+      return await base44.entities.Transmission.update(transmission.id, { amplified_by: newAmplifiedBy });
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['transmissions'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['transmissions'] });
+
+      const updater = (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map(t => {
+          if (t.id !== transmission.id) return t;
+          const newAmplifiedBy = isAmplified
+            ? (t.amplified_by || []).filter(a => a !== account)
+            : [...(t.amplified_by || []), account];
+          return { ...t, amplified_by: newAmplifiedBy };
+        });
+      };
+      queryClient.setQueriesData({ queryKey: ['transmissions'] }, updater);
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([key, value]) => queryClient.setQueryData(key, value));
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['transmissions'] });
     }
   });
@@ -42,16 +59,30 @@ export default function TransmissionItem({ transmission }) {
   });
 
   const commentMutation = useMutation({
-    mutationFn: async () => {
-      return await base44.entities.Resonance.create({
-        content: commentText,
-        transmission_id: transmission.id,
-        author_address: account
-      });
+    mutationFn: async (newComment) => {
+      return await base44.entities.Resonance.create(newComment);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resonances', transmission.id] });
+    onMutate: async (newComment) => {
+      await queryClient.cancelQueries({ queryKey: ['resonances', transmission.id] });
+      const previous = queryClient.getQueryData(['resonances', transmission.id]);
+      const optimistic = {
+        id: `optimistic-${Date.now()}`,
+        created_date: new Date().toISOString(),
+        ...newComment,
+      };
+      queryClient.setQueryData(['resonances', transmission.id], (old) =>
+        Array.isArray(old) ? [...old, optimistic] : [optimistic]
+      );
       setCommentText('');
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['resonances', transmission.id], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['resonances', transmission.id] });
     }
   });
 

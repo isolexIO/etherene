@@ -15,9 +15,34 @@ export default function CreateTransmission() {
     mutationFn: async (newTransmission) => {
       return await base44.entities.Transmission.create(newTransmission);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transmissions'] });
+    onMutate: async (newTransmission) => {
+      await queryClient.cancelQueries({ queryKey: ['transmissions'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['transmissions'] });
+
+      // Optimistically add to all transmission query variants
+      queryClient.setQueriesData({ queryKey: ['transmissions'] }, (old) => {
+        if (!Array.isArray(old)) return old;
+        const optimistic = {
+          id: `optimistic-${Date.now()}`,
+          created_date: new Date().toISOString(),
+          amplified_by: [],
+          ...newTransmission,
+        };
+        return [optimistic, ...old];
+      });
+
       setContent('');
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([key, value]) => {
+          queryClient.setQueryData(key, value);
+        });
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['transmissions'] });
     }
   });
 
