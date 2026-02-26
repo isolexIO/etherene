@@ -309,6 +309,17 @@ function LayoutContent({ children, currentPageName }) {
 export default function Layout({ children, currentPageName }) {
   const wallets = useMemo(
     () => [
+      new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
+        appIdentity: {
+          name: 'Etherene',
+          uri: 'https://etherene.app',
+          icon: '/icon.png',
+        },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: 'mainnet-beta',
+        onWalletNotFound: createDefaultWalletNotFoundHandler(),
+      }),
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
     ],
