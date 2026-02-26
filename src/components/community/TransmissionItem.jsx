@@ -94,7 +94,11 @@ export default function TransmissionItem({ transmission }) {
   const handleComment = (e) => {
     e.preventDefault();
     if (!commentText.trim() || !account) return;
-    commentMutation.mutate();
+    commentMutation.mutate({
+      content: commentText,
+      transmission_id: transmission.id,
+      author_address: account
+    });
   };
 
   return (
