@@ -51,18 +51,18 @@ import Admin from './pages/Admin';
 import Agora from './pages/Agora';
 import Block from './pages/Block';
 import BlockExplorer from './pages/BlockExplorer';
+import Copyright from './pages/Copyright';
 import CustomizeProfile from './pages/CustomizeProfile';
 import Home from './pages/Home';
 import Lessons from './pages/Lessons';
+import License from './pages/License';
 import Oracle from './pages/Oracle';
 import Principles from './pages/Principles';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Profile from './pages/Profile';
 import Sanctum from './pages/Sanctum';
 import Transaction from './pages/Transaction';
 import Whitepaper from './pages/Whitepaper';
-import License from './pages/License';
-import Copyright from './pages/Copyright';
-import PrivacyPolicy from './pages/PrivacyPolicy';
 import __Layout from './Layout.jsx';
 
 
@@ -71,18 +71,18 @@ export const PAGES = {
     "Agora": Agora,
     "Block": Block,
     "BlockExplorer": BlockExplorer,
+    "Copyright": Copyright,
     "CustomizeProfile": CustomizeProfile,
     "Home": Home,
     "Lessons": Lessons,
+    "License": License,
     "Oracle": Oracle,
     "Principles": Principles,
+    "PrivacyPolicy": PrivacyPolicy,
     "Profile": Profile,
     "Sanctum": Sanctum,
     "Transaction": Transaction,
     "Whitepaper": Whitepaper,
-    "License": License,
-    "Copyright": Copyright,
-    "PrivacyPolicy": PrivacyPolicy,
 }
 
 export const pagesConfig = {
