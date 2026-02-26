@@ -209,6 +209,7 @@ function LayoutContent({ children, currentPageName }) {
                   <ChevronLeft className="w-6 h-6 text-slate-600" />
                 </button>
               )}
+              {account && <NotificationBell account={account} />}
               <WalletMultiButton className="!bg-gradient-to-r !from-cyan-600 !to-fuchsia-600 hover:!from-cyan-500 hover:!to-fuchsia-500 !rounded-full !h-10 !text-sm !font-bold !transition-all hover:!shadow-lg hover:!shadow-fuchsia-500/50" />
             </div>
 
