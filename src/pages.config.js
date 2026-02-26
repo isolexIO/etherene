@@ -63,6 +63,7 @@ import Profile from './pages/Profile';
 import Sanctum from './pages/Sanctum';
 import Transaction from './pages/Transaction';
 import Whitepaper from './pages/Whitepaper';
+import NotificationSettings from './pages/NotificationSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -83,6 +84,7 @@ export const PAGES = {
     "Sanctum": Sanctum,
     "Transaction": Transaction,
     "Whitepaper": Whitepaper,
+    "NotificationSettings": NotificationSettings,
 }
 
 export const pagesConfig = {
