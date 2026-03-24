@@ -201,7 +201,10 @@ export default function AdminPage() {
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
                     <p className="text-slate-500 mb-8">Connect your wallet to access the admin dashboard.</p>
                     <button 
-                        onClick={connectWallet}
+                        onClick={() => {
+                            const btn = document.querySelector('[role="button"]');
+                            if (btn?.textContent?.includes('Select Wallet')) btn.click();
+                        }}
                         className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
                     >
                         Connect Wallet
