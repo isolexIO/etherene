@@ -165,7 +165,6 @@ export default function AdminPage() {
     const historicalRequests = mintRequests?.filter(r => r.status === 'minted' || r.status === 'failed') || [];
 
     // Check admin access
-    const { isLoading: adminCheckLoading } = useQuery({ queryKey: ['adminCheck'] });
     const isAdmin = account && adminSettings?.admin_wallet && account === adminSettings.admin_wallet;
 
     // Real-time notifications for new mint requests
