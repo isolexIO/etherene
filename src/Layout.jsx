@@ -9,7 +9,7 @@ import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletProvider, UnifiedWalletButton, useUnifiedWalletContext } from '@jup-ag/wallet-adapter';
 import { useWrappedReownAdapter } from '@jup-ag/jup-mobile-adapter';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+
 
 
 export const useWeb3 = () => {
@@ -322,7 +322,7 @@ function LayoutContent({ children, currentPageName }) {
 }
 
 function WalletProviderWrapper({ children, currentPageName }) {
-  const { reownAdapter, jupiterAdapter } = useWrappedReownAdapter({
+  const { jupiterAdapter } = useWrappedReownAdapter({
     appKitOptions: {
       metadata: {
         name: 'Etherene',
@@ -341,13 +341,8 @@ function WalletProviderWrapper({ children, currentPageName }) {
   });
 
   const wallets = useMemo(
-    () => [
-      jupiterAdapter,
-      reownAdapter,
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ].filter((item) => item && item.name && item.icon),
-    [jupiterAdapter, reownAdapter]
+    () => [jupiterAdapter].filter((item) => item && item.name && item.icon),
+    [jupiterAdapter]
   );
 
   return (
