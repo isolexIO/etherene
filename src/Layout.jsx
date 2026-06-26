@@ -7,16 +7,18 @@ import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
 import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { UnifiedWalletProvider, UnifiedWalletButton } from '@jup-ag/wallet-adapter';
+import { UnifiedWalletProvider, UnifiedWalletButton, useUnifiedWalletContext } from '@jup-ag/wallet-adapter';
 import { useWrappedReownAdapter } from '@jup-ag/jup-mobile-adapter';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 
 
 export const useWeb3 = () => {
   const wallet = useWallet();
+  const { setShowModal } = useUnifiedWalletContext();
+  const connectWallet = () => setShowModal(true);
   return {
     account: wallet.publicKey?.toBase58() || null,
-    connectWallet: () => {},
+    connectWallet,
     disconnectWallet: wallet.disconnect,
     isConnecting: wallet.connecting,
     wallet: wallet.wallet,
