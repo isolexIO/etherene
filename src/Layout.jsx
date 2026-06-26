@@ -1,34 +1,22 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, Menu, X, Home, Radio, Sparkles, User, Download, ChevronLeft } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { Menu, X, Home, Radio, Sparkles, User, ChevronLeft } from 'lucide-react';
+import { Toaster } from 'sonner';
 import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
 import NotificationBell from './components/notifications/NotificationBell';
-import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton, useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { 
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
-import {
-  SolanaMobileWalletAdapter,
-  createDefaultAddressSelector,
-  createDefaultAuthorizationResultCache,
-  createDefaultWalletNotFoundHandler,
-} from '@solana-mobile/wallet-adapter-mobile';
-import '@solana/wallet-adapter-react-ui/styles.css';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { UnifiedWalletProvider, UnifiedWalletButton } from '@jup-ag/wallet-adapter';
+import { useWrappedReownAdapter } from '@jup-ag/jup-mobile-adapter';
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 
-// Solana Network Endpoint
-const endpoint = 'https://api.mainnet-beta.solana.com';
 
 export const useWeb3 = () => {
   const wallet = useWallet();
-  const { setVisible } = useWalletModal();
   return {
     account: wallet.publicKey?.toBase58() || null,
-    connectWallet: () => setVisible(true),
+    connectWallet: () => {},
     disconnectWallet: wallet.disconnect,
     isConnecting: wallet.connecting,
     wallet: wallet.wallet,
@@ -211,7 +199,7 @@ function LayoutContent({ children, currentPageName }) {
                 </button>
               )}
               {account && <NotificationBell account={account} />}
-              <WalletMultiButton className="!bg-gradient-to-r !from-cyan-600 !to-fuchsia-600 hover:!from-cyan-500 hover:!to-fuchsia-500 !rounded-full !h-10 !text-sm !font-bold !transition-all hover:!shadow-lg hover:!shadow-fuchsia-500/50" />
+              <UnifiedWalletButton />
             </div>
 
             {/* Mobile Menu Button */}
@@ -251,7 +239,7 @@ function LayoutContent({ children, currentPageName }) {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <WalletMultiButton className="!bg-slate-900 !rounded-xl !w-full !h-12 !text-sm !font-medium" />
+                  <UnifiedWalletButton />
                 </div>
               </div>
             </motion.div>
@@ -331,33 +319,56 @@ function LayoutContent({ children, currentPageName }) {
   );
 }
 
-export default function Layout({ children, currentPageName }) {
+function WalletProviderWrapper({ children, currentPageName }) {
+  const { reownAdapter, jupiterAdapter } = useWrappedReownAdapter({
+    appKitOptions: {
+      metadata: {
+        name: 'Etherene',
+        description: 'A decentralized spiritual-tech platform',
+        url: 'https://etherene.app',
+        icons: ['https://etherene.app/icon.png'],
+      },
+      projectId: import.meta.env.VITE_REOWN_PROJECT_ID ?? '',
+      features: {
+        analytics: false,
+        socials: false,
+        email: false,
+      },
+      enableWallets: false,
+    },
+  });
+
   const wallets = useMemo(
     () => [
-      new SolanaMobileWalletAdapter({
-        addressSelector: createDefaultAddressSelector(),
-        appIdentity: {
-          name: 'Etherene',
-          uri: 'https://etherene.app',
-          icon: '/icon.png',
-        },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: 'mainnet-beta',
-        onWalletNotFound: createDefaultWalletNotFoundHandler(),
-      }),
+      jupiterAdapter,
+      reownAdapter,
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-    ],
-    []
+    ].filter((item) => item && item.name && item.icon),
+    [jupiterAdapter, reownAdapter]
   );
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          <LayoutContent children={children} currentPageName={currentPageName} />
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+    <UnifiedWalletProvider
+      wallets={wallets}
+      config={{
+        autoConnect: true,
+        env: 'mainnet-beta',
+        metadata: {
+          name: 'Etherene',
+          description: 'A decentralized spiritual-tech platform',
+          url: 'https://etherene.app',
+          iconUrls: ['https://etherene.app/icon.png'],
+        },
+        theme: 'dark',
+        lang: 'en',
+      }}
+    >
+      <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
+    </UnifiedWalletProvider>
   );
+}
+
+export default function Layout({ children, currentPageName }) {
+  return <WalletProviderWrapper currentPageName={currentPageName}>{children}</WalletProviderWrapper>;
 }
