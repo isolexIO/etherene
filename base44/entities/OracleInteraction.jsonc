@@ -1,0 +1,40 @@
+{
+  "name": "OracleInteraction",
+  "type": "object",
+  "properties": {
+    "user_address": {
+      "type": "string",
+      "description": "Address of the user interacting with Oracle"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Summary or topic of the interaction"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "chat",
+        "query",
+        "insight"
+      ],
+      "default": "chat"
+    }
+  },
+  "required": [
+    "user_address"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

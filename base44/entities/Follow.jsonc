@@ -1,0 +1,30 @@
+{
+  "name": "Follow",
+  "type": "object",
+  "properties": {
+    "follower_address": {
+      "type": "string",
+      "description": "Address of the user who is following"
+    },
+    "following_address": {
+      "type": "string",
+      "description": "Address of the user being followed"
+    }
+  },
+  "required": [
+    "follower_address",
+    "following_address"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": true,
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

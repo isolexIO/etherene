@@ -7,7 +7,7 @@ import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
 import NotificationBell from './components/notifications/NotificationBell';
 import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { WalletModalProvider, WalletMultiButton, useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { 
   PhantomWalletAdapter,
   SolflareWalletAdapter,
@@ -25,9 +25,10 @@ const endpoint = 'https://api.mainnet-beta.solana.com';
 
 export const useWeb3 = () => {
   const wallet = useWallet();
+  const { setVisible } = useWalletModal();
   return {
     account: wallet.publicKey?.toBase58() || null,
-    connectWallet: wallet.connect,
+    connectWallet: () => setVisible(true),
     disconnectWallet: wallet.disconnect,
     isConnecting: wallet.connecting,
     wallet: wallet.wallet,

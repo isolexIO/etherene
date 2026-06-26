@@ -234,114 +234,129 @@ export default function Profile() {
 
   const handleMint = async () => {
     if (!isOwner) return;
+    if (!account) {
+      connectWallet();
+      return;
+    }
 
     setIsMinting(true);
     try {
-      if (!account) {
-          await connectWallet();
-          setIsMinting(false);
-          return;
+      toast.info("Preparing your identity mint...", { duration: 4000 });
+
+      // Step 1: Call backend to build the partially-signed mint transaction
+      const mintResponse = await base44.functions.invoke('mintSolanaIdentity', {
+          userAddress: account
+      });
+
+      const mintResult = mintResponse.data;
+      if (!mintResult.success) {
+          throw new Error(mintResult.error || "Failed to prepare mint transaction");
       }
 
-      // Step 1: User sends payment using wallet's built-in connection
-      toast.info("Preparing payment...", { duration: 3000 });
+      const { transaction: txBase64, subdomain, imageUrl, feeAmount, feeAmountUSD } = mintResult;
 
-      // Step 1: Fetch global settings for fee and admin wallet
-      const settings = await base44.entities.GlobalSettings.list();
-      if (!settings || settings.length === 0) {
-          throw new Error("Global settings not configured");
-      }
-      const { platform_fee_usd, admin_wallet } = settings[0];
+      toast.info(`Approve transaction: ~${feeAmount?.toFixed(4)} SOL platform fee + rent (~$${feeAmountUSD} USD)`, { duration: 5000 });
 
-      if (!admin_wallet) {
-          throw new Error("Admin wallet not configured");
-      }
+      // Step 2: Deserialize the partially-signed transaction
+      const { Transaction, Connection } = await import('@solana/web3.js');
+      const transactionBuffer = Buffer.from(txBase64, 'base64');
+      const transaction = Transaction.from(transactionBuffer);
 
-      // Step 2: Get recent blockhash from backend
-      const blockhashResponse = await base44.functions.invoke('getSolanaBlockhash');
-      if (!blockhashResponse.data.success) {
-          throw new Error(blockhashResponse.data.error || "Failed to get blockhash");
-      }
-      const { blockhash, lastValidBlockHeight } = blockhashResponse.data;
-
-      // Step 3: Calculate SOL amount
-      const { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
-
-      let lamportsForFee = Math.round(0.015 * LAMPORTS_PER_SOL); // fallback
-      try {
-          const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-          const priceData = await priceReq.json();
-          if (priceData.solana?.usd) {
-              lamportsForFee = Math.round((platform_fee_usd / priceData.solana.usd) * LAMPORTS_PER_SOL);
-          }
-      } catch (e) {
-          console.warn("Using fallback SOL price", e);
-      }
-
-      const feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
-      toast.info(`Please approve payment of ${feeInSol.toFixed(4)} SOL (~$${platform_fee_usd} USD)`, { duration: 3000 });
-
-      // Step 4: Build transaction on frontend
-      const userPubkey = new PublicKey(account);
-      const adminPubkey = new PublicKey(admin_wallet);
-
-      const transaction = new Transaction().add(
-          SystemProgram.transfer({
-              fromPubkey: userPubkey,
-              toPubkey: adminPubkey,
-              lamports: lamportsForFee
-          })
-      );
-
-      transaction.recentBlockhash = blockhash;
-      transaction.lastValidBlockHeight = lastValidBlockHeight;
-      transaction.feePayer = userPubkey;
-
-      // Step 5: Create connection and send transaction
+      // Step 3: User signs and sends
       if (!sendTransaction) {
-          throw new Error("Wallet not connected properly");
+          throw new Error("Wallet not connected properly. Please reconnect.");
       }
-
-      const { Connection } = await import('@solana/web3.js');
       const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
       const signature = await sendTransaction(transaction, connection);
 
-      toast.success("Payment confirmed!", { duration: 5000 });
+      toast.info("Transaction submitted, confirming...", { duration: 5000 });
+      await connection.confirmTransaction(signature, "confirmed");
 
-      // Step 2: Submit mint request to backend
-      const response = await base44.functions.invoke('requestMint', {
+      toast.success("Mint successful! Creating your identity record...", { duration: 5000 });
+
+      // Step 4: Create identity record
+      const existing = await base44.entities.Identity.filter({ address: account });
+      if (existing.length > 0) {
+          await base44.entities.Identity.update(existing[0].id, {
+              subdomain,
+              status: 'minted',
+              avatar_url: imageUrl,
+              cover_image: imageUrl,
+              fee_charged: true,
+              network: 'Solana Mainnet'
+          });
+      } else {
+          await base44.entities.Identity.create({
+              address: account,
+              subdomain,
+              network: 'Solana Mainnet',
+              status: 'minted',
+              avatar_url: imageUrl,
+              cover_image: imageUrl,
+              fee_charged: true
+          });
+      }
+
+      // Step 5: Record the mint request as completed
+      await base44.functions.invoke('requestMint', {
           userAddress: account,
           paymentSignature: signature
       });
 
-      const result = response.data;
-      if (!result.success) throw new Error(result.error);
-
-      // Create pending identity record
-      await base44.entities.Identity.create({
-          address: account,
-          subdomain: result.subdomain,
-          network: 'Solana Mainnet',
-          status: 'declared',
-          bio: `Pending mint: ${result.subdomain}`,
-          avatar_url: result.imageUrl,
-          cover_image: result.imageUrl,
-          fee_charged: true
-      });
-
-      toast.success(result.message || "Mint request submitted! You'll be notified when complete.", { duration: 8000 });
+      toast.success(`Identity minted! Subdomain: ${subdomain}`, { duration: 10000 });
       window.open(`https://explorer.solana.com/tx/${signature}`, '_blank');
       window.location.reload();
 
     } catch (err) {
-      console.error("Mint request failed:", err);
-      let msg = "Unknown error";
-      if (err.response?.data?.error) {
-          msg = err.response.data.error;
-      } else if (err.message) {
-          msg = err.message;
+      console.error("Mint failed:", err);
+      let msg = err.message || "Unknown error";
+      if (err.response?.data?.error) msg = err.response.data.error;
+      
+      // If backend mint failed, fall back to payment-only + manual queue
+      if (msg.includes("does not own the parent") || msg.includes("Backend Error")) {
+          toast.warning("Auto-mint unavailable. Falling back to manual queue...", { duration: 4000 });
+          try {
+              const settings = await base44.entities.GlobalSettings.list();
+              const { platform_fee_usd, admin_wallet } = settings[0] || {};
+              if (!admin_wallet) throw new Error("Admin wallet not configured");
+
+              const { PublicKey, SystemProgram, Transaction, Connection, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
+              let lamports = Math.round(0.015 * LAMPORTS_PER_SOL);
+              try {
+                  const pr = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+                  const pd = await pr.json();
+                  if (pd.solana?.usd) lamports = Math.round((platform_fee_usd / pd.solana.usd) * LAMPORTS_PER_SOL);
+              } catch(e) {}
+
+              const blockhashRes = await base44.functions.invoke('getSolanaBlockhash');
+              const { blockhash, lastValidBlockHeight } = blockhashRes.data;
+
+              const tx = new Transaction().add(
+                  SystemProgram.transfer({ fromPubkey: new PublicKey(account), toPubkey: new PublicKey(admin_wallet), lamports })
+              );
+              tx.recentBlockhash = blockhash;
+              tx.lastValidBlockHeight = lastValidBlockHeight;
+              tx.feePayer = new PublicKey(account);
+
+              const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+              const sig = await sendTransaction(tx, connection);
+
+              const res = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: sig });
+              const r = res.data;
+              if (!r.success) throw new Error(r.error);
+
+              await base44.entities.Identity.create({
+                  address: account, subdomain: r.subdomain, network: 'Solana Mainnet',
+                  status: 'declared', avatar_url: r.imageUrl, cover_image: r.imageUrl, fee_charged: true
+              });
+              toast.success("Queued for manual mint! You'll be notified within 24h.", { duration: 8000 });
+              window.location.reload();
+          } catch (fallbackErr) {
+              toast.error(`Mint failed: ${fallbackErr.message}`, { duration: 10000 });
+          }
+      } else {
+          toast.error(`Mint failed: ${msg}`, { duration: 10000 });
       }
-      toast.error(`Mint request failed: ${msg}`, { duration: 10000 });
     } finally {
       setIsMinting(false);
     }
@@ -386,7 +401,7 @@ export default function Profile() {
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Connect Wallet</h2>
         <p className="text-slate-500 mb-8">Connect your wallet to view your profile or search for others.</p>
-        <button onClick={connectWallet} className="px-8 py-3 rounded-full bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors">
+        <button onClick={connectWallet} className="px-8 py-3 rounded-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 text-white font-medium hover:opacity-90 transition-opacity">
           Connect Wallet
         </button>
       </div>

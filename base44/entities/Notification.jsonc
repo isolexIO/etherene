@@ -1,0 +1,53 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "recipient_address": {
+      "type": "string",
+      "description": "Wallet address of the notification recipient"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "new_follower",
+        "new_reply",
+        "following_transmission"
+      ],
+      "description": "Type of notification"
+    },
+    "actor_address": {
+      "type": "string",
+      "description": "Wallet address of the user who triggered the notification"
+    },
+    "transmission_id": {
+      "type": "string",
+      "description": "Related transmission ID (if applicable)"
+    },
+    "transmission_preview": {
+      "type": "string",
+      "description": "Preview of the transmission content"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the notification has been read"
+    }
+  },
+  "required": [
+    "recipient_address",
+    "type",
+    "actor_address"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

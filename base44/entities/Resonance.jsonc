@@ -1,0 +1,35 @@
+{
+  "name": "Resonance",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "The content of the resonance (comment)"
+    },
+    "transmission_id": {
+      "type": "string",
+      "description": "ID of the transmission being resonated with"
+    },
+    "author_address": {
+      "type": "string",
+      "description": "Wallet address of the author"
+    }
+  },
+  "required": [
+    "content",
+    "transmission_id",
+    "author_address"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": true,
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useWeb3 } from '../Layout';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { 
     Shield, 
     Settings, 
@@ -42,7 +43,7 @@ export default function AdminPage() {
     const [newRequestCount, setNewRequestCount] = useState(0);
 
     // Fetch admin wallet from settings
-    const { data: adminSettings } = useQuery({
+    const { data: adminSettings, isLoading: adminSettingsLoading } = useQuery({
         queryKey: ['adminCheck'],
         queryFn: async () => {
             const res = await base44.entities.GlobalSettings.list();
@@ -191,6 +192,14 @@ export default function AdminPage() {
         return unsubscribe;
     }, [isAdmin, queryClient]);
 
+    if (adminSettingsLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     if (!account) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
@@ -200,15 +209,7 @@ export default function AdminPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
                     <p className="text-slate-500 mb-8">Connect your wallet to access the admin dashboard.</p>
-                    <button 
-                        onClick={() => {
-                            const btn = document.querySelector('[role="button"]');
-                            if (btn?.textContent?.includes('Select Wallet')) btn.click();
-                        }}
-                        className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
-                    >
-                        Connect Wallet
-                    </button>
+                    <WalletMultiButton className="!bg-gradient-to-r !from-cyan-600 !to-fuchsia-600 !rounded-xl !h-12 !text-sm !font-bold" />
                 </div>
             </div>
         );

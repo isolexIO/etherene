@@ -1,0 +1,73 @@
+{
+  "name": "Identity",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "Wallet address"
+    },
+    "subdomain": {
+      "type": "string",
+      "description": "The minted SNS subdomain name (e.g. node-123.etherene.sol)"
+    },
+    "network": {
+      "type": "string",
+      "description": "Network ID where identity is minted"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "minted",
+        "declared"
+      ],
+      "default": "minted"
+    },
+    "banned": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, the user is banned from the platform"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "User's display name"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Short bio for the user"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "URL to the user's uploaded avatar image"
+    },
+    "avatar_cid": {
+      "type": "string",
+      "description": "IPFS CID for the avatar"
+    },
+    "bio_cid": {
+      "type": "string",
+      "description": "IPFS CID for the bio text"
+    },
+    "cover_image": {
+      "type": "string",
+      "description": "URL for profile cover image"
+    },
+    "socials": {
+      "type": "string",
+      "description": "JSON string of social links"
+    },
+    "last_seen": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last user activity"
+    },
+    "fee_charged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the $3 platform fee has been collected"
+    }
+  },
+  "required": [
+    "address",
+    "subdomain"
+  ]
+}

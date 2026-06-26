@@ -1,0 +1,47 @@
+{
+  "name": "Transmission",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "The content of the transmission"
+    },
+    "author_address": {
+      "type": "string",
+      "description": "Wallet address of the author"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "insight",
+        "question",
+        "proposal"
+      ],
+      "default": "insight"
+    },
+    "amplified_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "List of wallet addresses that amplified this transmission"
+    }
+  },
+  "required": [
+    "content",
+    "author_address"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": true,
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

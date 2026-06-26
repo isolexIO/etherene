@@ -1,0 +1,50 @@
+{
+  "name": "Lesson",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the lesson"
+    },
+    "content": {
+      "type": "string",
+      "description": "Main content of the lesson"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the lesson (YYYY-MM-DD)"
+    },
+    "principle_title": {
+      "type": "string",
+      "description": "The specific manifesto principle this lesson is based on"
+    },
+    "practical_exercise": {
+      "type": "string",
+      "description": "A specific action or exercise for the user to do"
+    }
+  },
+  "required": [
+    "title",
+    "content",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

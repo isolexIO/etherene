@@ -1,0 +1,45 @@
+{
+  "name": "Principle",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The name of the principle"
+    },
+    "description": {
+      "type": "string",
+      "description": "The full text of the principle"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Lucide icon name"
+    }
+  },
+  "required": [
+    "title",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

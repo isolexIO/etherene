@@ -1,0 +1,71 @@
+{
+  "name": "MintRequest",
+  "type": "object",
+  "properties": {
+    "user_address": {
+      "type": "string",
+      "description": "Wallet address of the user requesting mint"
+    },
+    "subdomain": {
+      "type": "string",
+      "description": "Generated subdomain name"
+    },
+    "payment_signature": {
+      "type": "string",
+      "description": "Solana transaction signature for the payment"
+    },
+    "amount_paid_sol": {
+      "type": "number",
+      "description": "Amount paid in SOL"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "minted",
+        "failed"
+      ],
+      "default": "pending",
+      "description": "Status of the mint request"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Generated avatar image URL"
+    },
+    "bio": {
+      "type": "string",
+      "description": "User bio for the identity"
+    }
+  },
+  "required": [
+    "user_address",
+    "subdomain",
+    "payment_signature"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

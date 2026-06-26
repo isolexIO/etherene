@@ -1,0 +1,31 @@
+{
+  "name": "Watchlist",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "The wallet address being watched"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional note for the address"
+    }
+  },
+  "required": [
+    "address"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

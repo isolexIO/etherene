@@ -1,0 +1,42 @@
+{
+  "name": "NotificationPrefs",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "Wallet address of the user"
+    },
+    "new_follower": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify when someone follows me"
+    },
+    "new_reply": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify when someone replies to my transmission"
+    },
+    "following_transmission": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify when someone I follow posts a transmission"
+    }
+  },
+  "required": [
+    "address"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

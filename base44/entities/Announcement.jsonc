@@ -1,0 +1,58 @@
+{
+  "name": "Announcement",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "info",
+        "alert",
+        "success"
+      ],
+      "default": "info"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "title",
+    "content"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "active": true
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

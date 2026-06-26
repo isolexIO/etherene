@@ -1,0 +1,48 @@
+{
+  "name": "GlobalSettings",
+  "type": "object",
+  "properties": {
+    "genesis_date": {
+      "type": "string",
+      "format": "date",
+      "default": "2024-01-01",
+      "description": "The start date of the chain (Genesis)"
+    },
+    "platform_fee_usd": {
+      "type": "number",
+      "default": 3,
+      "description": "Platform fee for minting in USD"
+    },
+    "admin_wallet": {
+      "type": "string",
+      "default": "5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8",
+      "description": "Admin wallet address to receive payments"
+    },
+    "maintenance_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, disables minting"
+    }
+  },
+  "required": [
+    "genesis_date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

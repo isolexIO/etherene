@@ -1,0 +1,42 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "sender_address": {
+      "type": "string",
+      "description": "Wallet address of the sender"
+    },
+    "recipient_address": {
+      "type": "string",
+      "description": "Wallet address of the recipient"
+    },
+    "content": {
+      "type": "string",
+      "description": "Message content"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the message has been read"
+    }
+  },
+  "required": [
+    "sender_address",
+    "recipient_address",
+    "content"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
