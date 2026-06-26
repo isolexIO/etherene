@@ -328,7 +328,7 @@ function WalletProviderWrapper({ children, currentPageName }) {
         url: 'https://etherene.app',
         icons: ['https://etherene.app/icon.png'],
       },
-      projectId: import.meta.env.VITE_REOWN_PROJECT_ID ?? '',
+      projectId: '738f62ca344192adde75d9fc5841bb07',
       features: {
         analytics: false,
         socials: false,
