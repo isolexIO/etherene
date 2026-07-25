@@ -23,6 +23,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Transaction not found or not confirmed yet' }, { status: 404 });
         }
 
+        // Verify the caller actually signed/owned this transaction to prevent hijacking
+        const txAccountKeys = tx.transaction.message.accountKeys;
+        const signerKeys = txAccountKeys.filter(k => k.signer).map(k => k.pubkey.toBase58 ? k.pubkey.toBase58() : k.pubkey.toString());
+        if (!userAddress || !signerKeys.includes(userAddress)) {
+            return Response.json({ error: 'Wallet address must be a signer of the recovery transaction' }, { status: 403 });
+        }
+
         // 2. Analyze Logs/Instructions to find the name
         // We look for "System Program: Create Account With Seed" OR Name Service Create
         // The seed is the name (e.g. "node-xyz").

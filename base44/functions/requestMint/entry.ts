@@ -84,6 +84,13 @@ Deno.serve(async (req) => {
 
         let paymentFound = false;
         let amountPaid = 0;
+        let senderVerified = false;
+
+        // Identify signer account keys to verify the payment sender
+        const parsedTx = await connection.getParsedTransaction(paymentSignature, {
+            maxSupportedTransactionVersion: 0,
+            commitment: 'confirmed'
+        });
 
         const keyCount = accountKeys.length || (transaction.transaction.message.accountKeys?.length || 0);
         for (let i = 0; i < keyCount; i++) {
@@ -93,13 +100,21 @@ Deno.serve(async (req) => {
                 if (balanceChange > 0) {
                     amountPaid = balanceChange / LAMPORTS_PER_SOL;
                     paymentFound = true;
-                    break;
                 }
+            }
+            // Verify the userAddress signed the transaction (the payer is at index 0)
+            if (key.equals(userPublicKey)) {
+                const isSigner = parsedTx?.transaction?.message?.accountKeys?.[i]?.signer ?? true;
+                if (isSigner) senderVerified = true;
             }
         }
 
         if (!paymentFound) {
             return Response.json({ error: 'Payment to admin wallet not found in transaction' }, { status: 400 });
+        }
+
+        if (!senderVerified) {
+            return Response.json({ error: 'Payment sender does not match the provided wallet address' }, { status: 403 });
         }
 
         // Get SOL price and verify amount
