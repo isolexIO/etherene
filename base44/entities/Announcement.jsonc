@@ -35,7 +35,7 @@
     "read": {
       "$or": [
         {
-          "active": true
+          "data.active": true
         },
         {
           "user_condition": {
