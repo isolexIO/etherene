@@ -38,6 +38,12 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid user address' }, { status: 400 });
         }
 
+        // Replay protection: reject already-processed payment signatures
+        const existing = await base44.asServiceRole.entities.MintRequest.filter({ payment_signature: paymentSignature });
+        if (existing && existing.length > 0) {
+            return Response.json({ error: 'This payment signature has already been used' }, { status: 409 });
+        }
+
         // Verify payment transaction
         const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
         

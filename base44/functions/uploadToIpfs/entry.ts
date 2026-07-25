@@ -24,8 +24,28 @@ Deno.serve(async (req) => {
         const formData = new FormData();
 
         if (type === 'file' && fileUrl) {
-            // Fetch file from the temporary URL
-            const fileRes = await fetch(fileUrl);
+            // Validate fileUrl to prevent SSRF
+            const ALLOWED_HOSTS = ['res.cloudinary.com', 'images.unsplash.com', 'files.etherene.app', 'uploads.etherene.app'];
+            let parsed;
+            try {
+                parsed = new URL(fileUrl);
+            } catch (e) {
+                return Response.json({ error: 'Invalid file URL' }, { status: 400 });
+            }
+            if (parsed.protocol !== 'https:') {
+                return Response.json({ error: 'Only HTTPS URLs are allowed' }, { status: 400 });
+            }
+            const host = parsed.hostname.toLowerCase();
+            const isAllowedDomain = ALLOWED_HOSTS.some(h => host === h || host.endsWith('.' + h));
+            const isPrivate = host === 'localhost' || host === '0.0.0.0' ||
+                host.startsWith('127.') || host.startsWith('10.') ||
+                host.startsWith('192.168.') || host.startsWith('169.254.') ||
+                /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host.includes('::1') || host === '[::1]';
+            if (!isAllowedDomain || isPrivate) {
+                return Response.json({ error: 'File URL domain is not allowed' }, { status: 400 });
+            }
+            // Fetch file from the validated URL
+            const fileRes = await fetch(parsed.href);
             if (!fileRes.ok) throw new Error("Failed to fetch source file");
             const blob = await fileRes.blob();
             formData.append('file', blob, 'avatar.png');
