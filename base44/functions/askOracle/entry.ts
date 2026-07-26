@@ -32,14 +32,26 @@ Deno.serve(async (req) => {
 
         if (address) {
             try {
-                // Fetch User Identity & Activity using wallet address
-                const [identities, transmissions, interactions] = await Promise.all([
+                // Identity and Transmissions are public; fetch via service role.
+                const [identities, transmissions] = await Promise.all([
                     admin.entities.Identity.filter({ address: address }),
-                    admin.entities.Transmission.filter({ author_address: address }, '-created_date', 5),
-                    admin.entities.OracleInteraction.filter({ user_address: address }, '-created_date', 5)
+                    admin.entities.Transmission.filter({ author_address: address }, '-created_date', 5)
                 ]);
 
                 identityData = identities[0] || null;
+
+                // OracleInteraction records are private (RLS: created_by). Fetch them
+                // with the caller's user-scoped client so RLS is enforced — never via
+                // the service role, which would expose other users' chat history.
+                let interactions = [];
+                try {
+                    await base44.auth.me(); // throws if not authenticated
+                    interactions = await base44.entities.OracleInteraction.filter(
+                        { user_address: address }, '-created_date', 5
+                    );
+                } catch (authErr) {
+                    // Caller not authenticated — cannot access private interactions.
+                }
 
                 userContext = `
                 USER CONTEXT:
