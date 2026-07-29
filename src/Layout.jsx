@@ -9,7 +9,6 @@ import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletProvider, UnifiedWalletButton, useUnifiedWalletContext } from '@jup-ag/wallet-adapter';
 import { useWrappedReownAdapter } from '@jup-ag/jup-mobile-adapter';
-import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
 
 
@@ -341,24 +340,7 @@ function WalletProviderWrapper({ children, currentPageName }) {
     },
   });
 
-  const wallets = useMemo(() => {
-    const list = [jupiterAdapter];
-    if (typeof window !== 'undefined' && /android|iphone|ipad|ipod/i.test(window.navigator.userAgent)) {
-      try {
-        list.push(
-          new SolanaMobileWalletAdapter({
-            appIdentity: {
-              name: 'Etherene',
-              uri: 'https://etherene.app',
-            },
-          })
-        );
-      } catch {
-        // Mobile adapter unavailable — Jupiter QR adapter still works
-      }
-    }
-    return list.filter(Boolean);
-  }, [jupiterAdapter]);
+  const wallets = useMemo(() => [jupiterAdapter].filter(Boolean), [jupiterAdapter]);
 
   return (
     <UnifiedWalletProvider
