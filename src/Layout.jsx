@@ -341,20 +341,24 @@ function WalletProviderWrapper({ children, currentPageName }) {
     },
   });
 
-  const wallets = useMemo(
-    () => [
-      jupiterAdapter,
-      typeof window !== 'undefined' &&
-        /android|iphone|ipad|ipod/i.test(window.navigator.userAgent) &&
-        new SolanaMobileWalletAdapter({
-          appIdentity: {
-            name: 'Etherene',
-            uri: 'https://etherene.app',
-          },
-        }),
-    ].filter(Boolean),
-    [jupiterAdapter]
-  );
+  const wallets = useMemo(() => {
+    const list = [jupiterAdapter];
+    if (typeof window !== 'undefined' && /android|iphone|ipad|ipod/i.test(window.navigator.userAgent)) {
+      try {
+        list.push(
+          new SolanaMobileWalletAdapter({
+            appIdentity: {
+              name: 'Etherene',
+              uri: 'https://etherene.app',
+            },
+          })
+        );
+      } catch {
+        // Mobile adapter unavailable — Jupiter QR adapter still works
+      }
+    }
+    return list.filter(Boolean);
+  }, [jupiterAdapter]);
 
   return (
     <UnifiedWalletProvider
