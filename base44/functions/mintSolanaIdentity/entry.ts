@@ -177,41 +177,43 @@ Deno.serve(async (req) => {
             throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL (${(lamportsForFee/LAMPORTS_PER_SOL).toFixed(4)} platform fee + ${(rentLamports/LAMPORTS_PER_SOL).toFixed(4)} rent + fees) but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
         }
 
-        // 3. Create subdomain instruction
-        const { getHashedName, getNameAccountKey } = await import('npm:@bonfida/spl-name-service@^2.3.1');
+        // 3. Create subdomain instruction using the official Bonfida SNS builder.
+        //    getDomainKeySync derives the correct subdomain PDA + hashed name
+        //    (subdomains are prefixed with a null byte in SNS) and the parent key.
+        //    createInstruction builds the correct wire format + account layout
+        //    (7 accounts incl. name_class default and name_parent_owner signer).
+        const { getDomainKeySync, createInstruction: buildCreateInstruction, Numberu32, Numberu64 } = await import('npm:@bonfida/spl-name-service@^2.3.1');
 
         let hashedName, subdomainKey;
         try {
-            hashedName = await getHashedName(subdomain);
-            subdomainKey = await getNameAccountKey(hashedName, undefined, parentNameKey);
+            const result = getDomainKeySync(`${subdomain}.etherene.sol`);
+            subdomainKey = result.pubkey;
+            hashedName = result.hashed;
+            // Sanity: parent derived from the full domain must match our verified parent
+            if (result.parent && !result.parent.equals(parentNameKey)) {
+                throw new Error(`Parent key mismatch: ${result.parent.toBase58()} != ${parentNameKey.toBase58()}`);
+            }
         } catch (e) {
             throw new Error(`Failed to derive subdomain key: ${e.message}`);
         }
 
         console.log("Subdomain account:", subdomainKey.toBase58());
 
-        // Build instruction data (Create instruction format for SNS)
-        // Format: [1 byte opcode (0=Create)] + [32 bytes hashedName] + [4 bytes space] + [8 bytes rent]
-        const instructionData = Buffer.alloc(1 + 32 + 4 + 8);
-        instructionData.writeUInt8(0, 0); // Opcode: Create
-        hashedName.copy(instructionData, 1);
-        instructionData.writeUInt32LE(space + 96, 33); // Space
-        instructionData.writeBigUInt64LE(BigInt(rentLamports), 37); // Rent
+        const createIx = buildCreateInstruction(
+            NAME_PROGRAM_ID,
+            SystemProgram.programId,
+            subdomainKey,                        // nameKey (subdomain account)
+            userPublicKey,                       // nameOwnerKey (user owns the subdomain)
+            userPublicKey,                       // payerKey (user pays rent)
+            hashedName,                          // hashed_name (null-byte prefixed)
+            new Numberu64(BigInt(rentLamports)), // lamports
+            new Numberu32(space),               // space (body, excluding 96-byte header)
+            undefined,                           // nameClassKey (defaults to zero-pubkey)
+            parentNameKey,                       // nameParent
+            serverKeypair.publicKey              // nameParentOwner (signer — server owns etherene.sol)
+        );
 
-        const createInstruction = new TransactionInstruction({
-            keys: [
-                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-                { pubkey: userPublicKey, isSigner: true, isWritable: true },
-                { pubkey: subdomainKey, isSigner: false, isWritable: true },
-                { pubkey: userPublicKey, isSigner: false, isWritable: false },
-                { pubkey: parentNameKey, isSigner: false, isWritable: false },
-                { pubkey: serverKeypair.publicKey, isSigner: true, isWritable: false },
-            ],
-            programId: NAME_PROGRAM_ID,
-            data: instructionData
-        });
-
-        transaction.add(createInstruction);
+        transaction.add(createIx);
 
         // 6. Finalize
         transaction.feePayer = userPublicKey;
