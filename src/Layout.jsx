@@ -344,13 +344,15 @@ function WalletProviderWrapper({ children, currentPageName }) {
   const wallets = useMemo(
     () => [
       jupiterAdapter,
-      new SolanaMobileWalletAdapter({
-        appIdentity: {
-          name: 'Etherene',
-          uri: 'https://etherene.app',
-        },
-      }),
-    ].filter((item) => item && item.name),
+      typeof window !== 'undefined' &&
+        /android|iphone|ipad|ipod/i.test(window.navigator.userAgent) &&
+        new SolanaMobileWalletAdapter({
+          appIdentity: {
+            name: 'Etherene',
+            uri: 'https://etherene.app',
+          },
+        }),
+    ].filter(Boolean),
     [jupiterAdapter]
   );
 
