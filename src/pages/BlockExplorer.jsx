@@ -21,6 +21,12 @@ const ACTION_TYPES = [
 ];
 
 async function fetchAllBlocks() {
+  const moment = (await import('moment')).default;
+  const settingsList = await base44.entities.GlobalSettings.list();
+  const genesisDate = settingsList[0]?.genesis_date || '2024-01-01';
+  const genesis = moment.utc(genesisDate).startOf('day');
+  const blockHeight = moment.utc().diff(genesis, 'days');
+
   const results = await Promise.all(
     ACTION_TYPES.map(async ({ entity, label, to, status, addressField }) => {
       const records = await base44.entities[entity].list('-created_date', 200);
@@ -31,20 +37,14 @@ async function fetchAllBlocks() {
         type: label,
         created_date: r.created_date,
         status,
+        blockNumber: moment.utc(r.created_date).diff(genesis, 'days') + 1,
       }));
     })
   );
 
   const allTxs = results.flat().sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
-  // Assign block numbers — newest action = highest block number
-  const total = allTxs.length;
-  const numbered = allTxs.map((tx, i) => ({
-    ...tx,
-    blockNumber: total - i,
-  }));
-
-  return { blocks: numbered, total };
+  return { blocks: allTxs, blockHeight };
 }
 
 export default function BlockExplorer() {
@@ -109,19 +109,17 @@ export default function BlockExplorer() {
     const moment = (await import('moment')).default;
 
     try {
-      const { blocks, total } = await fetchAllBlocks();
+      const { blocks, blockHeight } = await fetchAllBlocks();
       const identities = await base44.entities.Identity.list();
 
-      // Actions per day since the oldest block
+      const totalTxns = blocks.length;
       let actionsPerDay = 0;
-      if (blocks.length > 0) {
-        const oldest = moment.utc(blocks[blocks.length - 1].created_date);
-        const days = Math.max(1, moment.utc().diff(oldest, 'days'));
-        actionsPerDay = (total / days).toFixed(1);
+      if (blockHeight > 0) {
+        actionsPerDay = (totalTxns / blockHeight).toFixed(1);
       }
 
       setStats({
-        blocks: total,
+        blocks: blockHeight,
         gasPrice: "10",
         identities: identities.length,
         tps: actionsPerDay,
