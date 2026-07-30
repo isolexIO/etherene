@@ -411,6 +411,16 @@ export default function Profile() {
 
   const socials = profileData?.socials ? JSON.parse(profileData.socials) : {};
 
+  // Only allow http/https URLs — blocks javascript: and other dangerous schemes
+  const safeUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return url;
+    } catch {}
+    return null;
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-0 pb-20">
       
@@ -466,10 +476,10 @@ export default function Profile() {
           {/* Socials */}
           {Object.keys(socials).filter(key => socials[key]).length > 0 && (
               <div className="flex gap-3 mb-8">
-                  {socials.website && <a href={socials.website} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-indigo-100 hover:text-indigo-600 transition-colors" title="Website"><Globe className="w-4 h-4"/></a>}
-                  {socials.twitter && <a href={`https://twitter.com/${socials.twitter}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Twitter"><MessageSquare className="w-4 h-4"/></a>}
-                  {socials.linkedin && <a href={`https://linkedin.com/in/${socials.linkedin}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors" title="LinkedIn"><Globe className="w-4 h-4"/></a>}
-                  {socials.github && <a href={`https://github.com/${socials.github}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors" title="GitHub"><Globe className="w-4 h-4"/></a>}
+                  {socials.website && (() => { const url = safeUrl(socials.website); return url ? <a href={url} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-indigo-100 hover:text-indigo-600 transition-colors" title="Website"><Globe className="w-4 h-4"/></a> : null; })()}
+                  {socials.twitter && <a href={`https://twitter.com/${encodeURIComponent(socials.twitter)}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Twitter"><MessageSquare className="w-4 h-4"/></a>}
+                  {socials.linkedin && <a href={`https://linkedin.com/in/${encodeURIComponent(socials.linkedin)}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-blue-100 hover:text-blue-600 transition-colors" title="LinkedIn"><Globe className="w-4 h-4"/></a>}
+                  {socials.github && <a href={`https://github.com/${encodeURIComponent(socials.github)}`} target="_blank" rel="noopener" className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors" title="GitHub"><Globe className="w-4 h-4"/></a>}
               </div>
           )}
 
