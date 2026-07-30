@@ -52,7 +52,7 @@ export default function BlockExplorer() {
   const [activeTab, setActiveTab] = useState('transactions');
 
   // Global State
-  const [stats, setStats] = useState({ blocks: 0, gasPrice: 0, identities: 0, tps: 0 });
+  const [stats, setStats] = useState({ blocks: 0, totalTxns: 0, gasPrice: 0, identities: 0, tps: 0 });
   const [transactions, setTransactions] = useState([]);
   const [graphData, setGraphData] = useState([]);
 
@@ -120,6 +120,7 @@ export default function BlockExplorer() {
 
       setStats({
         blocks: blockHeight,
+        totalTxns,
         gasPrice: "10",
         identities: identities.length,
         tps: actionsPerDay,
