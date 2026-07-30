@@ -36,7 +36,10 @@ function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
 
   // Dynamically detect if we can go back based on history depth
-  const canGoBack = (window.history.state?.idx ?? 0) > 0;
+  const canGoBack = (() => {
+    try { return (window.history.state?.idx ?? 0) > 0; }
+    catch { return false; }
+  })();
   
   // Scroll position preservation for main tabs
   const TAB_PAGES = ['Home', 'Agora', 'Oracle', 'Profile'];
@@ -251,18 +254,15 @@ function LayoutContent({ children, currentPageName }) {
 
       {/* Main Content */}
       <main className="relative z-10 pt-16 min-h-[calc(100vh-4rem)] md:pb-0 pb-20">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentPageName}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="h-full"
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={currentPageName}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="h-full"
+        >
+          {children}
+        </motion.div>
       </main>
 
       {/* Footer */}
