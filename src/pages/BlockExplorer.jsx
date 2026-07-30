@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Wifi } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -12,12 +12,45 @@ import AddressWatchlist from '../components/explorer/AddressWatchlist';
 import usePullToRefresh from '../components/mobile/usePullToRefresh';
 import PullToRefreshIndicator from '../components/mobile/PullToRefreshIndicator';
 
-// Initial State removed - using real data
+const ACTION_TYPES = [
+  { entity: 'Transmission', label: 'Transmission', to: 'Agora', status: 'Broadcasted', addressField: 'author_address' },
+  { entity: 'Resonance', label: 'Resonance', to: 'Agora', status: 'Resonated', addressField: 'author_address' },
+  { entity: 'OracleInteraction', label: 'Oracle Interaction', to: 'Oracle', status: 'Revealed', addressField: 'user_address' },
+  { entity: 'Identity', label: 'Identity Mint', to: 'Etherene Identity', status: 'Minted', addressField: 'address' },
+  { entity: 'Follow', label: 'Follow', to: 'Network', status: 'Connected', addressField: 'follower_address' },
+];
+
+async function fetchAllBlocks() {
+  const results = await Promise.all(
+    ACTION_TYPES.map(async ({ entity, label, to, status, addressField }) => {
+      const records = await base44.entities[entity].list('-created_date', 200);
+      return records.map(r => ({
+        hash: r.id,
+        from: r[addressField] || 'Unknown',
+        to,
+        type: label,
+        created_date: r.created_date,
+        status,
+      }));
+    })
+  );
+
+  const allTxs = results.flat().sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+
+  // Assign block numbers — newest action = highest block number
+  const total = allTxs.length;
+  const numbered = allTxs.map((tx, i) => ({
+    ...tx,
+    blockNumber: total - i,
+  }));
+
+  return { blocks: numbered, total };
+}
 
 export default function BlockExplorer() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('transactions');
-  
+
   // Global State
   const [stats, setStats] = useState({ blocks: 0, gasPrice: 0, identities: 0, tps: 0 });
   const [transactions, setTransactions] = useState([]);
@@ -73,132 +106,39 @@ export default function BlockExplorer() {
 
   // Separate refetch function
   const refetchTransactions = useCallback(async () => {
-    // Trigger fresh fetch
-    const { base44 } = await import('@/api/base44Client');
     const moment = (await import('moment')).default;
-    
-    const [identities, transmissions, interactions, settingsList] = await Promise.all([
-        base44.entities.Identity.list(),
-        base44.entities.Transmission.list(),
-        base44.entities.OracleInteraction.list(),
-        base44.entities.GlobalSettings.list()
-    ]);
 
-    const genesisDate = settingsList[0]?.genesis_date || '2024-01-01';
-    const genesis = moment.utc(genesisDate);
-    const now = moment.utc();
-    const blockHeight = now.diff(genesis, 'days');
+    try {
+      const { blocks, total } = await fetchAllBlocks();
+      const identities = await base44.entities.Identity.list();
 
-    const totalActivity = identities.length + transmissions.length + interactions.length;
-    const tps = totalActivity > 0 ? (totalActivity / (blockHeight * 24)).toFixed(2) : 0;
+      // Actions per day since the oldest block
+      let actionsPerDay = 0;
+      if (blocks.length > 0) {
+        const oldest = moment.utc(blocks[blocks.length - 1].created_date);
+        const days = Math.max(1, moment.utc().diff(oldest, 'days'));
+        actionsPerDay = (total / days).toFixed(1);
+      }
 
-    setStats({
-        blocks: blockHeight,
+      setStats({
+        blocks: total,
         gasPrice: "10",
         identities: identities.length,
-        tps: tps
-    });
+        tps: actionsPerDay,
+      });
 
-    const allTxs = [
-        ...identities.map(i => ({
-            hash: i.id,
-            from: i.address,
-            to: "Etherene Identity",
-            type: "Identity Mint",
-            created_date: i.created_date,
-            status: "Minted"
-        })),
-        ...transmissions.map(t => ({
-            hash: t.id,
-            from: t.author_address,
-            to: "Agora",
-            type: "Transmission",
-            created_date: t.created_date,
-            status: "Broadcasted"
-        })),
-        ...interactions.map(i => ({
-            hash: i.id,
-            from: i.user_address,
-            to: "Oracle",
-            type: "Oracle Interaction",
-            created_date: i.created_date,
-            status: "Revealed"
-        }))
-    ].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-
-    setTransactions(allTxs.slice(0, 15).map(tx => ({
+      setTransactions(blocks.slice(0, 50).map(tx => ({
         ...tx,
-        age: moment.utc(tx.created_date).fromNow()
-    })));
+        age: moment.utc(tx.created_date).fromNow(),
+      })));
+    } catch (error) {
+      console.error("Failed to fetch blocks:", error);
+    }
   }, []);
 
-  // Metaphysical Chain Stats
   useEffect(() => {
     const fetchMetaphysicalStats = async () => {
-        try {
-            const { base44 } = await import('@/api/base44Client');
-            const moment = (await import('moment')).default;
-            
-            // Fetch Settings & Entities
-            const [identities, transmissions, interactions, settingsList] = await Promise.all([
-                base44.entities.Identity.list(),
-                base44.entities.Transmission.list(),
-                base44.entities.OracleInteraction.list(),
-                base44.entities.GlobalSettings.list()
-            ]);
-
-            // Calculate "Block Height" (Days since Genesis)
-            const genesisDate = settingsList[0]?.genesis_date || '2024-01-01';
-            const genesis = moment.utc(genesisDate);
-            const now = moment.utc();
-            const blockHeight = now.diff(genesis, 'days');
-
-            const totalActivity = identities.length + transmissions.length + interactions.length;
-            const tps = totalActivity > 0 ? (totalActivity / (blockHeight * 24)).toFixed(2) : 0; // Transmissions Per Hour basically
-
-            setStats({
-                blocks: blockHeight,
-                gasPrice: "10", // Constant "Energy"
-                identities: identities.length,
-                tps: tps
-            });
-
-            // Merge and Map Transactions
-            const allTxs = [
-                ...identities.map(i => ({
-                    hash: i.id,
-                    from: i.address,
-                    to: "Etherene Identity",
-                    type: "Identity Mint",
-                    created_date: i.created_date,
-                    status: "Minted"
-                })),
-                ...transmissions.map(t => ({
-                    hash: t.id,
-                    from: t.author_address,
-                    to: "Agora",
-                    type: "Transmission",
-                    created_date: t.created_date,
-                    status: "Broadcasted"
-                })),
-                ...interactions.map(i => ({
-                    hash: i.id,
-                    from: i.user_address,
-                    to: "Oracle",
-                    type: "Oracle Interaction",
-                    created_date: i.created_date,
-                    status: "Revealed"
-                }))
-            ].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-
-            setTransactions(allTxs.slice(0, 15).map(tx => ({
-                ...tx,
-                age: moment.utc(tx.created_date).fromNow()
-            })));
-
-        } catch (error) {
-            console.error("Failed to fetch metaphysical stats:", error);
-        }
+      await refetchTransactions();
     };
 
     // Initial Graph
@@ -208,14 +148,14 @@ export default function BlockExplorer() {
     })));
 
     fetchMetaphysicalStats();
-    const interval = setInterval(fetchMetaphysicalStats, 30000); 
-    
+    const interval = setInterval(fetchMetaphysicalStats, 30000);
+
     // Visual Graph Update
     const graphInterval = setInterval(() => {
         setGraphData(prev => {
-            const newData = [...prev.slice(1), { 
-              time: new Date().toISOString().substr(11, 8), 
-              value: Math.floor(Math.random() * 10) + 2
+            const newData = [...prev.slice(1), {
+              time: new Date().toISOString().substr(11, 8),
+              tps: Math.floor(Math.random() * 10) + 2
             }];
             return newData;
         });
@@ -225,7 +165,7 @@ export default function BlockExplorer() {
         clearInterval(interval);
         clearInterval(graphInterval);
     };
-  }, []);
+  }, [refetchTransactions]);
 
 
 
@@ -240,19 +180,19 @@ export default function BlockExplorer() {
             >
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold text-slate-900">Block Explorer</h1>
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium animate-pulse">
+                  <span className="flex items-center gap-! px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium animate-pulse">
                     <Wifi className="w-3 h-3" /> Live
                   </span>
                 </div>
-                <p className="text-slate-600">Immutable record of truth and identity</p>
+                <p className="text-slate-600">Immutable log of every action on the Etherene network</p>
             </motion.div>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="relative w-full md:w-96"
             >
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input 
+                <input
                     type="text"
                     placeholder="Search by address, hash, or block..."
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white shadow-sm"
@@ -271,25 +211,25 @@ export default function BlockExplorer() {
             {/* Left Column: List & Tabs */}
             <div className="lg:col-span-2 overflow-y-auto max-h-[calc(100vh-300px)]">
                 <div className="flex gap-3 border-b border-slate-200 mb-8 overflow-x-auto min-h-11">
-                    <button 
+                    <button
                         onClick={() => setActiveTab('transactions')}
                         className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'transactions' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        Latest Transactions
+                        Latest Blocks
                         {activeTab === 'transactions' && (
-                            <motion.div 
+                            <motion.div
                                 layoutId="activeTab"
                                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"
                             />
                         )}
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('identities')}
                         className={`pb-4 px-2 font-medium text-sm transition-colors relative ${activeTab === 'identities' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Verified Identities
                         {activeTab === 'identities' && (
-                            <motion.div 
+                            <motion.div
                                 layoutId="activeTab"
                                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"
                             />
@@ -304,9 +244,9 @@ export default function BlockExplorer() {
                     transition={{ duration: 0.3 }}
                 >
                     {activeTab === 'transactions' ? (
-                      <TransactionList 
-                        transactions={transactions} 
-                        searchTerm={search} 
+                      <TransactionList
+                        transactions={transactions}
+                        searchTerm={search}
                         watchedAddresses={watchedAddresses}
                       />
                     ) : (
@@ -319,8 +259,8 @@ export default function BlockExplorer() {
             <div className="hidden lg:block space-y-8 relative">
                 <NetworkGraph data={graphData} />
                 <div className="sticky top-24">
-                  <AddressWatchlist 
-                    watchedAddresses={watchedAddresses} 
+                  <AddressWatchlist
+                    watchedAddresses={watchedAddresses}
                     onAdd={addToWatchlist}
                     onRemove={removeFromWatchlist}
                   />

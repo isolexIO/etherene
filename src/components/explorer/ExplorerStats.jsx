@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Box, Activity, Shield, Zap } from 'lucide-react';
+import { Boxes, Activity, Shield, Layers } from 'lucide-react';
 
 export default function ExplorerStats({ globalStats }) {
   const stats = [
-    { label: "Latest Block Height", value: globalStats.blocks ? globalStats.blocks.toLocaleString() : "Syncing...", icon: Box, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Gas Price (Gwei)", value: globalStats.gasPrice ? parseFloat(globalStats.gasPrice).toFixed(1) : "...", icon: Activity, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Network Identities", value: globalStats.identities.toLocaleString(), icon: Shield, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { label: "TPS (Approx)", value: globalStats.tps || "...", icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Total Blocks", value: globalStats.blocks ? globalStats.blocks.toLocaleString() : "Syncing...", icon: Boxes, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Network Identities", value: globalStats.identities ? globalStats.identities.toLocaleString() : "...", icon: Shield, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { label: "Actions / Day", value: globalStats.tps || "...", icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Energy (Gwei)", value: globalStats.gasPrice ? parseFloat(globalStats.gasPrice).toFixed(1) : "...", icon: Layers, color: "text-green-600", bg: "bg-green-50" },
   ];
 
   return (
