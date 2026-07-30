@@ -6,16 +6,16 @@ import { Toaster } from 'sonner';
 import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
 import NotificationBell from './components/notifications/NotificationBell';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { UnifiedWalletProvider, UnifiedWalletButton, useUnifiedWalletContext } from '@jup-ag/wallet-adapter';
-import { useWrappedReownAdapter } from '@jup-ag/jup-mobile-adapter';
+import { useWallet, ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider, WalletMultiButton, useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter, LedgerWalletAdapter } from '@solana/wallet-adapter-wallets';
 
-
+const SOLANA_ENDPOINT = 'https://api.mainnet-beta.solana.com';
 
 export const useWeb3 = () => {
   const wallet = useWallet();
-  const { setShowModal } = useUnifiedWalletContext();
-  const connectWallet = () => setShowModal(true);
+  const { setVisible } = useWalletModal();
+  const connectWallet = () => setVisible(true);
   return {
     account: wallet.publicKey?.toBase58() || null,
     connectWallet,
@@ -28,11 +28,9 @@ export const useWeb3 = () => {
 };
 
 function LayoutContent({ children, currentPageName }) {
-  const { publicKey, connected } = useWallet();
+  const { publicKey } = useWallet();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
-  const [activeTab, setActiveTab] = useState('Home');
-  const [tabStates, setTabStates] = useState({});
   const location = useLocation();
 
   // Dynamically detect if we can go back based on history depth
@@ -204,7 +202,7 @@ function LayoutContent({ children, currentPageName }) {
                 </button>
               )}
               {account && <NotificationBell account={account} />}
-              <UnifiedWalletButton />
+              <WalletMultiButton className="!bg-slate-800 !rounded-lg !px-4 !py-2 !text-sm !font-medium hover:!bg-slate-700 !transition-colors" />
             </div>
 
             {/* Mobile Menu Button */}
@@ -244,7 +242,7 @@ function LayoutContent({ children, currentPageName }) {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <UnifiedWalletButton />
+                  <WalletMultiButton className="!bg-slate-800 !rounded-lg !px-4 !py-2 !text-sm !font-medium hover:!bg-slate-700 !transition-colors !w-full" />
                 </div>
               </div>
             </motion.div>
@@ -322,44 +320,24 @@ function LayoutContent({ children, currentPageName }) {
 }
 
 function WalletProviderWrapper({ children, currentPageName }) {
-  const { jupiterAdapter } = useWrappedReownAdapter({
-    appKitOptions: {
-      metadata: {
-        name: 'Etherene',
-        description: 'A decentralized spiritual-tech platform',
-        url: 'https://etherene.app',
-        icons: ['https://etherene.app/icon.png'],
-      },
-      projectId: '738f62ca344192adde75d9fc5841bb07',
-      features: {
-        analytics: false,
-        socials: false,
-        email: false,
-      },
-      enableWallets: false,
-    },
-  });
-
-  const wallets = useMemo(() => [jupiterAdapter].filter(Boolean), [jupiterAdapter]);
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+      new TorusWalletAdapter(),
+      new LedgerWalletAdapter(),
+    ],
+    []
+  );
 
   return (
-    <UnifiedWalletProvider
-      wallets={wallets}
-      config={{
-        autoConnect: true,
-        env: 'mainnet-beta',
-        metadata: {
-          name: 'Etherene',
-          description: 'A decentralized spiritual-tech platform',
-          url: 'https://etherene.app',
-          iconUrls: ['https://etherene.app/icon.png'],
-        },
-        theme: 'dark',
-        lang: 'en',
-      }}
-    >
-      <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
-    </UnifiedWalletProvider>
+    <ConnectionProvider endpoint={SOLANA_ENDPOINT}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
   );
 }
 
