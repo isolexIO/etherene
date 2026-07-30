@@ -53,6 +53,7 @@ import Block from './pages/Block';
 import BlockExplorer from './pages/BlockExplorer';
 import Copyright from './pages/Copyright';
 import CustomizeProfile from './pages/CustomizeProfile';
+import DailyQuests from './pages/DailyQuests';
 import Home from './pages/Home';
 import Lessons from './pages/Lessons';
 import License from './pages/License';
@@ -74,6 +75,7 @@ export const PAGES = {
     "BlockExplorer": BlockExplorer,
     "Copyright": Copyright,
     "CustomizeProfile": CustomizeProfile,
+    "DailyQuests": DailyQuests,
     "Home": Home,
     "Lessons": Lessons,
     "License": License,

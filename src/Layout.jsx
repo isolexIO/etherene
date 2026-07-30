@@ -145,6 +145,7 @@ function LayoutContent({ children, currentPageName }) {
   const navItems = [
     { name: 'Sanctum', path: 'Sanctum' },
     { name: 'Lessons', path: 'Lessons' },
+    { name: 'Quests', path: 'DailyQuests' },
     { name: 'Principles', path: 'Principles' },
     { name: 'Oracle', path: 'Oracle' },
     { name: 'Agora', path: 'Agora' },

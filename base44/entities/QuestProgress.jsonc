@@ -1,0 +1,43 @@
+{
+  "name": "QuestProgress",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "Wallet address of the user completing the quest"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the quest was completed (YYYY-MM-DD)"
+    },
+    "quest_key": {
+      "type": "string",
+      "description": "Unique identifier of the completed quest template"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the quest is marked complete"
+    }
+  },
+  "required": [
+    "address",
+    "date",
+    "quest_key"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
