@@ -25,6 +25,7 @@ import {
   PROGRAM_ID as METADATA_PROGRAM_ID
 } from 'npm:@metaplex-foundation/mpl-token-metadata@^2.13.0';
 import bs58 from 'npm:bs58@5.0.0';
+import { QUEST_CONCEPTS } from '../../shared/badgeArt.ts';
 
 // Safe over-estimate of rent for an 82-byte mint account (~0.00147 SOL). The
 // excess stays in the account as a rent-exempt buffer; under-funding fails the tx.
@@ -46,11 +47,50 @@ export default async function(req) {
     questKey = String(questKey);
     userAddress = String(userAddress).trim();
 
+    // Access control: the server key is the mint authority + verified creator,
+    // so only authenticated app users may drive a co-sign. An unauthenticated
+    // caller (direct HTTP hit with no app session) must never reach partialSign.
+    try {
+      const caller = await base44.auth.me();
+      if (!caller) throw new Error('no session');
+    } catch {
+      return Response.json(
+        { error: 'Authentication required to mint a quest badge' },
+        { status: 401 }
+      );
+    }
+
+    // The quest must be one of the real Etherene daily quests — not arbitrary.
+    if (!Object.prototype.hasOwnProperty.call(QUEST_CONCEPTS, questKey)) {
+      return Response.json({ error: 'Unknown quest' }, { status: 400 });
+    }
+
     let userPublicKey;
     try {
       userPublicKey = new PublicKey(userAddress);
     } catch {
       return Response.json({ error: 'Invalid user address' }, { status: 400 });
+    }
+
+    // One verified badge per quest per address per day — blocks repeat
+    // co-signing abuse. Service role bypasses RLS so all records are visible.
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const existing =
+        await base44.asServiceRole.entities.QuestProgress.filter({
+          address: userAddress,
+          date: today,
+          quest_key: questKey,
+          completed: true,
+        });
+      if (existing && existing.length > 0) {
+        return Response.json(
+          { error: 'This quest badge has already been minted today' },
+          { status: 409 }
+        );
+      }
+    } catch {
+      // non-fatal — don't block minting on a transient DB read error
     }
 
     // Respect global maintenance mode

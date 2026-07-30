@@ -25,6 +25,16 @@ export const createPolygon = (cx, cy, r, sides, rotation = 0) => {
   return points;
 };
 
+// XML-entity escape so no caller-supplied value can ever break out of the
+// SVG markup (defense in depth — concept labels are from a static map, but
+// this guarantees safety even if that ever changes).
+const escapeXml = (s) => String(s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;');
+
 // ── Etherene concept registry ───────────────────────────────────────────────
 // Each daily quest maps to a distinct visual concept + color theme + glyph so
 // every badge is recognizably unique and rooted in the protocol's lore.
@@ -219,7 +229,7 @@ export const renderQuestBadge = (questKey) => {
   <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ring)" stroke-width="1.4" opacity="0.5"/>
   ${glyph}
   <text x="50" y="14" text-anchor="middle" font-family="monospace" font-size="4.5" fill="${c.primary}" opacity="0.8" letter-spacing="1">ETHERENE</text>
-  <text x="50" y="93" text-anchor="middle" font-family="monospace" font-size="6.5" fill="white" opacity="0.92" font-weight="700" letter-spacing="1.5">${meta.concept.toUpperCase()}</text>
+  <text x="50" y="93" text-anchor="middle" font-family="monospace" font-size="6.5" fill="white" opacity="0.92" font-weight="700" letter-spacing="1.5">${escapeXml(meta.concept.toUpperCase())}</text>
 </svg>`;
 
   return { svg, concept: meta.concept };
