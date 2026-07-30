@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { Transaction } from '@solana/web3.js';
 import { Link } from 'react-router-dom';
 import {
   Target, CheckCircle2, Circle, Lock, ArrowRight, Sparkles, Calendar,
@@ -198,7 +199,8 @@ function getTodayStr() {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function DailyQuests() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, signTransaction } = useWallet();
+  const { connection } = useConnection();
   const account = publicKey?.toBase58() || null;
   const today = getTodayStr();
 
@@ -260,44 +262,67 @@ export default function DailyQuests() {
     };
   }, [account, today]);
 
-  const toggleQuest = useCallback(
+  const completeQuest = useCallback(
     async (quest) => {
       if (!account) return;
-      const isComplete = completedKeys.has(quest.key);
       setToggling(quest.key);
       try {
-        if (isComplete) {
-          // Find and delete the record for this quest today
-          const records = await base44.entities.QuestProgress.filter({
-            address: account,
-            date: today,
-            quest_key: quest.key,
-          });
-          for (const r of records) {
-            await base44.entities.QuestProgress.delete(r.id);
-          }
-          setCompletedKeys((prev) => {
-            const next = new Set(prev);
-            next.delete(quest.key);
-            return next;
-          });
-        } else {
-          await base44.entities.QuestProgress.create({
-            address: account,
-            date: today,
-            quest_key: quest.key,
-            completed: true,
-          });
-          setCompletedKeys((prev) => new Set(prev).add(quest.key));
+        // 1. Fresh blockhash from the wallet's own RPC — the backend signs
+        //    fully offline, so it never has to hit a 403-prone public RPC.
+        const { blockhash, lastValidBlockHeight } =
+          await connection.getLatestBlockhash('confirmed');
+
+        // 2. Backend builds + partially signs the on-chain badge mint tx
+        //    (server keypair = mint authority + verified creator; the new
+        //    mint keypair signs its own account). Returns base64 for the
+        //    wallet to co-sign + submit.
+        const res = await base44.functions.invoke('mintQuestBadge', {
+          questKey: quest.key,
+          userAddress: account,
+          blockhash,
+          lastValidBlockHeight,
+        });
+        const { transaction: b64, mintAddress } = res.data;
+        if (!b64 || !mintAddress) {
+          throw new Error('Backend did not return a mintable transaction');
         }
+
+        // 3. Deserialize, let the wallet sign + submit, then confirm.
+        //    This signature landing on-chain IS the verified proof of
+        //    completion — the badge NFT is now in the user's wallet.
+        const txBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const tx = Transaction.from(txBytes);
+        const signed = await signTransaction(tx);
+        const signature = await connection.sendRawTransaction(
+          signed.serialize(),
+          { skipPreflight: false }
+        );
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          'confirmed'
+        );
+
+        // 4. Record the completion, linked to the minted badge.
+        await base44.entities.QuestProgress.create({
+          address: account,
+          date: today,
+          quest_key: quest.key,
+          completed: true,
+          mint_address: mintAddress,
+          tx_signature: signature,
+        });
+        setCompletedKeys((prev) => new Set(prev).add(quest.key));
+        toast.success('Badge minted — your quest is verified on-chain.');
       } catch (e) {
-        console.error('Failed to toggle quest', e);
-        toast.error('Could not save quest progress. Please reconnect your wallet and try again.');
+        console.error('Quest mint failed', e);
+        toast.error(
+          e?.message ? String(e.message) : 'Could not mint quest badge. Please try again.'
+        );
       } finally {
         setToggling(null);
       }
     },
-    [account, completedKeys, today]
+    [account, connection, signTransaction, today]
   );
 
   const completedCount = completedKeys.size;
@@ -375,8 +400,8 @@ export default function DailyQuests() {
           <div className="text-sm">
             <p className="font-semibold text-amber-900">Connect your wallet to track progress</p>
             <p className="text-amber-700">
-              Quests below are visible to everyone, but completing them is
-              recorded against your sovereign identity.
+              Completing a quest mints a verifiable on-chain badge NFT to your
+              wallet — a small Solana transaction fee applies.
             </p>
           </div>
         </div>
@@ -457,15 +482,15 @@ export default function DailyQuests() {
                         <ArrowRight className="w-4 h-4" />
                       </Link>
 
-                      {/* Complete toggle */}
+                      {/* Complete = mint a verifiable on-chain badge NFT */}
                       <button
-                        onClick={() => toggleQuest(quest)}
-                        disabled={!account || toggling === quest.key}
+                        onClick={() => completeQuest(quest)}
+                        disabled={!account || toggling === quest.key || isComplete}
                         className={`inline-flex w-full sm:w-auto justify-center items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                           isComplete
-                            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                            ? 'bg-emerald-500 text-white cursor-default'
                             : account
-                            ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            ? 'bg-gradient-to-r from-fuchsia-600 to-cyan-600 text-white hover:opacity-90'
                             : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                         }`}
                       >
@@ -476,7 +501,7 @@ export default function DailyQuests() {
                         ) : (
                           <Circle className="w-4 h-4" />
                         )}
-                        {isComplete ? 'Complete' : 'Mark done'}
+                        {isComplete ? 'Minted' : 'Mint badge'}
                       </button>
                     </div>
                   </div>
@@ -489,8 +514,9 @@ export default function DailyQuests() {
 
       {/* Footer note */}
       <p className="text-center text-xs text-slate-400 mt-10">
-        Quests rotate daily and are the same for every node on the network —
-        a shared curriculum for the Etherene protocol.
+        Quests rotate daily and are the same for every node on the network.
+        Completing one mints a sovereign badge NFT to your wallet as
+        permanent, verifiable proof.
       </p>
     </div>
   );

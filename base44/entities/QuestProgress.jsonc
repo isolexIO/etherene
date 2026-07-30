@@ -19,6 +19,14 @@
       "type": "boolean",
       "default": true,
       "description": "Whether the quest is marked complete"
+    },
+    "mint_address": {
+      "type": "string",
+      "description": "On-chain SPL token mint address of the badge NFT issued for this completion"
+    },
+    "tx_signature": {
+      "type": "string",
+      "description": "Solana transaction signature of the verified on-chain badge mint"
     }
   },
   "required": [
