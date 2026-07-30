@@ -17,7 +17,7 @@ import {
   createDefaultWalletNotFoundHandler,
 } from '@solana-mobile/wallet-adapter-mobile';
 
-const SOLANA_ENDPOINT = 'https://api.mainnet-beta.solana.com';
+const SOLANA_ENDPOINT = 'https://solana-rpc.publicnode.com';
 
 export const useWeb3 = () => {
   const wallet = useWallet();

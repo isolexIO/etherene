@@ -267,10 +267,26 @@ export default function DailyQuests() {
       if (!account) return;
       setToggling(quest.key);
       try {
-        // 1. Fresh blockhash from the wallet's own RPC — the backend signs
-        //    fully offline, so it never has to hit a 403-prone public RPC.
-        const { blockhash, lastValidBlockHeight } =
-          await connection.getLatestBlockhash('confirmed');
+        // 1. Fresh blockhash. The wallet's RPC is preferred, but public
+        //    mainnet-beta 403s many browser requests, so we fall back to the
+        //    backend getSolanaBlockhash function (which tries several
+        //    CORS-friendly endpoints) when the direct call is blocked.
+        let blockhash;
+        let lastValidBlockHeight;
+        try {
+          ({ blockhash, lastValidBlockHeight } =
+            await connection.getLatestBlockhash('confirmed'));
+        } catch (bhErr) {
+          const res = await base44.functions.invoke('getSolanaBlockhash', {});
+          if (!res?.data?.blockhash) {
+            throw new Error(
+              'Could not reach the Solana network to start the mint. ' +
+              'Please try again in a moment.'
+            );
+          }
+          blockhash = res.data.blockhash;
+          lastValidBlockHeight = res.data.lastValidBlockHeight;
+        }
 
         // 2. Backend builds + partially signs the on-chain badge mint tx
         //    (server keypair = mint authority + verified creator; the new
