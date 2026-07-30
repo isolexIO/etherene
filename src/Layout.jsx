@@ -9,6 +9,13 @@ import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet, ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton, useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter, LedgerWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import {
+  SolanaMobileWalletAdapter,
+  createDefaultAddressSelector,
+  createDefaultAuthorizationResultCache,
+  createDefaultWalletNotFoundHandler,
+} from '@solana-mobile/wallet-adapter-mobile';
 
 const SOLANA_ENDPOINT = 'https://api.mainnet-beta.solana.com';
 
@@ -327,6 +334,16 @@ function WalletProviderWrapper({ children, currentPageName }) {
       new SolflareWalletAdapter(),
       new TorusWalletAdapter(),
       new LedgerWalletAdapter(),
+      new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
+        appIdentity: {
+          name: 'Etherene',
+          uri: 'https://etherene.com',
+        },
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: WalletAdapterNetwork.Mainnet,
+        onWalletNotFound: createDefaultWalletNotFoundHandler(),
+      }),
     ],
     []
   );

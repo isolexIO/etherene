@@ -446,7 +446,7 @@ export default function DailyQuests() {
                       {quest.description}
                     </p>
 
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                       <Link
                         to={createPageUrl(quest.actionLink)}
                         className="inline-flex items-center gap-1.5 text-sm font-semibold text-fuchsia-600 hover:text-fuchsia-700 transition-colors"
@@ -459,7 +459,7 @@ export default function DailyQuests() {
                       <button
                         onClick={() => toggleQuest(quest)}
                         disabled={!connected || toggling === quest.key}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                        className={`inline-flex w-full sm:w-auto justify-center items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                           isComplete
                             ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                             : connected
