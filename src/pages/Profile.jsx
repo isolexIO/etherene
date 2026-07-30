@@ -20,6 +20,7 @@ import ChatWindow from '../components/messaging/ChatWindow';
 import ProfileEditor from '../components/profile/ProfileEditor';
 import ImportIdentity from '../components/profile/ImportIdentity';
 import LogoDownload from '../components/LogoDownload';
+import Badges from '../components/profile/Badges';
 import moment from 'moment';
 import { toast } from 'sonner';
 
@@ -735,6 +736,10 @@ export default function Profile() {
                     </div>
                 )}
             </div>
+
+            {isOwner && (
+                <Badges account={viewAddress} />
+            )}
         </div>
 
         {/* Right Column: Activity Feed */}
