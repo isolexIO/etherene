@@ -265,14 +265,28 @@ export default function DailyQuests() {
       if (!account) return;
       setToggling(quest.key);
       try {
-        // Completing a quest records a verifiable badge on the Etherene
-        // platform (no on-chain transaction required).
+        // 1. Record the verifiable badge on the Etherene platform (private to
+        //    the user's profile / streak tracking).
         await base44.entities.QuestProgress.create({
           address: account,
           date: today,
           quest_key: quest.key,
           completed: true,
         });
+
+        // 2. Broadcast the achievement as a Transmission so it surfaces as a
+        //    post in the Agora and as a transaction in the Block Explorer.
+        //    (Transmission has public read, unlike the private QuestProgress.)
+        try {
+          await base44.entities.Transmission.create({
+            content: `⚔️ Daily quest complete: "${quest.title}". Earned the ${quest.concept} badge on the Etherene network.`,
+            author_address: account,
+            type: 'insight',
+          });
+        } catch (postErr) {
+          console.error('Quest broadcast post failed', postErr);
+        }
+
         setCompletedKeys((prev) => new Set(prev).add(quest.key));
         toast.success('Quest complete — badge recorded to your profile.');
       } catch (e) {
