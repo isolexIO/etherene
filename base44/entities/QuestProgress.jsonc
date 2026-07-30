@@ -35,9 +35,7 @@
     "quest_key"
   ],
   "rls": {
-    "create": {
-      "created_by_id": "{{user.id}}"
-    },
+    "create": true,
     "read": {
       "created_by_id": "{{user.id}}"
     },
