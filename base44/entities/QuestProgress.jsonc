@@ -27,17 +27,15 @@
     "quest_key"
   ],
   "rls": {
-    "create": {
-      "created_by": "{{user.email}}"
-    },
+    "create": true,
     "read": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     }
   }
 }
