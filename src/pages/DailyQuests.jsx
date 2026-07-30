@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { Transaction } from '@solana/web3.js';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Link } from 'react-router-dom';
 import {
   Target, CheckCircle2, Circle, Lock, ArrowRight, Sparkles, Calendar,
@@ -199,8 +198,7 @@ function getTodayStr() {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function DailyQuests() {
-  const { publicKey, connected, signTransaction } = useWallet();
-  const { connection } = useConnection();
+  const { publicKey } = useWallet();
   const account = publicKey?.toBase58() || null;
   const today = getTodayStr();
 
@@ -267,78 +265,26 @@ export default function DailyQuests() {
       if (!account) return;
       setToggling(quest.key);
       try {
-        // 1. Fresh blockhash. The wallet's RPC is preferred, but public
-        //    mainnet-beta 403s many browser requests, so we fall back to the
-        //    backend getSolanaBlockhash function (which tries several
-        //    CORS-friendly endpoints) when the direct call is blocked.
-        let blockhash;
-        let lastValidBlockHeight;
-        try {
-          ({ blockhash, lastValidBlockHeight } =
-            await connection.getLatestBlockhash('confirmed'));
-        } catch (bhErr) {
-          const res = await base44.functions.invoke('getSolanaBlockhash', {});
-          if (!res?.data?.blockhash) {
-            throw new Error(
-              'Could not reach the Solana network to start the mint. ' +
-              'Please try again in a moment.'
-            );
-          }
-          blockhash = res.data.blockhash;
-          lastValidBlockHeight = res.data.lastValidBlockHeight;
-        }
-
-        // 2. Backend builds + partially signs the on-chain badge mint tx
-        //    (server keypair = mint authority + verified creator; the new
-        //    mint keypair signs its own account). Returns base64 for the
-        //    wallet to co-sign + submit.
-        const res = await base44.functions.invoke('mintQuestBadge', {
-          questKey: quest.key,
-          userAddress: account,
-          blockhash,
-          lastValidBlockHeight,
-        });
-        const { transaction: b64, mintAddress } = res.data;
-        if (!b64 || !mintAddress) {
-          throw new Error('Backend did not return a mintable transaction');
-        }
-
-        // 3. Deserialize, let the wallet sign + submit, then confirm.
-        //    This signature landing on-chain IS the verified proof of
-        //    completion — the badge NFT is now in the user's wallet.
-        const txBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        const tx = Transaction.from(txBytes);
-        const signed = await signTransaction(tx);
-        const signature = await connection.sendRawTransaction(
-          signed.serialize(),
-          { skipPreflight: false }
-        );
-        await connection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          'confirmed'
-        );
-
-        // 4. Record the completion, linked to the minted badge.
+        // Completing a quest records a verifiable badge on the Etherene
+        // platform (no on-chain transaction required).
         await base44.entities.QuestProgress.create({
           address: account,
           date: today,
           quest_key: quest.key,
           completed: true,
-          mint_address: mintAddress,
-          tx_signature: signature,
         });
         setCompletedKeys((prev) => new Set(prev).add(quest.key));
-        toast.success('Badge minted — your quest is verified on-chain.');
+        toast.success('Quest complete — badge recorded to your profile.');
       } catch (e) {
-        console.error('Quest mint failed', e);
+        console.error('Quest completion failed', e);
         toast.error(
-          e?.message ? String(e.message) : 'Could not mint quest badge. Please try again.'
+          e?.message ? String(e.message) : 'Could not record this quest. Please try again.'
         );
       } finally {
         setToggling(null);
       }
     },
-    [account, connection, signTransaction, today]
+    [account, today]
   );
 
   const completedCount = completedKeys.size;
@@ -416,8 +362,8 @@ export default function DailyQuests() {
           <div className="text-sm">
             <p className="font-semibold text-amber-900">Connect your wallet to track progress</p>
             <p className="text-amber-700">
-              Completing a quest mints a verifiable on-chain badge NFT to your
-              wallet — a small Solana transaction fee applies.
+              Completing a quest records a verifiable badge to your profile on
+              the Etherene platform.
             </p>
           </div>
         </div>
@@ -498,7 +444,7 @@ export default function DailyQuests() {
                         <ArrowRight className="w-4 h-4" />
                       </Link>
 
-                      {/* Complete = mint a verifiable on-chain badge NFT */}
+                      {/* Complete = record this quest on the platform */}
                       <button
                         onClick={() => completeQuest(quest)}
                         disabled={!account || toggling === quest.key || isComplete}
@@ -517,7 +463,7 @@ export default function DailyQuests() {
                         ) : (
                           <Circle className="w-4 h-4" />
                         )}
-                        {isComplete ? 'Minted' : 'Mint badge'}
+                        {isComplete ? 'Done' : 'Complete'}
                       </button>
                     </div>
                   </div>
@@ -531,7 +477,7 @@ export default function DailyQuests() {
       {/* Footer note */}
       <p className="text-center text-xs text-slate-400 mt-10">
         Quests rotate daily and are the same for every node on the network.
-        Completing one mints a sovereign badge NFT to your wallet as
+        Completing one records a sovereign badge to your profile as
         permanent, verifiable proof.
       </p>
     </div>
