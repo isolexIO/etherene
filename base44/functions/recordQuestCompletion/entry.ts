@@ -1,12 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-// Records a daily-quest completion with service-role access so the write
-// succeeds regardless of the calling app user's per-entity RLS state.
-// Creates the private QuestProgress badge (profile / streak) and broadcasts a
-// public Transmission that surfaces in the Agora and the Block Explorer.
+// Records a daily-quest completion on behalf of the authenticated caller.
+// Auth is required and the wallet address must belong to an Identity owned by
+// the caller, so quest progress and the public Agora broadcast cannot be
+// forged under another user's address.
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
+
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Authentication required' }, { status: 401 });
+    }
 
     let body = {};
     try {
@@ -23,21 +28,33 @@ export default async function(req) {
       );
     }
 
-    const admin = base44.asServiceRole;
+    // Verify the caller owns the wallet address they are recording for, by
+    // looking up an Identity for that address that was created by this user.
+    // This prevents forging quest progress or impersonating another wallet in
+    // the public Agora transmission.
+    const identities = await base44.entities.Identity.filter({ address });
+    const ownsAddress = Array.isArray(identities) && identities.some(
+      (id) => id && id.created_by_id === user.id
+    );
+    if (!ownsAddress) {
+      return Response.json(
+        { error: 'You can only record quest progress for your own identity.' },
+        { status: 403 }
+      );
+    }
 
-    // 1. Record the verifiable badge (private to the user's profile / streak).
-    const progress = await admin.entities.QuestProgress.create({
+    // User-scoped writes so created_by_id is the authenticated user, matching
+    // the owner-scoped RLS on QuestProgress and Transmission.
+    const progress = await base44.entities.QuestProgress.create({
       address,
       date,
       quest_key,
       completed: true,
     });
 
-    // 2. Broadcast the achievement as a Transmission so it surfaces as a post
-    //    in the Agora and as a transaction in the Block Explorer.
     let transmission = null;
     try {
-      transmission = await admin.entities.Transmission.create({
+      transmission = await base44.entities.Transmission.create({
         content: `⚔️ Daily quest complete: "${title}". Earned the ${concept} badge on the Etherene network.`,
         author_address: address,
         type: 'insight',
@@ -46,7 +63,11 @@ export default async function(req) {
       console.error('Quest broadcast post failed', String(postErr));
     }
 
-    return Response.json({ ok: true, progress_id: progress?.id, transmission_id: transmission?.id });
+    return Response.json({
+      ok: true,
+      progress_id: progress && progress.id,
+      transmission_id: transmission && transmission.id,
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
