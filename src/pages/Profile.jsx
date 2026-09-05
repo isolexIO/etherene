@@ -169,7 +169,7 @@ export default function Profile() {
            const { transaction: txBase64 } = res.data;
 
            const { Transaction, Connection } = await import('@solana/web3.js');
-           const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+           const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
            const transactionBuffer = Buffer.from(txBase64, 'base64');
            const transaction = Transaction.from(transactionBuffer);
 
@@ -267,7 +267,7 @@ export default function Profile() {
       if (!sendTransaction) {
           throw new Error("Wallet not connected properly. Please reconnect.");
       }
-      const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+      const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
       const signature = await sendTransaction(transaction, connection);
 
       toast.info("Transaction submitted, confirming...", { duration: 5000 });
@@ -339,7 +339,7 @@ export default function Profile() {
               tx.lastValidBlockHeight = lastValidBlockHeight;
               tx.feePayer = new PublicKey(account);
 
-              const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+              const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
               const sig = await sendTransaction(tx, connection);
 
               const res = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: sig });

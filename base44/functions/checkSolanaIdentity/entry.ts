@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
 
         if (!userAddress) return Response.json({ error: 'User address required' }, { status: 400 });
 
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
         const { pubkey: parentNameKey } = await getDomainKey("etherene", SOL_TLD);
         const NAME_PROGRAM_ID = new PublicKey("namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX");

@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
         }
 
         // 1. Verify the mint transaction succeeded on-chain
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         
         let txInfo;
         try {

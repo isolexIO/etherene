@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
         const { userAddress } = body;
         if (!userAddress) return Response.json({ error: "Address required" }, { status: 400 });
 
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         const NAME_PROGRAM_ID = new PublicKey("namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX");
         let userKey;
         try {

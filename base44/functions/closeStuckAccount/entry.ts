@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { accountKey, userAddress } = body;
         
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         const nameAccount = new PublicKey(accountKey);
         const user = new PublicKey(userAddress);
         const NAME_PROGRAM_ID = new PublicKey("namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX");

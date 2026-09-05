@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
         // 5. Setup Transaction
         console.log("Connecting to Solana...");
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         const transaction = new Transaction();
 
         // Add Compute Budget (Priority Fee might be needed, but standard limit helps)
@@ -143,9 +143,15 @@ Deno.serve(async (req) => {
 
          // 1. Verify Parent Ownership
          try {
+             // bonfida's retrieve() returns { registry, nftOwner }; the owner
+             // lives on registry.owner (a PublicKey).
              const parentState = await NameRegistryState.retrieve(connection, parentNameKey);
-             if (!parentState.owner.equals(serverKeypair.publicKey)) {
-                 console.error(`Parent owner mismatch. Expected: ${parentState.owner.toBase58()}, Server: ${serverKeypair.publicKey.toBase58()}`);
+             const parentOwner = parentState?.registry?.owner;
+             if (!parentOwner) {
+                 throw new Error("Parent domain 'etherene.sol' is not registered on-chain.");
+             }
+             if (!parentOwner.equals(serverKeypair.publicKey)) {
+                 console.error(`Parent owner mismatch. Expected: ${parentOwner.toBase58()}, Server: ${serverKeypair.publicKey.toBase58()}`);
                  throw new Error("Server key does not own the parent 'etherene.sol' domain. Cannot mint subdomain.");
              }
          } catch (e) {

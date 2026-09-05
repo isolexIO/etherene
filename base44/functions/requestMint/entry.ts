@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
         }
 
         // Verify payment transaction
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         
         let transaction;
         try {

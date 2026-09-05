@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Domain and user address required' }, { status: 400 });
         }
 
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         const userPubkey = new PublicKey(userAddress);
 
         // Parse domain (handle .sol TLD)

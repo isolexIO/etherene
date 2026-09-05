@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
 
         console.log(`Recovering identity for tx: ${txHash}`);
         
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
         
         // 1. Fetch Transaction
         const tx = await connection.getParsedTransaction(txHash, {
