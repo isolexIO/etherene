@@ -281,12 +281,12 @@ function LayoutContent({ children, currentPageName }) {
               <span>© 2024 Etherene Protocol</span>
             </div>
             <div className="flex gap-6 text-sm text-slate-400">
-              <a href="Whitepaper" className="hover:text-cyan-400 transition-colors">Manifesto</a>
-              <a href="BlockExplorer" className="hover:text-cyan-400 transition-colors">Contract</a>
-              <a href="Agora" className="hover:text-cyan-400 transition-colors">Governance</a>
-              <a href={createPageUrl('PrivacyPolicy')} className="hover:text-cyan-400 transition-colors">Privacy</a>
-              <a href={createPageUrl('License')} className="hover:text-cyan-400 transition-colors">License</a>
-              <a href={createPageUrl('Copyright')} className="hover:text-cyan-400 transition-colors">Copyright</a>
+              <Link to={createPageUrl('Whitepaper')} className="hover:text-cyan-400 transition-colors">Manifesto</Link>
+              <Link to={createPageUrl('BlockExplorer')} className="hover:text-cyan-400 transition-colors">Contract</Link>
+              <Link to={createPageUrl('Agora')} className="hover:text-cyan-400 transition-colors">Governance</Link>
+              <Link to={createPageUrl('PrivacyPolicy')} className="hover:text-cyan-400 transition-colors">Privacy</Link>
+              <Link to={createPageUrl('License')} className="hover:text-cyan-400 transition-colors">License</Link>
+              <Link to={createPageUrl('Copyright')} className="hover:text-cyan-400 transition-colors">Copyright</Link>
             </div>
           </div>
         </div>
