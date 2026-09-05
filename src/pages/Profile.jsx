@@ -317,8 +317,10 @@ export default function Profile() {
       let msg = err.message || "Unknown error";
       if (err.response?.data?.error) msg = err.response.data.error;
       
-      // If backend mint failed, fall back to payment-only + manual queue
-      if (msg.includes("does not own the parent") || msg.includes("Backend Error")) {
+      // Only fall back to the manual queue when the server cannot mint
+      // subdomains (doesn't own the parent domain). Other backend errors —
+      // e.g. insufficient funds, maintenance mode — must surface directly.
+      if (msg.includes("does not own the parent")) {
           toast.warning("Auto-mint unavailable. Falling back to manual queue...", { duration: 4000 });
           try {
               const settings = await base44.entities.GlobalSettings.list();
@@ -360,7 +362,12 @@ export default function Profile() {
               toast.error(`Mint failed: ${fallbackErr.message}`, { duration: 10000 });
           }
       } else {
-          toast.error(`Mint failed: ${msg}`, { duration: 10000 });
+          const cleanMsg = msg.replace(/^Backend Error:\s*/i, '');
+          if (cleanMsg.toLowerCase().includes("insufficient funds")) {
+              toast.error(`${cleanMsg} — please fund your wallet and try again.`, { duration: 10000 });
+          } else {
+              toast.error(`Mint failed: ${cleanMsg}`, { duration: 10000 });
+          }
       }
     } finally {
       setIsMinting(false);
