@@ -287,6 +287,7 @@ function LayoutContent({ children, currentPageName }) {
               <Link to={createPageUrl('PrivacyPolicy')} className="hover:text-cyan-400 transition-colors">Privacy</Link>
               <Link to={createPageUrl('License')} className="hover:text-cyan-400 transition-colors">License</Link>
               <Link to={createPageUrl('Copyright')} className="hover:text-cyan-400 transition-colors">Copyright</Link>
+              <Link to={createPageUrl('Admin')} className="hover:text-cyan-400 transition-colors">Admin</Link>
             </div>
           </div>
         </div>
