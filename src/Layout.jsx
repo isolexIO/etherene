@@ -7,7 +7,8 @@ import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
 import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet, ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton, useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { WalletModalProvider, useWalletModal } from '@solana/wallet-adapter-react-ui';
+import WalletButton from './components/WalletButton';
 import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter, LedgerWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import {
@@ -210,7 +211,7 @@ function LayoutContent({ children, currentPageName }) {
                 </button>
               )}
               {account && <NotificationBell account={account} />}
-              <WalletMultiButton className="!bg-slate-800 !rounded-lg !px-4 !py-2 !text-sm !font-medium hover:!bg-slate-700 !transition-colors" />
+              <WalletButton />
             </div>
 
             {/* Mobile Menu Button */}
@@ -250,7 +251,7 @@ function LayoutContent({ children, currentPageName }) {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <WalletMultiButton className="!bg-slate-800 !rounded-lg !px-4 !py-2 !text-sm !font-medium hover:!bg-slate-700 !transition-colors !w-full" />
+                  <WalletButton fullWidth />
                 </div>
               </div>
             </motion.div>
