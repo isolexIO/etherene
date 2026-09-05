@@ -280,7 +280,7 @@ function LayoutContent({ children, currentPageName }) {
               <div className="w-4 h-4 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" />
               <span>© 2024 Etherene Protocol</span>
             </div>
-            <div className="flex gap-6 text-sm text-slate-400">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm text-slate-400">
               <Link to={createPageUrl('Whitepaper')} className="hover:text-cyan-400 transition-colors">Manifesto</Link>
               <Link to={createPageUrl('BlockExplorer')} className="hover:text-cyan-400 transition-colors">Contract</Link>
               <Link to={createPageUrl('Agora')} className="hover:text-cyan-400 transition-colors">Governance</Link>
