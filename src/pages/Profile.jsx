@@ -263,12 +263,16 @@ export default function Profile() {
       const transactionBuffer = Buffer.from(txBase64, 'base64');
       const transaction = Transaction.from(transactionBuffer);
 
-      // Step 3: User signs and sends
-      if (!sendTransaction) {
+      // Step 3: User signs the partially-signed (server co-signed) transaction,
+      // then we broadcast it ourselves. signTransaction + sendRawTransaction is
+      // the reliable path for co-signed txs — sendTransaction can fail to fill
+      // the user's signature slot on some wallets ("Missing signature for public key").
+      if (!signTransaction) {
           throw new Error("Wallet not connected properly. Please reconnect.");
       }
       const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-      const signature = await sendTransaction(transaction, connection);
+      const signedTransaction = await signTransaction(transaction);
+      const signature = await connection.sendRawTransaction(signedTransaction.serialize(), { skipPreflight: false });
 
       toast.info("Transaction submitted, confirming...", { duration: 5000 });
       await connection.confirmTransaction(signature, "confirmed");
