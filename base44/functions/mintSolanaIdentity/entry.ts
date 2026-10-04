@@ -55,7 +55,8 @@ export default async function(req) {
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
     transaction.feePayer = userPublicKey;
     transaction.recentBlockhash = blockhash;
-    if (!manualQueue) transaction.partialSign(authority);
+    // The connected wallet must sign its own slot, even when it is also the parent authority.
+    if (!manualQueue && !authority.publicKey.equals(userPublicKey)) transaction.partialSign(authority);
     return Response.json({ success: true, transaction: transaction.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64'), blockhash, lastValidBlockHeight, subdomain, imageUrl, manualQueue, feeAmount: lamports / LAMPORTS_PER_SOL, feeAmountUSD: feeUSD, rentAmount: rentLamports / LAMPORTS_PER_SOL });
   } catch (error) {
     console.error('Mint preparation failed:', error.message);

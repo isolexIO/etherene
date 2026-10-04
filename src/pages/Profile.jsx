@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 
 export default function Profile() {
   const { account, connectWallet } = useWeb3();
-  const { signTransaction } = useWallet();
+  const { signTransaction, sendTransaction } = useWallet();
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
@@ -247,12 +247,12 @@ export default function Profile() {
         toast.info(result.manualQueue
           ? `Automatic minting is unavailable. Approving ${result.feeAmount.toFixed(4)} SOL queues a manual mint, not an immediate identity.`
           : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee + ${result.rentAmount.toFixed(4)} SOL rent and network fees.`, { duration: 10000 });
-        await submitIdentityTransaction(result, signTransaction, (signature) => {
-          pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: result.lastValidBlockHeight };
+        await submitIdentityTransaction(result, signTransaction, (signature, validity) => {
+          pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: validity.lastValidBlockHeight };
           sessionStorage.setItem(pendingKey, JSON.stringify(pending));
           setRecoverTx(signature);
           toast.info('Transaction submitted. Waiting for confirmation...');
-        });
+        }, sendTransaction);
       }
       const response = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, lastValidBlockHeight: pending.lastValidBlockHeight });
       const result = response.data;
