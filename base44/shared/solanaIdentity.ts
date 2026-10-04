@@ -60,12 +60,16 @@ export function mintReceipt(transaction, userId) {
   }
   return null;
 }
-export async function ownedRegistry(connection, domain, address) {
+export async function readRegistry(connection, domain) {
   const { pubkey } = getDomainKeySync(domain);
   const info = await connection.getAccountInfo(pubkey);
   if (!info || !info.owner.equals(NAME_PROGRAM_ID) || info.data.length < 96) throw new Error('Identity domain was not found on-chain.');
-  if (!new PublicKey(info.data.subarray(32, 64)).equals(new PublicKey(address))) throw new Error('The connected wallet does not own this identity domain.');
-  return { pubkey, info };
+  return { pubkey, info, owner: new PublicKey(info.data.subarray(32, 64)) };
+}
+export async function ownedRegistry(connection, domain, address) {
+  const registry = await readRegistry(connection, domain);
+  if (!registry.owner.equals(new PublicKey(address))) throw new Error('The connected wallet does not own this identity domain.');
+  return registry;
 }
 export async function saveIdentity(base44, user, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];
