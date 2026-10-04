@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { waitUntil } from 'base44:runtime';
 import { PublicKey, LAMPORTS_PER_SOL } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair, readRegistry, createSubdomain, ensureSubdomainLabel, SNS_PARENT_DOMAIN } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair, readRegistry, createSubdomain, ensureSubdomainLabel, mintIdentityNft, SNS_PARENT_DOMAIN } from '../../shared/solanaIdentity.ts';
 
 
 
@@ -59,6 +59,17 @@ export default async function(req) {
     const status = minted ? 'minted' : 'pending';
     const data = { subdomain: receipt.subdomain, network: 'Solana Mainnet', status: minted ? 'minted' : 'declared', fee_charged: true };
     if (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) Object.assign(data, { avatar_url: imageUrl, cover_image: imageUrl });
+    // Mint the identity NFT (server-side) once the subdomain exists.
+    let nftMintAddress = null;
+    if (minted && typeof imageUrl === 'string' && imageUrl.startsWith('https://')) {
+      try {
+        const nft = await mintIdentityNft(connection, serverKeypair(), address, imageUrl, receipt.subdomain);
+        nftMintAddress = nft.mintAddress;
+        Object.assign(data, { nft_mint_address: nftMintAddress });
+      } catch (nftError) {
+        console.error('Identity NFT mint failed:', nftError.message);
+      }
+    }
     const identity = await saveIdentity(base44, user, address, data);
     const requestData = { user_address: address, subdomain: receipt.subdomain, payment_signature: paymentSignature, amount_paid_sol: paid / LAMPORTS_PER_SOL, status, image_url: identity.avatar_url || '', bio: identity.bio || '' };
     const mintRequest = existingRequest ? await base44.asServiceRole.entities.MintRequest.update(existingRequest.id, requestData) : await base44.entities.MintRequest.create(requestData);
@@ -68,7 +79,7 @@ export default async function(req) {
         if (admins[0]?.email) await base44.asServiceRole.integrations.Core.SendEmail({ to: admins[0].email, template_name: 'MintRequestNotice', variables: { subdomain: receipt.subdomain, user_address: address, amount_sol: (paid / LAMPORTS_PER_SOL).toFixed(4), request_id: mintRequest.id } });
       })().catch(error => console.error('Manual mint notice failed:', error.message)));
     }
-    return Response.json({ success: true, subdomain: receipt.subdomain, imageUrl: identity.avatar_url, identity, requestId: mintRequest.id, status, serverMintSignature, message: minted ? 'Identity minted and verified on-chain.' : 'Payment confirmed. Your identity is queued for manual minting.' });
+    return Response.json({ success: true, subdomain: receipt.subdomain, imageUrl: identity.avatar_url, identity, requestId: mintRequest.id, status, serverMintSignature, nftMintAddress, message: minted ? 'Identity minted and verified on-chain.' : 'Payment confirmed. Your identity is queued for manual minting.' });
   } catch (error) {
     console.error('Mint confirmation failed:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

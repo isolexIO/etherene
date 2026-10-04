@@ -2,6 +2,9 @@ import { Buffer } from 'node:buffer';
 import { secrets } from 'base44:runtime';
 import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction, Transaction, SystemProgram } from 'npm:@solana/web3.js@1.98.4';
 import { getSnsDomainKeySync, NAME_PROGRAM_ID, createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
+import { MINT_SIZE, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createInitializeMintInstruction, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, createMintToInstruction } from 'npm:@solana/spl-token@0.4.0';
+import { createCreateMetadataAccountV3Instruction, PROGRAM_ID as METADATA_PROGRAM_ID } from 'npm:@metaplex-foundation/mpl-token-metadata@2.13.0';
+import { pinataUploadFile, pinataUploadJson } from './pinata.ts';
 import bs58 from 'npm:bs58@5.0.0';
 
 export { NAME_PROGRAM_ID };
@@ -110,6 +113,51 @@ export async function ensureSubdomainLabel(connection, authority, subdomain) {
   const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
   await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
   return { pubkey, corrected: true, signature };
+}
+
+// Mints a Metaplex NFT (supply 1, decimals 0) for the identity's generated
+// image and pins the image + metadata on IPFS. The server (parent authority)
+// pays rent and acts as mint/update authority; the token is minted to the
+// user's associated token account so they own the NFT.
+export async function mintIdentityNft(connection, authority, ownerAddress, imageUrl, subdomain) {
+  const owner = new PublicKey(ownerAddress);
+  const imageUri = await pinataUploadFile(imageUrl);
+  const metadata = {
+    name: subdomain.slice(0, 32),
+    symbol: 'ETHERENE',
+    description: `Etherene on-chain identity node: ${subdomain}`,
+    image: imageUri,
+    external_url: `https://etherene.info/Profile?address=${ownerAddress}`,
+    attributes: [
+      { trait_type: 'Subdomain', value: subdomain },
+      { trait_type: 'Network', value: 'Solana Mainnet' },
+      { trait_type: 'Protocol', value: 'Etherene' }
+    ]
+  };
+  const metadataUri = await pinataUploadJson(metadata);
+  const mint = Keypair.generate();
+  const ata = getAssociatedTokenAddressSync(mint.publicKey, owner, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+  const [metadataPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
+    METADATA_PROGRAM_ID
+  );
+  const mintLamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
+  const transaction = new Transaction();
+  transaction.add(SystemProgram.createAccount({ fromPubkey: authority.publicKey, newAccountPubkey: mint.publicKey, space: MINT_SIZE, lamports: mintLamports, programId: TOKEN_PROGRAM_ID }));
+  transaction.add(createInitializeMintInstruction(mint.publicKey, 0, authority.publicKey, authority.publicKey, TOKEN_PROGRAM_ID));
+  transaction.add(createAssociatedTokenAccountIdempotentInstruction(authority.publicKey, ata, owner, mint.publicKey, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID));
+  transaction.add(createMintToInstruction(mint.publicKey, ata, authority.publicKey, 1, [], TOKEN_PROGRAM_ID));
+  transaction.add(createCreateMetadataAccountV3Instruction(
+    { metadata: metadataPda, mint: mint.publicKey, mintAuthority: authority.publicKey, payer: authority.publicKey, updateAuthority: authority.publicKey },
+    { createMetadataAccountArgsV3: { data: { name: metadata.name, symbol: metadata.symbol, uri: metadataUri, sellerFeeBasisPoints: 0, creators: null, collection: null, uses: null }, isMutable: true, collectionDetails: null } }
+  ));
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = authority.publicKey;
+  transaction.sign(authority, mint);
+  const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
+  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+  return { mintAddress: mint.publicKey.toBase58(), signature, metadataUri, imageUri };
 }
 export async function saveIdentity(base44, user, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];

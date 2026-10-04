@@ -64,6 +64,10 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the $3 platform fee has been collected"
+    },
+    "nft_mint_address": {
+      "type": "string",
+      "description": "On-chain SPL token mint address of the identity NFT"
     }
   },
   "required": [
