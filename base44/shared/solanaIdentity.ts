@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { secrets } from 'base44:runtime';
-import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction } from 'npm:@solana/web3.js@1.98.4';
-import { getSnsDomainKeySync, NAME_PROGRAM_ID } from 'npm:@bonfida/spl-name-service@4.0.1';
+import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction, Transaction, SystemProgram } from 'npm:@solana/web3.js@1.98.4';
+import { getSnsDomainKeySync, NAME_PROGRAM_ID, createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
 import bs58 from 'npm:bs58@5.0.0';
 
 export { NAME_PROGRAM_ID };
@@ -70,6 +70,27 @@ export async function ownedRegistry(connection, domain, address) {
   const registry = await readRegistry(connection, domain);
   if (!registry.owner.equals(new PublicKey(address))) throw new Error('The connected wallet does not own this identity domain.');
   return registry;
+}
+
+// Server-side auto-mint: the parent authority creates and configures the SNS
+// subdomain on-chain in a server-signed transaction, assigning the user as owner.
+export async function createSubdomain(connection, authority, subdomain, ownerAddress) {
+  const label = subdomain.replace(/\.(sns|sol)$/, '').split('.').pop();
+  const { pubkey, hashed } = getDomainKeySync(subdomain);
+  const space = 1000;
+  const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
+  const parent = parentDomainKey();
+  const owner = new PublicKey(ownerAddress);
+  const transaction = new Transaction();
+  transaction.add(createInstruction(NAME_PROGRAM_ID, SystemProgram.programId, pubkey, authority.publicKey, owner, hashed, new Numberu64(rentLamports), new Numberu32(space), undefined, parent, authority.publicKey));
+  transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(label), authority.publicKey));
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = authority.publicKey;
+  transaction.sign(authority);
+  const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
+  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+  return { signature, pubkey };
 }
 export async function saveIdentity(base44, user, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];

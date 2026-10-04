@@ -247,7 +247,7 @@ export default function Profile() {
         if (!result.success) throw new Error(result.error || 'Unable to prepare identity mint.');
         toast.info(result.manualQueue
           ? `Automatic minting is unavailable. Approving ${result.feeAmount.toFixed(4)} SOL queues a manual mint, not an immediate identity.`
-          : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee + ${result.rentAmount.toFixed(4)} SOL rent and network fees.`, { duration: 10000 });
+          : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee. Your identity is configured automatically on-chain.`, { duration: 10000 });
         await submitIdentityTransaction(result, signTransaction, (signature, validity) => {
           pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: validity.lastValidBlockHeight };
           sessionStorage.setItem(pendingKey, JSON.stringify(pending));
@@ -452,7 +452,7 @@ export default function Profile() {
                                     {isMinting ? "Minting Identity..." : "Mint Identity Token"}
                                 </button>
                                 <p className="text-center text-xs text-slate-400">
-                                    + On-chain storage rent and network fees
+                                    On-chain subdomain configured automatically after payment
                                 </p>
                             </div>
                           ) : (

@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { waitUntil } from 'base44:runtime';
 import { PublicKey, LAMPORTS_PER_SOL } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair, readRegistry, createSubdomain, SNS_PARENT_DOMAIN } from '../../shared/solanaIdentity.ts';
 
 
 
@@ -35,11 +35,22 @@ export default async function(req) {
     const paid = instructions.filter(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === address && ix.parsed.info.destination === settings.admin_wallet).reduce((total, ix) => total + Number(ix.parsed.info.lamports), 0);
     const registryKey = getDomainKeySync(receipt.subdomain).pubkey;
     const automaticMint = instructions.some(ix => ix.programId?.equals(NAME_PROGRAM_ID)) && keys.some(key => key.pubkey.equals(registryKey));
-    const registryInfo = existingRequest && !automaticMint ? await connection.getAccountInfo(registryKey) : null;
-    const minted = automaticMint || Boolean(registryInfo?.owner.equals(NAME_PROGRAM_ID));
+    const registryInfo = !automaticMint ? await connection.getAccountInfo(registryKey) : null;
+    let minted = automaticMint || Boolean(registryInfo?.owner?.equals(NAME_PROGRAM_ID));
+    let serverMintSignature = null;
     if (minted) {
       if (automaticMint && !keys.some(key => key.signer && key.pubkey.equals(serverKeypair().publicKey))) return Response.json({ error: 'Mint authority signature missing.' }, { status: 403 });
       await ownedRegistry(connection, receipt.subdomain, address);
+    } else {
+      // Server-side auto-mint: create the SNS subdomain on-chain using the parent authority.
+      const authority = serverKeypair();
+      const parentState = await readRegistry(connection, SNS_PARENT_DOMAIN);
+      if (parentState.owner.equals(authority.publicKey)) {
+        const created = await createSubdomain(connection, authority, receipt.subdomain, address);
+        await ownedRegistry(connection, receipt.subdomain, address);
+        serverMintSignature = created.signature;
+        minted = true;
+      }
     }
     const expected = minted || existingRequest ? receipt.feeLamports : (await quoteMintFee(settings)).lamports;
     if (paid < expected * 0.95 || paid < receipt.feeLamports) return Response.json({ error: 'The required platform payment is missing from this transaction.' }, { status: 400 });
@@ -55,7 +66,7 @@ export default async function(req) {
         if (admins[0]?.email) await base44.asServiceRole.integrations.Core.SendEmail({ to: admins[0].email, template_name: 'MintRequestNotice', variables: { subdomain: receipt.subdomain, user_address: address, amount_sol: (paid / LAMPORTS_PER_SOL).toFixed(4), request_id: mintRequest.id } });
       })().catch(error => console.error('Manual mint notice failed:', error.message)));
     }
-    return Response.json({ success: true, subdomain: receipt.subdomain, imageUrl: identity.avatar_url, identity, requestId: mintRequest.id, status, message: minted ? 'Identity minted and verified on-chain.' : 'Payment confirmed. Your identity is queued for manual minting.' });
+    return Response.json({ success: true, subdomain: receipt.subdomain, imageUrl: identity.avatar_url, identity, requestId: mintRequest.id, status, serverMintSignature, message: minted ? 'Identity minted and verified on-chain.' : 'Payment confirmed. Your identity is queued for manual minting.' });
   } catch (error) {
     console.error('Mint confirmation failed:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

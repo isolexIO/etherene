@@ -1,8 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { Buffer } from 'node:buffer';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram } from 'npm:@solana/web3.js@1.98.4';
-import { createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
-import { solanaConnection, parentDomainKey, SNS_PARENT_DOMAIN, readRegistry, serverKeypair, mintSettings, quoteMintFee, mintMemo, getDomainKeySync, NAME_PROGRAM_ID } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, SNS_PARENT_DOMAIN, readRegistry, serverKeypair, mintSettings, quoteMintFee, mintMemo } from '../../shared/solanaIdentity.ts';
 
 export default async function(req) {
   try {
@@ -24,7 +23,6 @@ export default async function(req) {
 
     const connection = solanaConnection();
     const authority = serverKeypair();
-    const parent = parentDomainKey();
     // Read the SNS registry directly; the SDK's NFT-holder lookup is not
     // needed for parent authority and is blocked by the public RPC endpoint.
     const parentState = await readRegistry(connection, SNS_PARENT_DOMAIN);
@@ -32,21 +30,16 @@ export default async function(req) {
     const label = `node-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
     const subdomain = `${label}.${SNS_PARENT_DOMAIN}`;
     const { lamports, feeUSD } = await quoteMintFee(settings);
-    const space = 1000;
-    const rentLamports = manualQueue ? 0 : await connection.getMinimumBalanceForRentExemption(space + 96);
     const balance = await connection.getBalance(userPublicKey);
-    const requiredFunds = lamports + rentLamports + 10000;
-    if (balance < requiredFunds) return Response.json({ error: `Insufficient funds. Need ${(requiredFunds / LAMPORTS_PER_SOL).toFixed(4)} SOL (${(lamports / LAMPORTS_PER_SOL).toFixed(4)} platform fee + ${(rentLamports / LAMPORTS_PER_SOL).toFixed(4)} rent + network fees), but have ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL.` }, { status: 400 });
+    const requiredFunds = lamports + 10000;
+    if (balance < requiredFunds) return Response.json({ error: `Insufficient funds. Need ${(requiredFunds / LAMPORTS_PER_SOL).toFixed(4)} SOL (platform fee + network fees), but have ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL.` }, { status: 400 });
 
+    // The user signs a payment-only transaction. The server creates the SNS
+    // subdomain on-chain after confirming payment (server-side auto-mint).
     const transaction = new Transaction();
     transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200000 }));
     if (lamports > 0) transaction.add(SystemProgram.transfer({ fromPubkey: userPublicKey, toPubkey: new PublicKey(settings.admin_wallet), lamports }));
     transaction.add(mintMemo(user.id, subdomain, lamports));
-    if (!manualQueue) {
-      const { pubkey, hashed } = getDomainKeySync(subdomain);
-      transaction.add(createInstruction(NAME_PROGRAM_ID, SystemProgram.programId, pubkey, userPublicKey, userPublicKey, hashed, new Numberu64(rentLamports), new Numberu32(space), undefined, parent, authority.publicKey));
-      transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(label), userPublicKey));
-    }
     let imageUrl;
     try {
       imageUrl = (await base44.integrations.Core.GenerateImage({ prompt: `Abstract spiritual digital art, sacred geometry, Etherene node ${label}. Blue and purple cyberpunk mandala, no text.` })).url;
@@ -56,9 +49,7 @@ export default async function(req) {
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
     transaction.feePayer = userPublicKey;
     transaction.recentBlockhash = blockhash;
-    // The connected wallet must sign its own slot, even when it is also the parent authority.
-    if (!manualQueue && !authority.publicKey.equals(userPublicKey)) transaction.partialSign(authority);
-    return Response.json({ success: true, transaction: transaction.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64'), blockhash, lastValidBlockHeight, subdomain, imageUrl, manualQueue, feeAmount: lamports / LAMPORTS_PER_SOL, feeAmountUSD: feeUSD, rentAmount: rentLamports / LAMPORTS_PER_SOL });
+    return Response.json({ success: true, transaction: transaction.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64'), blockhash, lastValidBlockHeight, subdomain, imageUrl, manualQueue, feeAmount: lamports / LAMPORTS_PER_SOL, feeAmountUSD: feeUSD, rentAmount: 0 });
   } catch (error) {
     console.error('Mint preparation failed:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
