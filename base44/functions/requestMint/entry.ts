@@ -67,6 +67,9 @@ export default async function(req) {
     return Response.json({ success: true, status: 'minted', subdomain: receipt.subdomain, identity, requestId: mintRequest.id, serverMintSignature, nftMintAddress: nft.mintAddress, nftSignature: nft.signature, nftMetadataUri: nft.metadataUri, message: 'Subdomain registered and identity NFT delivered to your wallet.' });
   } catch (error) {
     console.error(`Identity ${stage} step failed:`, error.message);
-    return Response.json({ error: `${stage === 'nft' ? 'NFT delivery failed: ' : ''}${error.message}`, paymentConfirmed: Boolean(mintRequest), stage, identity, requestId: mintRequest?.id, mintPending: Boolean(error.mintPending) }, { status: error.mintPending ? 409 : 500 });
+    const rateLimited = /429|rate limit exceeded|too many requests/i.test(error.message);
+    const mintPending = Boolean(error.mintPending || rateLimited);
+    const message = rateLimited ? 'Blockchain delivery is temporarily busy. Completion will retry using your confirmed payment.' : error.message;
+    return Response.json({ error: `${stage === 'nft' ? 'NFT delivery failed: ' : ''}${message}`, paymentConfirmed: Boolean(mintRequest), stage, identity, requestId: mintRequest?.id, mintPending }, { status: mintPending ? 409 : 500 });
   }
 }

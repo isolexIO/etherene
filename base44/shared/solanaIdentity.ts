@@ -4,6 +4,7 @@ import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, TransactionInstructio
 import { getSnsDomainKeySync, NAME_PROGRAM_ID, createInstruction, updateInstruction, transferInstruction, createReverse, getReverseKeyFromDomainKey, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
 import { assertNftStorageConfigured } from './pinata.ts';
 import submitServerTransaction from './submitServerTransaction.ts';
+import createSolanaConnection from './solanaRpc.ts';
 export { default as mintIdentityNft } from './identityNft.ts';
 import bs58 from 'npm:bs58@5.0.0';
 
@@ -19,7 +20,7 @@ export function snsDomainName(domain, allowLegacy = false) {
 }
 // Only persisted SNS names and legacy mint receipts may use the old display suffix.
 export function getDomainKeySync(domain) { return getSnsDomainKeySync(snsDomainName(domain, true).slice(0, -4)); }
-export function solanaConnection() { return new Connection('https://solana-rpc.publicnode.com', 'confirmed'); }
+export function solanaConnection() { return createSolanaConnection(); }
 export function parentDomainKey() { return getDomainKeySync(SNS_PARENT_DOMAIN).pubkey; }
 export function serverKeypair() {
   const value = secrets.get('SOLANA_PAYER_PRIVATE_KEY');
