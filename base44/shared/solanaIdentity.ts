@@ -75,7 +75,7 @@ export async function ownedRegistry(connection, domain, address) {
 // Server-side auto-mint: the parent authority creates and configures the SNS
 // subdomain on-chain in a server-signed transaction, assigning the user as owner.
 export async function createSubdomain(connection, authority, subdomain, ownerAddress) {
-  const label = subdomain.replace(/\.(sns|sol)$/, '').split('.').pop();
+  const label = subdomain.replace(/\.(sns|sol)$/, '').split('.')[0];
   const { pubkey, hashed } = getDomainKeySync(subdomain);
   const space = 1000;
   const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
@@ -91,6 +91,25 @@ export async function createSubdomain(connection, authority, subdomain, ownerAdd
   const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
   await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
   return { signature, pubkey };
+}
+
+// Corrects the subdomain's stored label if it was written incorrectly (e.g. the
+// parent name instead of the subdomain label). The SNS indexer reads this field
+// to resolve and display the subdomain name on sns.id.
+export async function ensureSubdomainLabel(connection, authority, subdomain) {
+  const expectedLabel = subdomain.replace(/\.(sns|sol)$/, '').split('.')[0];
+  const { pubkey, info } = await readRegistry(connection, subdomain);
+  const currentLabel = info.data.length > 96 ? new TextDecoder().decode(info.data.subarray(96)).replace(/\0/g, '').trim() : '';
+  if (currentLabel === expectedLabel) return { pubkey, corrected: false };
+  const transaction = new Transaction();
+  transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(expectedLabel), authority.publicKey));
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = authority.publicKey;
+  transaction.sign(authority);
+  const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
+  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+  return { pubkey, corrected: true, signature };
 }
 export async function saveIdentity(base44, user, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];

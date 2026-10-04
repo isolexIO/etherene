@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { waitUntil } from 'base44:runtime';
 import { PublicKey, LAMPORTS_PER_SOL } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair, readRegistry, createSubdomain, SNS_PARENT_DOMAIN } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair, readRegistry, createSubdomain, ensureSubdomainLabel, SNS_PARENT_DOMAIN } from '../../shared/solanaIdentity.ts';
 
 
 
@@ -41,6 +41,8 @@ export default async function(req) {
     if (minted) {
       if (automaticMint && !keys.some(key => key.signer && key.pubkey.equals(serverKeypair().publicKey))) return Response.json({ error: 'Mint authority signature missing.' }, { status: 403 });
       await ownedRegistry(connection, receipt.subdomain, address);
+      // Correct the stored label if a prior mint wrote the wrong value.
+      await ensureSubdomainLabel(connection, serverKeypair(), receipt.subdomain);
     } else {
       // Server-side auto-mint: create the SNS subdomain on-chain using the parent authority.
       const authority = serverKeypair();
