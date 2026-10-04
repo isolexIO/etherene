@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Link, useSearchParams } from 'react-router-dom';
 import submitIdentityTransaction from '@/components/profile/submitIdentityTransaction';
+import submitMintPayment from '@/components/profile/submitMintPayment';
 import syncIdentityMint from '@/components/profile/syncIdentityMint';
 import IdentityMintReceipt from '@/components/profile/IdentityMintReceipt';
 
@@ -28,7 +29,8 @@ import { toast } from 'sonner';
 
 export default function Profile() {
   const { account, connectWallet } = useWeb3();
-  const { signTransaction, sendTransaction } = useWallet();
+  const walletContext = useWallet();
+  const { signTransaction } = walletContext;
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
@@ -259,12 +261,12 @@ export default function Profile() {
         toast.info(result.manualQueue
           ? `Automatic minting is unavailable. Approving ${result.feeAmount.toFixed(4)} SOL queues a manual mint, not an immediate identity.`
           : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee. Your SNS subdomain and NFT are delivered after confirmation.`, { duration: 10000 });
-        await submitIdentityTransaction(result, signTransaction, (signature, validity) => {
+        await submitMintPayment(result, walletContext, (signature, validity) => {
           pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: validity.lastValidBlockHeight, paymentBlockhash: validity.blockhash, signedTransaction: validity.signedTransaction };
           sessionStorage.setItem(pendingKey, JSON.stringify(pending));
           setRecoverTx(signature);
           toast.info('Transaction signed. Checking confirmation...');
-        }, sendTransaction, false);
+        });
       }
       toast.info('Completing your subdomain registration and identity NFT...');
       const result = await syncIdentityMint({ userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, paymentBlockhash: pending.paymentBlockhash, signedTransaction: pending.signedTransaction });

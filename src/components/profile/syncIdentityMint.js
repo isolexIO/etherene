@@ -1,5 +1,5 @@
 import { base44 } from '@/api/base44Client';
-import { Connection, Transaction } from '@solana/web3.js';
+import { Connection, VersionedTransaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 
 export default async function syncIdentityMint(pending) {
@@ -8,8 +8,8 @@ export default async function syncIdentityMint(pending) {
     const status = (await connection.getSignatureStatuses([pending.paymentSignature], { searchTransactionHistory: true })).value[0];
     if (!status) {
       const raw = Buffer.from(pending.signedTransaction, 'base64');
-      const transaction = Transaction.from(raw);
-      if ((await connection.isBlockhashValid(transaction.recentBlockhash)).value) await connection.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: 'confirmed' });
+      const transaction = VersionedTransaction.deserialize(raw);
+      if ((await connection.isBlockhashValid(transaction.message.recentBlockhash)).value) await connection.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: 'confirmed' });
     }
   }
   for (let attempt = 0; attempt < 20; attempt += 1) {
