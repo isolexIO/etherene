@@ -1,4 +1,4 @@
-import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { Connection, Transaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import encodeSolanaSignature from '@/components/profile/encodeSolanaSignature';
 
@@ -17,20 +17,33 @@ export default async function submitIdentityTransaction(result, signTransaction,
   }
   if (signTransaction) {
     const message = Buffer.from(transaction.serializeMessage());
-    // Use the modern wallet signing API without delegating submission to the wallet.
-    const signingTransaction = authoritySignatures.length ? transaction : new VersionedTransaction(transaction.compileMessage());
+    // Sign the legacy Transaction directly. Wrapping it in a VersionedTransaction
+    // causes the wallet to sign versioned message bytes, which don't match the
+    // legacy message that verifySignatures() checks — producing "Signature
+    // verification failed" on-chain.
     let approved;
-    try { approved = await signTransaction(signingTransaction); }
+    try { approved = await signTransaction(transaction); }
     catch (error) { throw new Error(`Wallet signing failed: ${error.error?.message || error.cause?.message || error.message || 'Approval did not complete.'}`); }
     if (!approved) throw new Error('The wallet did not return an approved transaction.');
-    const signed = Transaction.from(Buffer.from(approved.serialize({ requireAllSignatures: false, verifySignatures: false })));
+    const signed = approved instanceof Transaction
+      ? approved
+      : Transaction.from(Buffer.from(approved.serialize({ requireAllSignatures: false, verifySignatures: false })));
     if (!Buffer.from(signed.serializeMessage()).equals(message)) throw new Error('The wallet changed the mint transaction. Nothing was submitted; please reconnect and try again.');
     authoritySignatures.forEach(entry => signed.addSignature(entry.publicKey, entry.signature));
     if (!signed.verifySignatures()) throw new Error('Wallet approval did not produce a valid mint signature. Nothing was submitted; please reconnect and try again.');
     signature = encodeSolanaSignature(signed.signature);
     // Save the transaction ID before submission, preventing another payment on retry.
     onSubmitted?.(signature, validity);
-    await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
+    try {
+      await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
+    } catch (err) {
+      // Submission failed (preflight rejection, network error, etc.) — the
+      // transaction never landed, so mark it for the caller to clear the
+      // saved pending state instead of retrying a dead signature.
+      const error = new Error(err.message || 'Transaction submission failed.');
+      error.transactionFailed = true;
+      throw error;
+    }
   } else if (!authoritySignatures.length && sendTransaction) {
     signature = await sendTransaction(transaction, connection, { preflightCommitment: 'confirmed' });
     onSubmitted?.(signature, validity);
