@@ -1,12 +1,23 @@
 import { Buffer } from 'node:buffer';
 import { secrets } from 'base44:runtime';
 import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction } from 'npm:@solana/web3.js@1.98.4';
-import { getDomainKeySync, NAME_PROGRAM_ID } from 'npm:@bonfida/spl-name-service@2.3.1';
+import { getSnsDomainKeySync, NAME_PROGRAM_ID } from 'npm:@bonfida/spl-name-service@4.0.1';
 import bs58 from 'npm:bs58@5.0.0';
 
-export { NAME_PROGRAM_ID, getDomainKeySync };
+export { NAME_PROGRAM_ID };
+export const SNS_PARENT_DOMAIN = 'etherene.sns';
+export function snsDomainName(domain, allowLegacy = false) {
+  const name = typeof domain === 'string' ? domain.trim().toLowerCase() : '';
+  if (!name) throw new Error('SNS domain name required.');
+  if (name.endsWith('.sol') && !allowLegacy) throw new Error('SNS domains now use .sns. Enter the .sns name; .sol is a separate SRS namespace.');
+  const trimmed = name.replace(/\.(sns|sol)$/, '');
+  if (trimmed.split('.').some(label => !label)) throw new Error('Invalid SNS domain name.');
+  return `${trimmed}.sns`;
+}
+// Only persisted SNS names and legacy mint receipts may use the old display suffix.
+export function getDomainKeySync(domain) { return getSnsDomainKeySync(snsDomainName(domain, true).slice(0, -4)); }
 export function solanaConnection() { return new Connection('https://solana-rpc.publicnode.com', 'confirmed'); }
-export function parentDomainKey() { return getDomainKeySync('etherene.sol').pubkey; }
+export function parentDomainKey() { return getDomainKeySync(SNS_PARENT_DOMAIN).pubkey; }
 export function serverKeypair() {
   const value = secrets.get('SOLANA_PAYER_PRIVATE_KEY');
   if (!value) throw new Error('Identity mint authority is not configured.');
@@ -44,7 +55,7 @@ export function mintReceipt(transaction, userId) {
     if (typeof text !== 'string' && instruction.data) text = Buffer.from(bs58.decode(instruction.data)).toString('utf8');
     try {
       const receipt = JSON.parse(text);
-      if (receipt.app === 'etherene-mint' && receipt.userId === userId && /^node-[a-z0-9]+\.etherene\.sol$/.test(receipt.subdomain) && Number.isSafeInteger(receipt.feeLamports) && receipt.feeLamports >= 0) return receipt;
+      if (receipt.app === 'etherene-mint' && receipt.userId === userId && /^node-[a-z0-9]+\.etherene\.(sns|sol)$/.test(receipt.subdomain) && Number.isSafeInteger(receipt.feeLamports) && receipt.feeLamports >= 0) return { ...receipt, subdomain: snsDomainName(receipt.subdomain, true) };
     } catch { /* Other memos are not mint receipts. */ }
   }
   return null;

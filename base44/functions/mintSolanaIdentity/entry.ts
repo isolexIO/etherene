@@ -1,8 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { Buffer } from 'node:buffer';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram } from 'npm:@solana/web3.js@1.98.4';
-import { NameRegistryState, createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@2.3.1';
-import { solanaConnection, parentDomainKey, serverKeypair, mintSettings, quoteMintFee, mintMemo, getDomainKeySync, NAME_PROGRAM_ID } from '../../shared/solanaIdentity.ts';
+import { NameRegistryState, createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
+import { solanaConnection, parentDomainKey, SNS_PARENT_DOMAIN, serverKeypair, mintSettings, quoteMintFee, mintMemo, getDomainKeySync, NAME_PROGRAM_ID } from '../../shared/solanaIdentity.ts';
 
 export default async function(req) {
   try {
@@ -26,10 +26,10 @@ export default async function(req) {
     const authority = serverKeypair();
     const parent = parentDomainKey();
     const parentState = await NameRegistryState.retrieve(connection, parent);
-    if (!parentState.registry?.owner) throw new Error('The etherene.sol parent domain is not registered.');
+    if (!parentState.registry?.owner) throw new Error(`The ${SNS_PARENT_DOMAIN} parent domain is not registered.`);
     const manualQueue = !parentState.registry.owner.equals(authority.publicKey);
     const label = `node-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    const subdomain = `${label}.etherene.sol`;
+    const subdomain = `${label}.${SNS_PARENT_DOMAIN}`;
     const { lamports, feeUSD } = await quoteMintFee(settings);
     const space = 1000;
     const rentLamports = manualQueue ? 0 : await connection.getMinimumBalanceForRentExemption(space + 96);

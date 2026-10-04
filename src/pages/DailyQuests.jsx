@@ -34,7 +34,7 @@ const QUEST_POOL = [
     color: 'from-fuchsia-500 to-purple-500',
     title: 'Declare Your Node Name',
     description:
-      'Every participant mints an SNS subdomain — a name like node-123.etherene.sol — that replaces a raw address with a sovereign identity. Visit your profile and review how your on-chain name is derived from your wallet.',
+      'Every participant mints an SNS subdomain — a name like node-123.etherene.sns — that replaces a raw address with a sovereign identity. Visit your profile and review how your on-chain name is derived from your wallet.',
     actionLabel: 'View Profile',
     actionLink: 'Profile',
   },

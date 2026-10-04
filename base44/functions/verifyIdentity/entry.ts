@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, ownedRegistry } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, snsDomainName, ownedRegistry } from '../../shared/solanaIdentity.ts';
 
 export default async function(req) {
   try {
@@ -11,7 +11,7 @@ export default async function(req) {
     let address;
     try { address = new PublicKey(userAddress).toBase58(); }
     catch { return Response.json({ error: 'Invalid Solana wallet address' }, { status: 400 }); }
-    const name = domain.trim().toLowerCase().replace(/\.sol$/, '') + '.sol';
+    const name = snsDomainName(domain);
     const { pubkey } = await ownedRegistry(solanaConnection(), name, address);
     return Response.json({ success: true, subdomain: name, owner: address, registryAddress: pubkey.toBase58() });
   } catch (error) {

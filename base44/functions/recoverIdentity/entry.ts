@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, mintReceipt, parentDomainKey, NAME_PROGRAM_ID, ownedRegistry, saveIdentity } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, mintReceipt, parentDomainKey, SNS_PARENT_DOMAIN, NAME_PROGRAM_ID, ownedRegistry, saveIdentity } from '../../shared/solanaIdentity.ts';
 
 export default async function(req) {
   try {
@@ -28,7 +28,7 @@ export default async function(req) {
       if (!new PublicKey(info.data.subarray(0, 32)).equals(parent) || !new PublicKey(info.data.subarray(32, 64)).equals(new PublicKey(address))) continue;
       const label = new TextDecoder().decode(info.data.subarray(96)).replace(/\0/g, '').trim();
       if (!/^[a-z0-9-]+$/.test(label)) continue;
-      const subdomain = `${label}.etherene.sol`;
+      const subdomain = `${label}.${SNS_PARENT_DOMAIN}`;
       const registry = await ownedRegistry(connection, subdomain, address);
       if (!registry.pubkey.equals(key.pubkey)) continue;
       const identity = await saveIdentity(base44, user, address, { subdomain, network: 'Solana Mainnet', status: 'minted' });

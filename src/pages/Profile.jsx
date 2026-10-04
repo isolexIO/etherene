@@ -251,7 +251,7 @@ export default function Profile() {
           pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: validity.lastValidBlockHeight };
           sessionStorage.setItem(pendingKey, JSON.stringify(pending));
           setRecoverTx(signature);
-          toast.info('Transaction submitted. Waiting for confirmation...');
+          toast.info('Transaction signed. Checking confirmation...');
         }, sendTransaction);
       }
       const response = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, lastValidBlockHeight: pending.lastValidBlockHeight });

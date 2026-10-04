@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, parentDomainKey, NAME_PROGRAM_ID, getDomainKeySync } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, parentDomainKey, SNS_PARENT_DOMAIN, NAME_PROGRAM_ID, getDomainKeySync } from '../../shared/solanaIdentity.ts';
 
 export default async function(req) {
   try {
@@ -14,7 +14,7 @@ export default async function(req) {
     const accounts = await solanaConnection().getProgramAccounts(NAME_PROGRAM_ID, { filters: [{ memcmp: { offset: 0, bytes: parentDomainKey().toBase58() } }, { memcmp: { offset: 32, bytes: address } }] });
     for (const account of accounts) {
       const label = new TextDecoder().decode(account.account.data.subarray(96)).replace(/\0/g, '').trim();
-      const subdomain = /^[a-z0-9-]+$/.test(label) ? `${label}.etherene.sol` : null;
+      const subdomain = /^[a-z0-9-]+$/.test(label) ? `${label}.${SNS_PARENT_DOMAIN}` : null;
       if (subdomain && getDomainKeySync(subdomain).pubkey.equals(account.pubkey)) return Response.json({ found: true, registryAddress: account.pubkey.toBase58(), subdomain });
     }
     return Response.json(accounts.length ? { found: true, registryAddress: accounts[0].pubkey.toBase58(), subdomain: null } : { found: false });

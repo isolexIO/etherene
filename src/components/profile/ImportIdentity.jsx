@@ -105,7 +105,7 @@ export default function ImportIdentity({ account, onSuccess }) {
                                 type="text"
                                 value={domain}
                                 onChange={(e) => setDomain(e.target.value)}
-                                placeholder="yourname.sol or subdomain.parent.sol"
+                                placeholder="yourname.sns or subdomain.parent.sns"
                                 className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 outline-none"
                                 onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
                             />
