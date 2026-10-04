@@ -102,7 +102,7 @@ export default function Profile() {
               const [transmissions, interactions, mints, resonances, followers, following, myFollow] = await Promise.all([
                   base44.entities.Transmission.filter({ author_address: viewAddress }),
                   base44.entities.OracleInteraction.filter({ user_address: viewAddress }),
-                  Promise.resolve(identity ? [identity] : []),
+                  Promise.resolve(identity?.status === 'minted' ? [identity] : []),
                   base44.entities.Resonance.filter({ author_address: viewAddress }),
                   base44.entities.Follow.filter({ following_address: viewAddress }),
                   base44.entities.Follow.filter({ follower_address: viewAddress }),
@@ -130,7 +130,7 @@ export default function Profile() {
       };
 
       loadProfile();
-  }, [viewAddress]);
+  }, [viewAddress, account]);
 
 
   const [showRecover, setShowRecover] = useState(false);
@@ -259,6 +259,7 @@ export default function Profile() {
       if (!result.success) throw new Error(result.error || 'Unable to sync your identity.');
       sessionStorage.removeItem(pendingKey);
       setProfileData(result.identity);
+      if (result.status === 'minted') setActivities(previous => [{ ...result.identity, type: 'mint', date: result.identity.created_date }, ...previous.filter(item => item.type !== 'mint')]);
       toast.success(result.status === 'minted' ? `Identity minted and verified: ${result.subdomain}` : 'Payment confirmed. Identity queued for manual minting.', { duration: 10000 });
     } catch (error) {
       if (error.transactionFailed || error.response?.data?.transactionFailed || error.response?.data?.transactionExpired) sessionStorage.removeItem(pendingKey);
