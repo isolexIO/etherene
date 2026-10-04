@@ -11,8 +11,6 @@ export default async function(req) {
   let stage = 'payment';
   try {
     base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
     const { userAddress, paymentSignature, imageUrl, paymentBlockhash } = await req.json();
     if (!userAddress || !paymentSignature) return Response.json({ error: 'Missing wallet or transaction signature' }, { status: 400 });
     let address;
@@ -28,13 +26,12 @@ export default async function(req) {
     }
     if (tx.meta.err) return Response.json({ error: 'The payment failed on-chain. No identity was minted.', transactionFailed: true }, { status: 400 });
     if (!tx.transaction.message.accountKeys.some(key => key.signer && key.pubkey.toBase58() === address)) return Response.json({ error: 'The wallet did not sign this payment.' }, { status: 403 });
-    const receipt = mintReceipt(tx, user.id);
-    if (!receipt) return Response.json({ error: 'This transaction is not a mint payment for your signed-in account.' }, { status: 403 });
+    const receipt = mintReceipt(tx, address);
+    if (!receipt) return Response.json({ error: 'This transaction is not a mint payment for your wallet.' }, { status: 403 });
     const existingRequest = (await base44.asServiceRole.entities.MintRequest.filter({ payment_signature: paymentSignature }))[0];
-    if (existingRequest && (existingRequest.created_by_id !== user.id || existingRequest.user_address !== address || existingRequest.subdomain !== receipt.subdomain)) return Response.json({ error: 'This payment belongs to a different mint request.' }, { status: 409 });
+    if (existingRequest && (existingRequest.user_address !== address || existingRequest.subdomain !== receipt.subdomain)) return Response.json({ error: 'This payment belongs to a different mint request.' }, { status: 409 });
     const existingIdentity = (await base44.entities.Identity.filter({ address }))[0];
     if (existingIdentity?.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
-    if (existingIdentity && existingIdentity.created_by_id !== user.id && user.role !== 'admin') return Response.json({ error: 'This wallet identity belongs to another app account.' }, { status: 403 });
     if (existingIdentity?.nft_mint_address && existingIdentity.subdomain !== receipt.subdomain) return Response.json({ error: 'This wallet already has a completed identity. Sync its original payment instead of another mint.' }, { status: 409 });
     const settings = await mintSettings(base44);
     const paid = tx.transaction.message.instructions.filter(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === address && ix.parsed.info.destination === settings.admin_wallet).reduce((sum, ix) => sum + Number(ix.parsed.info.lamports), 0);
@@ -62,10 +59,10 @@ export default async function(req) {
       image = (await base44.integrations.Core.GenerateImage({ prompt: `Abstract sacred geometry identity art for Etherene ${receipt.subdomain}, a blue and purple luminous mandala, no text.` })).url;
       await base44.asServiceRole.entities.MintRequest.update(mintRequest.id, { image_url: image });
     }
-    identity = await saveIdentity(base44, user, address, { subdomain: receipt.subdomain, network: 'Solana Mainnet', status: 'minted', fee_charged: true, avatar_url: image, cover_image: image });
+    identity = await saveIdentity(base44, address, { subdomain: receipt.subdomain, network: 'Solana Mainnet', status: 'minted', fee_charged: true, avatar_url: image, cover_image: image });
     stage = 'nft';
     const nft = await mintIdentityNft(connection, authority, address, image, receipt.subdomain, savedNft);
-    identity = await saveIdentity(base44, user, address, { nft_mint_address: nft.mintAddress });
+    identity = await saveIdentity(base44, address, { nft_mint_address: nft.mintAddress });
     await base44.asServiceRole.entities.MintRequest.update(mintRequest.id, { status: 'minted', image_url: identity.avatar_url || image });
     return Response.json({ success: true, status: 'minted', subdomain: receipt.subdomain, identity, requestId: mintRequest.id, serverMintSignature, nftMintAddress: nft.mintAddress, nftSignature: nft.signature, nftMetadataUri: nft.metadataUri, message: 'Subdomain registered and identity NFT delivered to your wallet.' });
   } catch (error) {

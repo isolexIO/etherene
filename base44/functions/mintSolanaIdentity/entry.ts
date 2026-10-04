@@ -6,8 +6,6 @@ import { solanaConnection, SNS_PARENT_DOMAIN, serverKeypair, mintSettings, quote
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Sign in before minting your identity.' }, { status: 401 });
     const { userAddress, checkOnly = false } = await req.json();
     if (typeof userAddress !== 'string' || !userAddress.trim()) return Response.json({ error: 'Solana user address required' }, { status: 400 });
     let userPublicKey;
@@ -24,7 +22,6 @@ export default async function(req) {
     const identity = (await base44.entities.Identity.filter({ address }))[0];
     if (identity?.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
     if (identity?.status === 'minted') return Response.json({ error: 'This wallet already has an identity. Use recovery instead of paying again.' }, { status: 409 });
-    if (identity && identity.created_by_id !== user.id && user.role !== 'admin') return Response.json({ error: 'This identity belongs to another app account.' }, { status: 403 });
 
     const manualQueue = false;
     const label = `node-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
@@ -39,7 +36,7 @@ export default async function(req) {
     const transaction = new Transaction();
     transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200000 }));
     if (lamports > 0) transaction.add(SystemProgram.transfer({ fromPubkey: userPublicKey, toPubkey: new PublicKey(settings.admin_wallet), lamports }));
-    transaction.add(mintMemo(user.id, subdomain, lamports));
+    transaction.add(mintMemo(address, subdomain, lamports));
     let imageUrl;
     try {
       imageUrl = (await base44.integrations.Core.GenerateImage({ prompt: `Abstract spiritual digital art, sacred geometry, Etherene node ${label}. Blue and purple cyberpunk mandala, no text.` })).url;

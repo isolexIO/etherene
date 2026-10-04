@@ -5,7 +5,6 @@ import { solanaConnection, parentDomainKey, SNS_PARENT_DOMAIN, NAME_PROGRAM_ID, 
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    if (!(await base44.auth.me())) return Response.json({ error: 'Authentication required' }, { status: 401 });
     const { userAddress } = await req.json();
     if (!userAddress) return Response.json({ error: 'Wallet address required' }, { status: 400 });
     let address;

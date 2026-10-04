@@ -10,11 +10,6 @@ export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
 
-    const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
     let body = {};
     try {
       body = await req.json();
@@ -43,9 +38,7 @@ export default async function(req) {
     //    this wallet address — prevents impersonating another node in the Agora.
     let transmission_id = null;
     const identities = await base44.entities.Identity.filter({ address });
-    const ownsAddress = Array.isArray(identities) && identities.some(
-      (id) => id && id.created_by_id === user.id
-    );
+    const ownsAddress = Array.isArray(identities) && identities.length > 0;
     if (ownsAddress) {
       try {
         const transmission = await base44.entities.Transmission.create({

@@ -5,8 +5,6 @@ import { solanaConnection, mintReceipt, parentDomainKey, SNS_PARENT_DOMAIN, NAME
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
     const { txHash, userAddress } = await req.json();
     if (!txHash || !userAddress) return Response.json({ error: 'Transaction signature and wallet address required' }, { status: 400 });
     let address;
@@ -17,7 +15,7 @@ export default async function(req) {
     if (!tx?.meta) return Response.json({ error: 'Transaction not found or not confirmed yet' }, { status: 404 });
     if (tx.meta.err) return Response.json({ error: 'This transaction failed on-chain and cannot be recovered.' }, { status: 400 });
     if (!tx.transaction.message.accountKeys.some(key => key.signer && key.pubkey.toBase58() === address)) return Response.json({ error: 'This wallet did not sign the recovery transaction.' }, { status: 403 });
-    if (mintReceipt(tx, user.id)) {
+    if (mintReceipt(tx, address)) {
       const response = await base44.functions.invoke('requestMint', { userAddress: address, paymentSignature: txHash });
       return Response.json(response.data);
     }
@@ -31,7 +29,7 @@ export default async function(req) {
       const subdomain = `${label}.${SNS_PARENT_DOMAIN}`;
       const registry = await ownedRegistry(connection, subdomain, address);
       if (!registry.pubkey.equals(key.pubkey)) continue;
-      const identity = await saveIdentity(base44, user, address, { subdomain, network: 'Solana Mainnet', status: 'minted' });
+      const identity = await saveIdentity(base44, address, { subdomain, network: 'Solana Mainnet', status: 'minted' });
       return Response.json({ success: true, subdomain, identity });
     }
     return Response.json({ success: false, reason: 'unknown_name', details: 'No recoverable domain name was stored in this transaction. Import the domain by name instead of paying again.' });

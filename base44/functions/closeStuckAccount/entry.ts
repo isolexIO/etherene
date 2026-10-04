@@ -6,7 +6,6 @@ import { solanaConnection, parentDomainKey, NAME_PROGRAM_ID } from '../../shared
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    if (!(await base44.auth.me())) return Response.json({ error: 'Authentication required' }, { status: 401 });
     const { accountKey, userAddress } = await req.json();
     if (!accountKey || !userAddress) return Response.json({ error: 'Account and wallet address required' }, { status: 400 });
     const nameAccount = new PublicKey(accountKey);

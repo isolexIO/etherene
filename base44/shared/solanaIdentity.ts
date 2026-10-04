@@ -45,20 +45,20 @@ export async function quoteMintFee(settings) {
   if (!Number.isFinite(price) || price <= 0) throw new Error('SOL pricing is temporarily unavailable. Please try again before approving payment.');
   return { feeUSD, lamports: Math.ceil(feeUSD / price * LAMPORTS_PER_SOL) };
 }
-export function mintMemo(userId, subdomain, feeLamports) {
+export function mintMemo(ownerKey, subdomain, feeLamports) {
   return new TransactionInstruction({
     programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-    keys: [], data: Buffer.from(JSON.stringify({ app: 'etherene-mint', userId, subdomain, feeLamports }))
+    keys: [], data: Buffer.from(JSON.stringify({ app: 'etherene-mint', ownerKey, subdomain, feeLamports }))
   });
 }
-export function mintReceipt(transaction, userId) {
+export function mintReceipt(transaction, ownerKey) {
   for (const instruction of transaction.transaction.message.instructions) {
     if (instruction.programId?.toBase58() !== 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr') continue;
     let text = instruction.parsed;
     if (typeof text !== 'string' && instruction.data) text = Buffer.from(bs58.decode(instruction.data)).toString('utf8');
     try {
       const receipt = JSON.parse(text);
-      if (receipt.app === 'etherene-mint' && receipt.userId === userId && /^node-[a-z0-9]+\.etherene\.(sns|sol)$/.test(receipt.subdomain) && Number.isSafeInteger(receipt.feeLamports) && receipt.feeLamports >= 0) return { ...receipt, subdomain: snsDomainName(receipt.subdomain, true) };
+      if (receipt.app === 'etherene-mint' && receipt.ownerKey === ownerKey && /^node-[a-z0-9]+\.etherene\.(sns|sol)$/.test(receipt.subdomain) && Number.isSafeInteger(receipt.feeLamports) && receipt.feeLamports >= 0) return { ...receipt, subdomain: snsDomainName(receipt.subdomain, true) };
     } catch { /* Other memos are not mint receipts. */ }
   }
   return null;
@@ -124,9 +124,8 @@ export async function ensureSubdomainLabel(connection, authority, subdomain) {
   return { pubkey, corrected: true, signature };
 }
 
-export async function saveIdentity(base44, user, address, data) {
+export async function saveIdentity(base44, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];
-  if (existing && existing.created_by_id !== user.id && user.role !== 'admin') throw new Error('This wallet identity belongs to another app account.');
   if (existing?.banned) throw new Error('Identity suspended.');
   return existing ? await base44.entities.Identity.update(existing.id, data) : await base44.entities.Identity.create({ address, ...data });
 }

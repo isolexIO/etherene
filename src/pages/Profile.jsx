@@ -236,14 +236,12 @@ export default function Profile() {
   const handleMint = async () => {
     if (!account) { connectWallet(); return; }
     if (!isOwner || isMinting) return;
-    if (!(await base44.auth.isAuthenticated())) { base44.auth.redirectToLogin(window.location.href); return; }
     const pendingKey = `etherene_pending_mint_${account}`;
     setIsMinting(true);
     try {
       let pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null');
       if (!pending) {
-        const user = await base44.auth.me();
-        const paidRequests = await base44.entities.MintRequest.filter({ user_address: account, created_by_id: user.id }, '-created_date', 20);
+        const paidRequests = await base44.entities.MintRequest.filter({ user_address: account }, '-created_date', 20);
         const paidRequest = profileData ? paidRequests.find(item => item.subdomain === profileData.subdomain) : paidRequests[0];
         if (paidRequest) {
           pending = { signature: paidRequest.payment_signature, imageUrl: paidRequest.image_url };

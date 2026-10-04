@@ -5,8 +5,6 @@ import { solanaConnection, mintSettings, quoteMintFee, NAME_PROGRAM_ID } from '.
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
     const { userAddress, mintTxSignature } = await req.json();
     if (!userAddress || !mintTxSignature) return Response.json({ error: 'Wallet address and mint signature required' }, { status: 400 });
     const owner = new PublicKey(userAddress);
@@ -14,7 +12,6 @@ export default async function(req) {
     const tx = await connection.getParsedTransaction(mintTxSignature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' });
     if (!tx?.meta || tx.meta.err || !tx.transaction.message.accountKeys.some(key => key.signer && key.pubkey.equals(owner)) || !tx.transaction.message.instructions.some(ix => ix.programId?.equals(NAME_PROGRAM_ID))) return Response.json({ error: 'A successful identity mint signed by this wallet is required.' }, { status: 400 });
     const identity = (await base44.entities.Identity.filter({ address: owner.toBase58() }))[0];
-    if (identity && identity.created_by_id !== user.id && user.role !== 'admin') return Response.json({ error: 'This identity belongs to another app account.' }, { status: 403 });
     const settings = await mintSettings(base44);
     if (identity?.fee_charged || tx.transaction.message.instructions.some(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === owner.toBase58() && ix.parsed.info.destination === settings.admin_wallet && Number(ix.parsed.info.lamports) > 0)) return Response.json({ success: true, alreadyCharged: true, message: 'Platform fee already included in the mint.' });
     const { lamports } = await quoteMintFee(settings);

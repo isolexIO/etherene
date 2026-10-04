@@ -5,7 +5,6 @@ import { solanaConnection, snsDomainName, ownedRegistry } from '../../shared/sol
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    if (!(await base44.auth.me())) return Response.json({ error: 'Authentication required' }, { status: 401 });
     const { domain, userAddress } = await req.json();
     if (typeof domain !== 'string' || !domain.trim() || !userAddress) return Response.json({ error: 'Domain and wallet address required' }, { status: 400 });
     let address;
