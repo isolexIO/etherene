@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 // Self-contained wallet connect/disconnect control.
 // Disconnect is a direct one-click action (no nested dropdown), so it works
 // inside overflow-hidden containers like the mobile nav menu.
-export default function WalletButton({ fullWidth = false }) {
+export default function WalletButton({ fullWidth = false, onOpen }) {
   const { publicKey, connected, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const [copied, setCopied] = useState(false);
@@ -17,7 +17,7 @@ export default function WalletButton({ fullWidth = false }) {
   if (!connected || !publicKey) {
     return (
       <button
-        onClick={() => setVisible(true)}
+        onClick={() => { onOpen?.(); setVisible(true); }}
         className={`flex items-center justify-center gap-2 bg-slate-800 rounded-lg px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700 transition-colors ${widthClass}`}
       >
         <Wallet className="w-4 h-4" />

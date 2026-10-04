@@ -251,7 +251,7 @@ function LayoutContent({ children, currentPageName }) {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <WalletButton fullWidth />
+                  <WalletButton fullWidth onOpen={() => setIsMenuOpen(false)} />
                 </div>
               </div>
             </motion.div>

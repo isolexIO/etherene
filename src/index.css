@@ -156,3 +156,14 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+
+/* Force the Solana wallet picker visible on mobile — the library's opacity
+   fade-in relies on a zero-timeout state update that some mobile browsers
+   drop, leaving the modal at opacity:0 (invisible but present). */
+.wallet-adapter-modal {
+  opacity: 1 !important;
+  z-index: 9999 !important;
+}
+.wallet-adapter-modal-wrapper {
+  z-index: 10000 !important;
+}
