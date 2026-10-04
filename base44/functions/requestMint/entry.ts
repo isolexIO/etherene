@@ -1,16 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
-import { waitUntil } from 'base44:runtime';
 import { PublicKey, LAMPORTS_PER_SOL } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, NAME_PROGRAM_ID, serverKeypair, readRegistry, createSubdomain, ensureSubdomainLabel, mintIdentityNft, SNS_PARENT_DOMAIN } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, mintSettings, quoteMintFee, mintReceipt, ownedRegistry, saveIdentity, getDomainKeySync, serverKeypair, createSubdomain, ensureSubdomainLabel, mintIdentityNft, mintReadiness } from '../../shared/solanaIdentity.ts';
 
 
 
 export default async function(req) {
+  let base44;
+  let mintRequest;
+  let identity;
+  let stage = 'payment';
   try {
-    const base44 = createClientFromRequest(req);
+    base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
-    const { userAddress, paymentSignature, imageUrl, lastValidBlockHeight } = await req.json();
+    const { userAddress, paymentSignature, imageUrl, paymentBlockhash } = await req.json();
     if (!userAddress || !paymentSignature) return Response.json({ error: 'Missing wallet or transaction signature' }, { status: 400 });
     let address;
     try { address = new PublicKey(userAddress).toBase58(); }
@@ -19,69 +22,54 @@ export default async function(req) {
     const tx = await connection.getParsedTransaction(paymentSignature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
     if (!tx?.meta) {
       const signatureStatus = (await connection.getSignatureStatuses([paymentSignature], { searchTransactionHistory: true })).value[0];
-      if (signatureStatus?.err) return Response.json({ error: 'The transaction failed on-chain. You can retry minting.', transactionFailed: true }, { status: 400 });
-      if (!signatureStatus && Number.isSafeInteger(lastValidBlockHeight) && await connection.getBlockHeight('confirmed') > lastValidBlockHeight) return Response.json({ error: 'The transaction expired without confirmation. You can prepare a fresh mint.', transactionExpired: true }, { status: 409 });
-      return Response.json({ error: 'Transaction confirmation is still being indexed. Retry syncing this signature without paying again.', transactionPending: true }, { status: 409 });
+      if (signatureStatus?.err) return Response.json({ error: 'The payment failed on-chain. You can retry minting.', transactionFailed: true }, { status: 400 });
+      if (!signatureStatus && typeof paymentBlockhash === 'string' && !(await connection.isBlockhashValid(paymentBlockhash, 'confirmed')).value) return Response.json({ error: 'The payment expired without confirmation. You can prepare a fresh mint.', transactionExpired: true }, { status: 409 });
+      return Response.json({ error: 'Payment confirmation is still being indexed. Retry without paying again.', transactionPending: true }, { status: 409 });
     }
-    if (tx.meta.err) return Response.json({ error: 'The transaction failed on-chain. No identity was minted.', transactionFailed: true }, { status: 400 });
-    const keys = tx.transaction.message.accountKeys;
-    if (!keys.some(key => key.signer && key.pubkey.toBase58() === address)) return Response.json({ error: 'The wallet did not sign this transaction.' }, { status: 403 });
+    if (tx.meta.err) return Response.json({ error: 'The payment failed on-chain. No identity was minted.', transactionFailed: true }, { status: 400 });
+    if (!tx.transaction.message.accountKeys.some(key => key.signer && key.pubkey.toBase58() === address)) return Response.json({ error: 'The wallet did not sign this payment.' }, { status: 403 });
     const receipt = mintReceipt(tx, user.id);
-    if (!receipt) return Response.json({ error: 'This transaction is not a mint request for your signed-in account. Use identity recovery for older transactions.' }, { status: 403 });
+    if (!receipt) return Response.json({ error: 'This transaction is not a mint payment for your signed-in account.' }, { status: 403 });
     const existingRequest = (await base44.asServiceRole.entities.MintRequest.filter({ payment_signature: paymentSignature }))[0];
-    if (existingRequest && existingRequest.created_by_id !== user.id) return Response.json({ error: 'This transaction has already been claimed.' }, { status: 409 });
+    if (existingRequest && (existingRequest.created_by_id !== user.id || existingRequest.user_address !== address || existingRequest.subdomain !== receipt.subdomain)) return Response.json({ error: 'This payment belongs to a different mint request.' }, { status: 409 });
+    const existingIdentity = (await base44.entities.Identity.filter({ address }))[0];
+    if (existingIdentity?.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
+    if (existingIdentity && existingIdentity.created_by_id !== user.id && user.role !== 'admin') return Response.json({ error: 'This wallet identity belongs to another app account.' }, { status: 403 });
+    if (existingIdentity?.nft_mint_address && existingIdentity.subdomain !== receipt.subdomain) return Response.json({ error: 'This wallet already has a completed identity. Sync its original payment instead of another mint.' }, { status: 409 });
     const settings = await mintSettings(base44);
-    const instructions = tx.transaction.message.instructions;
-    const paid = instructions.filter(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === address && ix.parsed.info.destination === settings.admin_wallet).reduce((total, ix) => total + Number(ix.parsed.info.lamports), 0);
-    const registryKey = getDomainKeySync(receipt.subdomain).pubkey;
-    const automaticMint = instructions.some(ix => ix.programId?.equals(NAME_PROGRAM_ID)) && keys.some(key => key.pubkey.equals(registryKey));
-    const registryInfo = !automaticMint ? await connection.getAccountInfo(registryKey) : null;
-    let minted = automaticMint || Boolean(registryInfo?.owner?.equals(NAME_PROGRAM_ID));
+    const paid = tx.transaction.message.instructions.filter(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === address && ix.parsed.info.destination === settings.admin_wallet).reduce((sum, ix) => sum + Number(ix.parsed.info.lamports), 0);
+    // Verify payment BEFORE spending server funds or creating any blockchain accounts.
+    const expected = existingRequest ? receipt.feeLamports : (await quoteMintFee(settings)).lamports;
+    if (paid < expected * 0.95 || paid < receipt.feeLamports || (Number(settings.platform_fee_usd) > 0 && receipt.feeLamports <= 0)) return Response.json({ error: 'The required platform payment is missing.' }, { status: 400 });
+    let image = existingRequest?.image_url || (existingIdentity?.subdomain === receipt.subdomain ? existingIdentity.avatar_url : null) || imageUrl;
+    const requestData = { user_address: address, subdomain: receipt.subdomain, payment_signature: paymentSignature, amount_paid_sol: paid / LAMPORTS_PER_SOL, status: 'processing', image_url: typeof image === 'string' ? image : '', bio: existingIdentity?.bio || '' };
+    // Persist the paid request before the subdomain/NFT steps; all retries resume it.
+    mintRequest = existingRequest ? await base44.asServiceRole.entities.MintRequest.update(existingRequest.id, requestData) : await base44.entities.MintRequest.create(requestData);
+    const authority = serverKeypair();
+    const registry = await connection.getAccountInfo(getDomainKeySync(receipt.subdomain).pubkey);
+    const savedNft = existingIdentity?.subdomain === receipt.subdomain ? existingIdentity.nft_mint_address : null;
+    if (!registry || !savedNft) {
+      const readiness = await mintReadiness(connection, authority, !registry);
+      if (!readiness.ready) throw new Error(readiness.reason);
+    }
+    stage = 'subdomain';
     let serverMintSignature = null;
-    if (minted) {
-      if (automaticMint && !keys.some(key => key.signer && key.pubkey.equals(serverKeypair().publicKey))) return Response.json({ error: 'Mint authority signature missing.' }, { status: 403 });
-      await ownedRegistry(connection, receipt.subdomain, address);
-      // Correct the stored label if a prior mint wrote the wrong value.
-      await ensureSubdomainLabel(connection, serverKeypair(), receipt.subdomain);
-    } else {
-      // Server-side auto-mint: create the SNS subdomain on-chain using the parent authority.
-      const authority = serverKeypair();
-      const parentState = await readRegistry(connection, SNS_PARENT_DOMAIN);
-      if (parentState.owner.equals(authority.publicKey)) {
-        const created = await createSubdomain(connection, authority, receipt.subdomain, address);
-        await ownedRegistry(connection, receipt.subdomain, address);
-        serverMintSignature = created.signature;
-        minted = true;
-      }
+    if (!registry) serverMintSignature = (await createSubdomain(connection, authority, receipt.subdomain, address)).signature;
+    await ownedRegistry(connection, receipt.subdomain, address);
+    const reverse = await ensureSubdomainLabel(connection, authority, receipt.subdomain);
+    serverMintSignature ||= reverse.signature || null;
+    if (typeof image !== 'string' || !image.startsWith('https://')) {
+      image = (await base44.integrations.Core.GenerateImage({ prompt: `Abstract sacred geometry identity art for Etherene ${receipt.subdomain}, a blue and purple luminous mandala, no text.` })).url;
+      await base44.asServiceRole.entities.MintRequest.update(mintRequest.id, { image_url: image });
     }
-    const expected = minted || existingRequest ? receipt.feeLamports : (await quoteMintFee(settings)).lamports;
-    if (paid < expected * 0.95 || paid < receipt.feeLamports) return Response.json({ error: 'The required platform payment is missing from this transaction.' }, { status: 400 });
-    const status = minted ? 'minted' : 'pending';
-    const data = { subdomain: receipt.subdomain, network: 'Solana Mainnet', status: minted ? 'minted' : 'declared', fee_charged: true };
-    if (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) Object.assign(data, { avatar_url: imageUrl, cover_image: imageUrl });
-    // Mint the identity NFT (server-side) once the subdomain exists.
-    let nftMintAddress = null;
-    if (minted && typeof imageUrl === 'string' && imageUrl.startsWith('https://')) {
-      try {
-        const nft = await mintIdentityNft(connection, serverKeypair(), address, imageUrl, receipt.subdomain);
-        nftMintAddress = nft.mintAddress;
-        Object.assign(data, { nft_mint_address: nftMintAddress });
-      } catch (nftError) {
-        console.error('Identity NFT mint failed:', nftError.message);
-      }
-    }
-    const identity = await saveIdentity(base44, user, address, data);
-    const requestData = { user_address: address, subdomain: receipt.subdomain, payment_signature: paymentSignature, amount_paid_sol: paid / LAMPORTS_PER_SOL, status, image_url: identity.avatar_url || '', bio: identity.bio || '' };
-    const mintRequest = existingRequest ? await base44.asServiceRole.entities.MintRequest.update(existingRequest.id, requestData) : await base44.entities.MintRequest.create(requestData);
-    if (!minted && !existingRequest) {
-      waitUntil((async () => {
-        const admins = await base44.asServiceRole.entities.User.filter({ role: 'admin' });
-        if (admins[0]?.email) await base44.asServiceRole.integrations.Core.SendEmail({ to: admins[0].email, template_name: 'MintRequestNotice', variables: { subdomain: receipt.subdomain, user_address: address, amount_sol: (paid / LAMPORTS_PER_SOL).toFixed(4), request_id: mintRequest.id } });
-      })().catch(error => console.error('Manual mint notice failed:', error.message)));
-    }
-    return Response.json({ success: true, subdomain: receipt.subdomain, imageUrl: identity.avatar_url, identity, requestId: mintRequest.id, status, serverMintSignature, nftMintAddress, message: minted ? 'Identity minted and verified on-chain.' : 'Payment confirmed. Your identity is queued for manual minting.' });
+    identity = await saveIdentity(base44, user, address, { subdomain: receipt.subdomain, network: 'Solana Mainnet', status: 'minted', fee_charged: true, avatar_url: image, cover_image: image });
+    stage = 'nft';
+    const nft = await mintIdentityNft(connection, authority, address, image, receipt.subdomain, savedNft);
+    identity = await saveIdentity(base44, user, address, { nft_mint_address: nft.mintAddress });
+    await base44.asServiceRole.entities.MintRequest.update(mintRequest.id, { status: 'minted', image_url: identity.avatar_url || image });
+    return Response.json({ success: true, status: 'minted', subdomain: receipt.subdomain, identity, requestId: mintRequest.id, serverMintSignature, nftMintAddress: nft.mintAddress, nftSignature: nft.signature, nftMetadataUri: nft.metadataUri, message: 'Subdomain registered and identity NFT delivered to your wallet.' });
   } catch (error) {
-    console.error('Mint confirmation failed:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error(`Identity ${stage} step failed:`, error.message);
+    return Response.json({ error: `${stage === 'nft' ? 'NFT delivery failed: ' : ''}${error.message}`, paymentConfirmed: Boolean(mintRequest), stage, identity, requestId: mintRequest?.id, mintPending: Boolean(error.mintPending) }, { status: error.mintPending ? 409 : 500 });
   }
 }

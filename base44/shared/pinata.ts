@@ -1,9 +1,11 @@
-// Server-side Pinata IPFS pinning helpers used by on-chain NFT minting.
-// These run with server credentials and only handle URLs produced by our own
-// GenerateImage integration, so they do not need the user-facing SSRF guard.
+import { secrets } from 'base44:runtime';
+
+export function assertNftStorageConfigured() {
+  if (!secrets.get('PINATA_JWT')) throw new Error('NFT image storage is not configured. Minting is unavailable before payment.');
+}
 
 async function pinFile(blob, filename) {
-  const jwt = process.env.PINATA_JWT;
+  const jwt = secrets.get('PINATA_JWT');
   if (!jwt) throw new Error('PINATA_JWT is not configured.');
   const formData = new FormData();
   formData.append('file', blob, filename);
@@ -18,7 +20,10 @@ async function pinFile(blob, filename) {
 }
 
 export async function pinataUploadFile(fileUrl) {
-  const res = await fetch(fileUrl);
+  const url = new URL(fileUrl);
+  const allowed = url.hostname === 'media.base44.com' || url.hostname === 'images.unsplash.com' || url.hostname === 'qtrypzzcjebvfcihiynt.supabase.co';
+  if (url.protocol !== 'https:' || !allowed) throw new Error('Use an Etherene-generated or stored profile image for NFT minting.');
+  const res = await fetch(url, { redirect: 'manual' });
   if (!res.ok) throw new Error('Failed to fetch the generated image for IPFS upload.');
   const blob = await res.blob();
   return pinFile(blob, 'identity.png');

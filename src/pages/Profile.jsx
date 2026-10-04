@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import { Link, useSearchParams } from 'react-router-dom';
 import submitIdentityTransaction from '@/components/profile/submitIdentityTransaction';
 import syncIdentityMint from '@/components/profile/syncIdentityMint';
+import IdentityMintReceipt from '@/components/profile/IdentityMintReceipt';
 
 // Polyfill Buffer for Solana web3.js
 if (typeof window !== 'undefined') {
@@ -241,32 +242,46 @@ export default function Profile() {
     try {
       let pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null');
       if (!pending) {
+        const user = await base44.auth.me();
+        const paidRequests = await base44.entities.MintRequest.filter({ user_address: account, created_by_id: user.id }, '-created_date', 20);
+        const paidRequest = profileData ? paidRequests.find(item => item.subdomain === profileData.subdomain) : paidRequests[0];
+        if (paidRequest) {
+          pending = { signature: paidRequest.payment_signature, imageUrl: paidRequest.image_url };
+          sessionStorage.setItem(pendingKey, JSON.stringify(pending));
+          setRecoverTx(pending.signature);
+        } else if (profileData) {
+          throw new Error('No payment receipt was found for this identity. Use Recover Identity with your original payment signature; do not pay again.');
+        }
+      }
+      if (!pending) {
         toast.info('Preparing your identity mint...');
         const response = await base44.functions.invoke('mintSolanaIdentity', { userAddress: account });
         const result = response.data;
         if (!result.success) throw new Error(result.error || 'Unable to prepare identity mint.');
         toast.info(result.manualQueue
           ? `Automatic minting is unavailable. Approving ${result.feeAmount.toFixed(4)} SOL queues a manual mint, not an immediate identity.`
-          : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee. Your identity is configured automatically on-chain.`, { duration: 10000 });
+          : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee. Your SNS subdomain and NFT are delivered after confirmation.`, { duration: 10000 });
         await submitIdentityTransaction(result, signTransaction, (signature, validity) => {
-          pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: validity.lastValidBlockHeight };
+          pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: validity.lastValidBlockHeight, paymentBlockhash: validity.blockhash, signedTransaction: validity.signedTransaction };
           sessionStorage.setItem(pendingKey, JSON.stringify(pending));
           setRecoverTx(signature);
           toast.info('Transaction signed. Checking confirmation...');
         }, sendTransaction, false);
       }
-      const result = await syncIdentityMint({ userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, lastValidBlockHeight: pending.lastValidBlockHeight });
+      toast.info('Completing your subdomain registration and identity NFT...');
+      const result = await syncIdentityMint({ userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, paymentBlockhash: pending.paymentBlockhash, signedTransaction: pending.signedTransaction });
       sessionStorage.removeItem(pendingKey);
       setProfileData(result.identity);
       if (result.status === 'minted') setActivities(previous => [{ ...result.identity, type: 'mint', date: result.identity.created_date }, ...previous.filter(item => item.type !== 'mint')]);
-      toast.success(result.status === 'minted' ? `Identity minted and verified: ${result.subdomain}` : 'Payment confirmed. Identity queued for manual minting.', { duration: 10000 });
+      toast.success(`Subdomain registered and NFT delivered: ${result.subdomain}`, { duration: 10000 });
     } catch (error) {
+      if (error.response?.data?.identity) setProfileData(error.response.data.identity);
       if (error.transactionFailed || error.response?.data?.transactionFailed || error.response?.data?.transactionExpired) sessionStorage.removeItem(pendingKey);
       const pending = sessionStorage.getItem(pendingKey);
       if (pending) {
         setShowRecover(true);
         const reason = error.response?.data?.error || error.message || 'Confirmation is still pending.';
-        toast.error(`${reason} Your signed transaction is saved. Retry Mint to sync the same transaction without another payment.`, { duration: 12000 });
+        toast.error(`${reason} Your payment reference is saved. Retry completion without another payment.`, { duration: 12000 });
       } else {
         toast.error(error.response?.data?.error || error.message || 'Minting failed.', { duration: 10000 });
       }
@@ -452,7 +467,7 @@ export default function Profile() {
                                     {isMinting ? "Minting Identity..." : "Mint Identity Token"}
                                 </button>
                                 <p className="text-center text-xs text-slate-400">
-                                    On-chain subdomain configured automatically after payment
+                                    SNS subdomain and identity NFT delivered after payment
                                 </p>
                             </div>
                           ) : (
@@ -637,7 +652,7 @@ export default function Profile() {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">Status</span>
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium text-xs">{profileData.status === 'minted' ? 'Verified' : 'Awaiting manual mint'}</span>
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium text-xs">{profileData.status === 'minted' ? (profileData.nft_mint_address ? 'Mint complete' : 'Subdomain verified, NFT pending') : 'Mint pending'}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">Network</span>
@@ -651,6 +666,7 @@ export default function Profile() {
                             <span className="text-xs text-slate-400 block mb-1">Subdomain</span>
                             <code className="block w-full bg-slate-50 p-2 rounded text-xs text-slate-600 break-all">{profileData.subdomain}</code>
                         </div>
+                        <IdentityMintReceipt profile={profileData} isOwner={isOwner} isMinting={isMinting} onComplete={handleMint} />
                     </div>
                 ) : (
                     <div className="text-center py-6 text-slate-500 text-sm">

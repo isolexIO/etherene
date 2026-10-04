@@ -1,10 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { secrets } from 'base44:runtime';
 import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction, Transaction, SystemProgram } from 'npm:@solana/web3.js@1.98.4';
-import { getSnsDomainKeySync, NAME_PROGRAM_ID, createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
-import { MINT_SIZE, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, createInitializeMintInstruction, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, createMintToInstruction } from 'npm:@solana/spl-token@0.4.0';
-import { createCreateMetadataAccountV3Instruction, PROGRAM_ID as METADATA_PROGRAM_ID } from 'npm:@metaplex-foundation/mpl-token-metadata@2.13.0';
-import { pinataUploadFile, pinataUploadJson } from './pinata.ts';
+import { getSnsDomainKeySync, NAME_PROGRAM_ID, createInstruction, updateInstruction, transferInstruction, createReverse, getReverseKeyFromDomainKey, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@4.0.1';
+import { assertNftStorageConfigured } from './pinata.ts';
+import submitServerTransaction from './submitServerTransaction.ts';
+export { default as mintIdentityNft } from './identityNft.ts';
 import bs58 from 'npm:bs58@5.0.0';
 
 export { NAME_PROGRAM_ID };
@@ -75,8 +75,20 @@ export async function ownedRegistry(connection, domain, address) {
   return registry;
 }
 
-// Server-side auto-mint: the parent authority creates and configures the SNS
-// subdomain on-chain in a server-signed transaction, assigning the user as owner.
+export async function mintReadiness(connection, authority, needsSubdomain = true) {
+  assertNftStorageConfigured();
+  const parent = await readRegistry(connection, SNS_PARENT_DOMAIN);
+  const balance = await connection.getBalance(authority.publicKey, 'confirmed');
+  const requiredSol = needsSubdomain ? 0.04 : 0.03;
+  const reason = !parent.owner.equals(authority.publicKey)
+    ? `Automatic minting requires the server signer to own ${SNS_PARENT_DOMAIN}. Parent owner: ${parent.owner.toBase58()}; server signer: ${authority.publicKey.toBase58()}. No new payment will be requested.`
+    : balance < requiredSol * LAMPORTS_PER_SOL
+      ? `Server mint wallet ${authority.publicKey.toBase58()} has ${(balance / LAMPORTS_PER_SOL).toFixed(5)} SOL. Fund it to at least ${requiredSol} SOL for subdomain registration and NFT rent. Do not pay the platform fee again.`
+      : null;
+  return { ready: !reason, reason, authorityAddress: authority.publicKey.toBase58(), parentOwner: parent.owner.toBase58(), balanceSol: balance / LAMPORTS_PER_SOL, requiredSol };
+}
+
+// Fund and configure with the server signer, then transfer ownership atomically.
 export async function createSubdomain(connection, authority, subdomain, ownerAddress) {
   const label = subdomain.replace(/\.(sns|sol)$/, '').split('.')[0];
   const { pubkey, hashed } = getDomainKeySync(subdomain);
@@ -85,91 +97,33 @@ export async function createSubdomain(connection, authority, subdomain, ownerAdd
   const parent = parentDomainKey();
   const owner = new PublicKey(ownerAddress);
   const transaction = new Transaction();
-  transaction.add(createInstruction(NAME_PROGRAM_ID, SystemProgram.programId, pubkey, authority.publicKey, owner, hashed, new Numberu64(rentLamports), new Numberu32(space), undefined, parent, authority.publicKey));
-  transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(label), authority.publicKey));
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-  transaction.recentBlockhash = blockhash;
   transaction.feePayer = authority.publicKey;
-  transaction.sign(authority);
-  const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
-  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+  // createInstruction expects owner BEFORE payer; the user must never be payer here.
+  transaction.add(createInstruction(NAME_PROGRAM_ID, SystemProgram.programId, pubkey, authority.publicKey, authority.publicKey, hashed, new Numberu64(rentLamports), new Numberu32(space), undefined, parent, authority.publicKey));
+  transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(label), authority.publicKey));
+  const reverse = getReverseKeyFromDomainKey(pubkey, parent);
+  if (!await connection.getAccountInfo(reverse)) transaction.add(...await createReverse(pubkey, `\0${label}`, authority.publicKey, parent, authority.publicKey));
+  if (!owner.equals(authority.publicKey)) transaction.add(transferInstruction(NAME_PROGRAM_ID, pubkey, owner, authority.publicKey));
+  const signature = await submitServerTransaction(connection, transaction, [authority]);
   return { signature, pubkey };
 }
 
-// Corrects the subdomain's stored label if it was written incorrectly (e.g. the
-// parent name instead of the subdomain label). The SNS indexer reads this field
-// to resolve and display the subdomain name on sns.id.
+// SNS discovery reads the registrar's reverse account, not arbitrary domain data.
 export async function ensureSubdomainLabel(connection, authority, subdomain) {
-  const expectedLabel = subdomain.replace(/\.(sns|sol)$/, '').split('.')[0];
-  const { pubkey, info } = await readRegistry(connection, subdomain);
-  const currentLabel = info.data.length > 96 ? new TextDecoder().decode(info.data.subarray(96)).replace(/\0/g, '').trim() : '';
-  if (currentLabel === expectedLabel) return { pubkey, corrected: false };
+  const label = subdomain.replace(/\.(sns|sol)$/, '').split('.')[0];
+  const { pubkey } = await readRegistry(connection, subdomain);
+  const parent = parentDomainKey();
+  const reverse = getReverseKeyFromDomainKey(pubkey, parent);
+  if (await connection.getAccountInfo(reverse)) return { pubkey, corrected: false };
+  const parentState = await readRegistry(connection, SNS_PARENT_DOMAIN);
+  if (!parentState.owner.equals(authority.publicKey)) throw new Error('The server signer does not own the parent domain needed to register the SNS reverse lookup. Your payment is preserved.');
   const transaction = new Transaction();
-  transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(expectedLabel), authority.publicKey));
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-  transaction.recentBlockhash = blockhash;
   transaction.feePayer = authority.publicKey;
-  transaction.sign(authority);
-  const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
-  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+  transaction.add(...await createReverse(pubkey, `\0${label}`, authority.publicKey, parent, authority.publicKey));
+  const signature = await submitServerTransaction(connection, transaction, [authority]);
   return { pubkey, corrected: true, signature };
 }
 
-// Mints a Metaplex NFT (supply 1, decimals 0) for the identity's generated
-// image and pins the image + metadata on IPFS. The server (parent authority)
-// pays rent and acts as mint/update authority; the token is minted to the
-// user's associated token account so they own the NFT.
-export async function mintIdentityNft(connection, authority, ownerAddress, imageUrl, subdomain) {
-  const owner = new PublicKey(ownerAddress);
-  const imageUri = await pinataUploadFile(imageUrl);
-  const metadata = {
-    name: subdomain.slice(0, 32),
-    symbol: 'ETHERENE',
-    description: `Etherene on-chain identity node: ${subdomain}`,
-    image: imageUri,
-    external_url: `https://etherene.info/Profile?address=${ownerAddress}`,
-    attributes: [
-      { trait_type: 'Subdomain', value: subdomain },
-      { trait_type: 'Network', value: 'Solana Mainnet' },
-      { trait_type: 'Protocol', value: 'Etherene' }
-    ]
-  };
-  const metadataUri = await pinataUploadJson(metadata);
-  const mint = Keypair.generate();
-  const ata = getAssociatedTokenAddressSync(mint.publicKey, owner, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-  const [metadataPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
-    METADATA_PROGRAM_ID
-  );
-  const { ComputeBudgetProgram } = await import('npm:@solana/web3.js@1.98.4');
-  const mintLamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-  const transaction = new Transaction();
-  transaction.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }));
-  transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
-  transaction.add(SystemProgram.createAccount({ fromPubkey: authority.publicKey, newAccountPubkey: mint.publicKey, space: MINT_SIZE, lamports: mintLamports, programId: TOKEN_PROGRAM_ID }));
-  transaction.add(createInitializeMintInstruction(mint.publicKey, 0, authority.publicKey, authority.publicKey, TOKEN_PROGRAM_ID));
-  transaction.add(createAssociatedTokenAccountIdempotentInstruction(authority.publicKey, ata, owner, mint.publicKey, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID));
-  transaction.add(createMintToInstruction(mint.publicKey, ata, authority.publicKey, 1, [], TOKEN_PROGRAM_ID));
-  transaction.add(createCreateMetadataAccountV3Instruction(
-    { metadata: metadataPda, mint: mint.publicKey, mintAuthority: authority.publicKey, payer: authority.publicKey, updateAuthority: authority.publicKey },
-    { createMetadataAccountArgsV3: { data: { name: metadata.name, symbol: metadata.symbol, uri: metadataUri, sellerFeeBasisPoints: 0, creators: null, collection: null, uses: null }, isMutable: true, collectionDetails: null } }
-  ));
-  transaction.feePayer = authority.publicKey;
-  let signature;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const { blockhash } = await connection.getLatestBlockhash('confirmed');
-    transaction.recentBlockhash = blockhash;
-    transaction.sign(authority, mint);
-    try {
-      signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true, maxRetries: 5 });
-      await connection.confirmTransaction(signature, 'confirmed');
-      return { mintAddress: mint.publicKey.toBase58(), signature, metadataUri, imageUri };
-    } catch (err) {
-      if (attempt < 2 && /expired|block height|timeout/i.test(err.message)) continue;
-      throw err;
-    }
-  }
-}
 export async function saveIdentity(base44, user, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];
   if (existing && existing.created_by_id !== user.id && user.role !== 'admin') throw new Error('This wallet identity belongs to another app account.');

@@ -17,10 +17,7 @@ export default async function submitIdentityTransaction(result, signTransaction,
   }
   if (signTransaction) {
     const message = Buffer.from(transaction.serializeMessage());
-    // Sign the legacy Transaction directly. Wrapping it in a VersionedTransaction
-    // causes the wallet to sign versioned message bytes, which don't match the
-    // legacy message that verifySignatures() checks — producing "Signature
-    // verification failed" on-chain.
+    // Keep the prepared message intact and preserve every server co-signature.
     let approved;
     try { approved = await signTransaction(transaction); }
     catch (error) { throw new Error(`Wallet signing failed: ${error.error?.message || error.cause?.message || error.message || 'Approval did not complete.'}`); }
@@ -31,19 +28,12 @@ export default async function submitIdentityTransaction(result, signTransaction,
     if (!Buffer.from(signed.serializeMessage()).equals(message)) throw new Error('The wallet changed the mint transaction. Nothing was submitted; please reconnect and try again.');
     authoritySignatures.forEach(entry => signed.addSignature(entry.publicKey, entry.signature));
     if (!signed.verifySignatures()) throw new Error('Wallet approval did not produce a valid mint signature. Nothing was submitted; please reconnect and try again.');
+    // Fully serialize BEFORE saving pending state, so a missing signature cannot
+    // create a dead receipt. Preserve ambiguous transport failures to avoid double payment.
+    const raw = signed.serialize();
     signature = encodeSolanaSignature(signed.signature);
-    // Save the transaction ID before submission, preventing another payment on retry.
-    onSubmitted?.(signature, validity);
-    try {
-      await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
-    } catch (err) {
-      // Submission failed (preflight rejection, network error, etc.) — the
-      // transaction never landed, so mark it for the caller to clear the
-      // saved pending state instead of retrying a dead signature.
-      const error = new Error(err.message || 'Transaction submission failed.');
-      error.transactionFailed = true;
-      throw error;
-    }
+    onSubmitted?.(signature, { ...validity, signedTransaction: Buffer.from(raw).toString('base64') });
+    await connection.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: 'confirmed' });
   } else if (!authoritySignatures.length && sendTransaction) {
     signature = await sendTransaction(transaction, connection, { preflightCommitment: 'confirmed' });
     onSubmitted?.(signature, validity);

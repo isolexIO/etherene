@@ -1,32 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { Buffer } from 'node:buffer';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram } from 'npm:@solana/web3.js@1.98.4';
-import { solanaConnection, SNS_PARENT_DOMAIN, readRegistry, serverKeypair, mintSettings, quoteMintFee, mintMemo } from '../../shared/solanaIdentity.ts';
+import { solanaConnection, SNS_PARENT_DOMAIN, serverKeypair, mintSettings, quoteMintFee, mintMemo, mintReadiness } from '../../shared/solanaIdentity.ts';
 
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Sign in before minting your identity.' }, { status: 401 });
-    const { userAddress } = await req.json();
+    const { userAddress, checkOnly = false } = await req.json();
     if (typeof userAddress !== 'string' || !userAddress.trim()) return Response.json({ error: 'Solana user address required' }, { status: 400 });
     let userPublicKey;
     try { userPublicKey = new PublicKey(userAddress.trim()); }
     catch { return Response.json({ error: 'Invalid Solana wallet address' }, { status: 400 }); }
     const address = userPublicKey.toBase58();
     const settings = await mintSettings(base44);
+    const connection = solanaConnection();
+    const authority = serverKeypair();
+    const readiness = await mintReadiness(connection, authority);
+    if (checkOnly) return Response.json({ success: true, ...readiness, maintenance: Boolean(settings.maintenance_mode) });
     if (settings.maintenance_mode) return Response.json({ error: 'Minting disabled for maintenance.' }, { status: 503 });
+    if (!readiness.ready) return Response.json({ error: readiness.reason, readiness }, { status: 503 });
     const identity = (await base44.entities.Identity.filter({ address }))[0];
     if (identity?.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
     if (identity?.status === 'minted') return Response.json({ error: 'This wallet already has an identity. Use recovery instead of paying again.' }, { status: 409 });
     if (identity && identity.created_by_id !== user.id && user.role !== 'admin') return Response.json({ error: 'This identity belongs to another app account.' }, { status: 403 });
 
-    const connection = solanaConnection();
-    const authority = serverKeypair();
-    // Read the SNS registry directly; the SDK's NFT-holder lookup is not
-    // needed for parent authority and is blocked by the public RPC endpoint.
-    const parentState = await readRegistry(connection, SNS_PARENT_DOMAIN);
-    const manualQueue = !parentState.owner.equals(authority.publicKey);
+    const manualQueue = false;
     const label = `node-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
     const subdomain = `${label}.${SNS_PARENT_DOMAIN}`;
     const { lamports, feeUSD } = await quoteMintFee(settings);
