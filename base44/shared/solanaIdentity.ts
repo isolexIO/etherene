@@ -141,8 +141,11 @@ export async function mintIdentityNft(connection, authority, ownerAddress, image
     [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
     METADATA_PROGRAM_ID
   );
+  const { ComputeBudgetProgram } = await import('npm:@solana/web3.js@1.98.4');
   const mintLamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
   const transaction = new Transaction();
+  transaction.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }));
+  transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
   transaction.add(SystemProgram.createAccount({ fromPubkey: authority.publicKey, newAccountPubkey: mint.publicKey, space: MINT_SIZE, lamports: mintLamports, programId: TOKEN_PROGRAM_ID }));
   transaction.add(createInitializeMintInstruction(mint.publicKey, 0, authority.publicKey, authority.publicKey, TOKEN_PROGRAM_ID));
   transaction.add(createAssociatedTokenAccountIdempotentInstruction(authority.publicKey, ata, owner, mint.publicKey, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID));
@@ -151,13 +154,21 @@ export async function mintIdentityNft(connection, authority, ownerAddress, image
     { metadata: metadataPda, mint: mint.publicKey, mintAuthority: authority.publicKey, payer: authority.publicKey, updateAuthority: authority.publicKey },
     { createMetadataAccountArgsV3: { data: { name: metadata.name, symbol: metadata.symbol, uri: metadataUri, sellerFeeBasisPoints: 0, creators: null, collection: null, uses: null }, isMutable: true, collectionDetails: null } }
   ));
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-  transaction.recentBlockhash = blockhash;
   transaction.feePayer = authority.publicKey;
-  transaction.sign(authority, mint);
-  const signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, preflightCommitment: 'confirmed' });
-  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
-  return { mintAddress: mint.publicKey.toBase58(), signature, metadataUri, imageUri };
+  let signature;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = blockhash;
+    transaction.sign(authority, mint);
+    try {
+      signature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true, maxRetries: 5 });
+      await connection.confirmTransaction(signature, 'confirmed');
+      return { mintAddress: mint.publicKey.toBase58(), signature, metadataUri, imageUri };
+    } catch (err) {
+      if (attempt < 2 && /expired|block height|timeout/i.test(err.message)) continue;
+      throw err;
+    }
+  }
 }
 export async function saveIdentity(base44, user, address, data) {
   const existing = (await base44.entities.Identity.filter({ address }))[0];
