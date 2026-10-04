@@ -21,7 +21,7 @@ export default async function(req) {
       const signatureStatus = (await connection.getSignatureStatuses([paymentSignature], { searchTransactionHistory: true })).value[0];
       if (signatureStatus?.err) return Response.json({ error: 'The transaction failed on-chain. You can retry minting.', transactionFailed: true }, { status: 400 });
       if (!signatureStatus && Number.isSafeInteger(lastValidBlockHeight) && await connection.getBlockHeight('confirmed') > lastValidBlockHeight) return Response.json({ error: 'The transaction expired without confirmation. You can prepare a fresh mint.', transactionExpired: true }, { status: 409 });
-      return Response.json({ error: 'Transaction not confirmed yet. Retry syncing this signature without paying again.' }, { status: 409 });
+      return Response.json({ error: 'Transaction confirmation is still being indexed. Retry syncing this signature without paying again.', transactionPending: true }, { status: 409 });
     }
     if (tx.meta.err) return Response.json({ error: 'The transaction failed on-chain. No identity was minted.', transactionFailed: true }, { status: 400 });
     const keys = tx.transaction.message.accountKeys;

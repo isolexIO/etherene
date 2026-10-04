@@ -2,7 +2,7 @@ import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import encodeSolanaSignature from '@/components/profile/encodeSolanaSignature';
 
-export default async function submitIdentityTransaction(result, signTransaction, onSubmitted, sendTransaction) {
+export default async function submitIdentityTransaction(result, signTransaction, onSubmitted, sendTransaction, awaitConfirmation = true) {
   const connection = new Connection('https://solana-rpc.publicnode.com', 'confirmed');
   const transaction = Transaction.from(Buffer.from(result.transaction, 'base64'));
   const authoritySignatures = transaction.signatures
@@ -37,6 +37,8 @@ export default async function submitIdentityTransaction(result, signTransaction,
   } else {
     throw new Error('Reconnect a wallet that supports transaction signing.');
   }
+  // Mint registration verifies confirmation server-side, without a browser WebSocket.
+  if (!awaitConfirmation) return signature;
   const confirmation = await connection.confirmTransaction({ signature, ...validity }, 'confirmed');
   if (confirmation.value.err) {
     const error = new Error(`The transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);

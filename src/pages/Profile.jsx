@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Link, useSearchParams } from 'react-router-dom';
 import submitIdentityTransaction from '@/components/profile/submitIdentityTransaction';
+import syncIdentityMint from '@/components/profile/syncIdentityMint';
 
 // Polyfill Buffer for Solana web3.js
 if (typeof window !== 'undefined') {
@@ -252,11 +253,9 @@ export default function Profile() {
           sessionStorage.setItem(pendingKey, JSON.stringify(pending));
           setRecoverTx(signature);
           toast.info('Transaction signed. Checking confirmation...');
-        }, sendTransaction);
+        }, sendTransaction, false);
       }
-      const response = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, lastValidBlockHeight: pending.lastValidBlockHeight });
-      const result = response.data;
-      if (!result.success) throw new Error(result.error || 'Unable to sync your identity.');
+      const result = await syncIdentityMint({ userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, lastValidBlockHeight: pending.lastValidBlockHeight });
       sessionStorage.removeItem(pendingKey);
       setProfileData(result.identity);
       if (result.status === 'minted') setActivities(previous => [{ ...result.identity, type: 'mint', date: result.identity.created_date }, ...previous.filter(item => item.type !== 'mint')]);
@@ -266,7 +265,8 @@ export default function Profile() {
       const pending = sessionStorage.getItem(pendingKey);
       if (pending) {
         setShowRecover(true);
-        toast.error('Your transaction was submitted but syncing is incomplete. Retry Mint to check the same transaction without another payment, or use its signature to recover.', { duration: 12000 });
+        const reason = error.response?.data?.error || error.message || 'Confirmation is still pending.';
+        toast.error(`${reason} Your signed transaction is saved. Retry Mint to sync the same transaction without another payment.`, { duration: 12000 });
       } else {
         toast.error(error.response?.data?.error || error.message || 'Minting failed.', { duration: 10000 });
       }
