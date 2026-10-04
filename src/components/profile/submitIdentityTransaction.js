@@ -5,6 +5,16 @@ import encodeSolanaSignature from '@/components/profile/encodeSolanaSignature';
 export default async function submitIdentityTransaction(result, signTransaction, onSubmitted, sendTransaction, awaitConfirmation = true) {
   const connection = new Connection('https://solana-rpc.publicnode.com', 'confirmed');
   const transaction = Transaction.from(Buffer.from(result.transaction, 'base64'));
+  // The server-serialized transaction carries a null feePayer signature
+  // placeholder (web3.js _compile pads signatures to numRequiredSignatures).
+  // Some wallet adapters (notably @solana-mobile/wallet-adapter-mobile) call
+  // transaction.serialize() with the default requireAllSignatures=true when
+  // forwarding to the wallet, which throws
+  // "Signature verification failed. Missing signature for public key
+  // [feePayer]" before the wallet prompt opens. Force the relaxed config on
+  // this instance so the adapter can serialize the unsigned transaction.
+  const relaxedSerialize = transaction.serialize.bind(transaction);
+  transaction.serialize = (config) => relaxedSerialize({ requireAllSignatures: false, verifySignatures: false, ...config });
   const authoritySignatures = transaction.signatures
     .filter(entry => entry.signature && !entry.publicKey.equals(transaction.feePayer))
     .map(entry => ({ publicKey: entry.publicKey, signature: Buffer.from(entry.signature) }));
