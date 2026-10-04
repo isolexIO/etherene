@@ -1,37 +1,25 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import { Buffer } from "node:buffer";
-if (typeof globalThis.Buffer === 'undefined') globalThis.Buffer = Buffer;
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { PublicKey, Transaction } from 'npm:@solana/web3.js@1.98.4';
+import { deleteInstruction } from 'npm:@bonfida/spl-name-service@2.3.1';
+import { solanaConnection, parentDomainKey, NAME_PROGRAM_ID } from '../../shared/solanaIdentity.ts';
 
-import { Connection, PublicKey, Transaction } from 'npm:@solana/web3.js@^1.91.0';
-import { deleteInstruction } from 'npm:@bonfida/spl-name-service@^2.3.1';
-
-Deno.serve(async (req) => {
-    try {
-        const body = await req.json();
-        const { accountKey, userAddress } = body;
-        
-        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-        const nameAccount = new PublicKey(accountKey);
-        const user = new PublicKey(userAddress);
-        const NAME_PROGRAM_ID = new PublicKey("namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX");
-
-        // deleteInstruction(programId, nameKey, refundTarget, nameOwner)
-        const ix = deleteInstruction(
-            NAME_PROGRAM_ID,
-            nameAccount,
-            user, // Refund to user
-            user  // Owner is user
-        );
-
-        const tx = new Transaction().add(ix);
-        tx.feePayer = user;
-        const { blockhash } = await connection.getLatestBlockhash();
-        tx.recentBlockhash = blockhash;
-
-        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-
-        return Response.json({ transaction: serialized.toString('base64') });
-    } catch (e) {
-        return Response.json({ error: e.message }, { status: 500 });
-    }
-});
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    if (!(await base44.auth.me())) return Response.json({ error: 'Authentication required' }, { status: 401 });
+    const { accountKey, userAddress } = await req.json();
+    if (!accountKey || !userAddress) return Response.json({ error: 'Account and wallet address required' }, { status: 400 });
+    const nameAccount = new PublicKey(accountKey);
+    const owner = new PublicKey(userAddress);
+    const connection = solanaConnection();
+    const info = await connection.getAccountInfo(nameAccount);
+    if (!info || !info.owner.equals(NAME_PROGRAM_ID) || info.data.length < 96 || !new PublicKey(info.data.subarray(32, 64)).equals(owner) || !new PublicKey(info.data.subarray(0, 32)).equals(parentDomainKey()) || !info.data.subarray(96).every(byte => byte === 0)) return Response.json({ error: 'Only an empty Etherene registry owned by this wallet can be reclaimed.' }, { status: 403 });
+    const tx = new Transaction().add(deleteInstruction(NAME_PROGRAM_ID, nameAccount, owner, owner));
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    tx.feePayer = owner;
+    tx.recentBlockhash = blockhash;
+    return Response.json({ transaction: tx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64'), blockhash, lastValidBlockHeight });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

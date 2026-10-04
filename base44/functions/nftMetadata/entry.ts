@@ -1,54 +1,27 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { findPublicIdentity } from '../../shared/publicIdentity.ts';
 
-Deno.serve(async (req) => {
+export default async function(req) {
     try {
-        const url = new URL(req.url);
-        const tokenIdParam = url.searchParams.get("id") || url.searchParams.get("tokenId");
-        
-        if (!tokenIdParam) {
-            return Response.json({ error: "Missing 'id' or 'tokenId' parameter" }, { status: 400 });
-        }
-
-        const tokenId = parseInt(tokenIdParam);
+        const body = await req.json().catch(() => ({}));
+        if (body.id == null && body.tokenId == null && !body.address) return Response.json({ error: 'Identity ID or wallet address required' }, { status: 400 });
         const base44 = createClientFromRequest(req);
-        
-        // Use service role to read public data for metadata without needing user auth
-        const identities = await base44.asServiceRole.entities.Identity.filter({ token_id: tokenId });
-        const identity = identities[0];
-
-        if (!identity) {
-            return Response.json({ error: "Identity not found for this Token ID" }, { status: 404 });
-        }
-
-        // Construct the Metadata JSON (ERC-721 standard)
-        // We assume the image generation function is available at /functions/nftImage
-        const appUrl = url.origin; 
-        const imageUrl = `${appUrl}/functions/nftImage?id=${tokenId}`;
-
-        const metadata = {
-            name: `Etherene Identity #${tokenId}`,
-            description: `Sovereign Identity on the Etherene Network. Soul Hash: ${identity.soul_hash}`,
-            image: imageUrl,
-            external_url: `${appUrl}/Profile`,
+        const identity = await findPublicIdentity(base44, body);
+        if (!identity) return Response.json({ error: 'Identity not found' }, { status: 404 });
+        return Response.json({
+            name: identity.display_name || identity.subdomain,
+            description: identity.bio || `Etherene identity: ${identity.subdomain}`,
+            image: identity.avatar_url || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/693568c43d156a928d236e54/9ccbd4280_logo.png',
+            external_url: `https://etherene.info/Profile?address=${encodeURIComponent(identity.address)}`,
             attributes: [
-                {
-                    trait_type: "Network",
-                    value: identity.network === "137" ? "Polygon" : (identity.network === "8453" ? "Base" : "Unknown")
-                },
-                {
-                    trait_type: "Status",
-                    value: identity.status
-                },
-                {
-                    trait_type: "Soul Hash",
-                    value: identity.soul_hash
-                }
+                { trait_type: 'Network', value: identity.network || 'Solana Mainnet' },
+                { trait_type: 'Status', value: identity.status },
+                { trait_type: 'Subdomain', value: identity.subdomain },
+                { trait_type: 'Wallet', value: identity.address }
             ]
-        };
-
-        return Response.json(metadata);
+        });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
-});
+}

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 
 const DEFAULT_MANIFESTO = `
 THE ETHERENE WHITE PAPER (The Source of Truth):
@@ -14,7 +14,7 @@ THE ETHERENE WHITE PAPER (The Source of Truth):
 10. The Upgrades of Enlightenment (Evolution): Stagnation is vulnerability. Constantly upgrade minds and spirits. (e.g. Learning new skills; Letting go of outdated beliefs).
 `;
 
-Deno.serve(async (req) => {
+export default async function(req) {
     try {
         const base44 = createClientFromRequest(req);
         const body = await req.json().catch(() => ({}));
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
         // Record Interaction
         if (address && mode !== 'greeting') {
             try {
-                await admin.entities.OracleInteraction.create({
+                await base44.entities.OracleInteraction.create({
                     user_address: address,
                     topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
                     type: 'chat'
@@ -150,4 +150,4 @@ Deno.serve(async (req) => {
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
-});
+}

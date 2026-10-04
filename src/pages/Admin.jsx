@@ -30,9 +30,7 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer,
-    LineChart,
-    Line
+    ResponsiveContainer
 } from 'recharts';
 import { toast } from 'sonner';
 
@@ -101,7 +99,8 @@ export default function AdminPage() {
             }
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['globalSettings']);
+            queryClient.invalidateQueries({ queryKey: ['globalSettings'] });
+            queryClient.invalidateQueries({ queryKey: ['adminCheck'] });
             toast.success("Settings updated successfully");
         },
         onError: () => toast.error("Failed to update settings")
@@ -154,12 +153,22 @@ export default function AdminPage() {
 
     const updateMintStatusMutation = useMutation({
         mutationFn: async ({ id, status }) => {
+            if (status === 'minted') {
+                const request = mintRequests.find(item => item.id === id);
+                const response = await base44.functions.invoke('verifyIdentity', { domain: request.subdomain, userAddress: request.user_address });
+                if (!response.data.success) throw new Error(response.data.error || 'Mint is not confirmed on-chain.');
+                const identities = await base44.entities.Identity.filter({ address: request.user_address });
+                if (!identities[0]) throw new Error('The request has no associated identity to update.');
+                await base44.entities.Identity.update(identities[0].id, { status: 'minted', subdomain: request.subdomain, network: 'Solana Mainnet' });
+            }
             return base44.entities.MintRequest.update(id, { status });
         },
         onSuccess: () => {
             refetchMintRequests();
+            refetchUsers();
             toast.success("Mint request updated");
-        }
+        },
+        onError: error => toast.error(error.response?.data?.error || error.message || 'Could not update mint request.')
     });
 
     const pendingRequests = mintRequests?.filter(r => r.status === 'pending' || r.status === 'processing') || [];
@@ -185,7 +194,7 @@ export default function AdminPage() {
                         }
                     }
                 });
-                queryClient.invalidateQueries(['mintRequests']);
+                queryClient.invalidateQueries({ queryKey: ['mintRequests'] });
             }
         });
 

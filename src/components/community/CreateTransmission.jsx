@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+
+import { Send, Sparkles, Loader2 } from 'lucide-react';
 import { useWeb3 } from '../../Layout';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

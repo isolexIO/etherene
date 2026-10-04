@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Save, X, Upload, Loader2, Globe, Twitter, Linkedin, Github, Link as LinkIcon } from 'lucide-react';
+import { Save, X, Upload, Loader2, Globe, Twitter, Linkedin, Github } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
@@ -37,7 +37,7 @@ export default function ProfileEditor({ profileData, onSave, onCancel }) {
         setLoading(true);
 
         try {
-            const response = await base44.integrations.Core.UploadFile({ file });
+            const response = await base44.integrations.Core.UploadPublicFile({ file });
             const imageUrl = response.file_url;
 
             setFormData(prev => ({

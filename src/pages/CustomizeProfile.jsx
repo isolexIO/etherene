@@ -109,7 +109,7 @@ export default function CustomizeProfile() {
 
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
       
       if (field === 'avatar') {
         let cid = '';

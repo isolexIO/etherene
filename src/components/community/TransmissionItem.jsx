@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, Heart, Share2, MoreHorizontal, User } from 'lucide-react';
+import { MessageCircle, Heart, Share2, MoreHorizontal } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import IdentityAvatar from '../profile/IdentityAvatar';
 import { useWeb3 } from '../../Layout';

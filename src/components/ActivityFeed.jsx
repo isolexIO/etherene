@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, User, Box, MessageSquare, Radio } from 'lucide-react';
+import { Activity, User, Box, Radio } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import moment from 'moment';
 

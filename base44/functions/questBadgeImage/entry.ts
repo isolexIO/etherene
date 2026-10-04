@@ -5,8 +5,8 @@ import { renderQuestBadge } from '../../shared/badgeArt.ts';
 
 export default async function(req) {
   try {
-    const url = new URL(req.url);
-    const questKey = url.searchParams.get('quest') || 'etherene';
+    const body = await req.json().catch(() => ({}));
+    const questKey = typeof body.quest === 'string' ? body.quest : 'etherene';
     const { svg } = renderQuestBadge(questKey);
 
     return new Response(svg, {

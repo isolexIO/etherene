@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Download, Share2, BookOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { FileText, Download, Share2, BookOpen, ChevronRight } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Term from '../components/whitepaper/Term';
 import Quiz from '../components/whitepaper/Quiz';

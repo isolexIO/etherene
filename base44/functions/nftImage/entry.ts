@@ -1,28 +1,15 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { findPublicIdentity } from '../../shared/publicIdentity.ts';
 
 import { seededRandom, createPolygon } from '../../shared/badgeArt.ts';
 
-Deno.serve(async (req) => {
+export default async function(req) {
     try {
-        const url = new URL(req.url);
-        const tokenIdParam = url.searchParams.get("id");
-        
-        if (!tokenIdParam) {
-            return new Response("Missing id", { status: 400 });
-        }
-
-        const tokenId = parseInt(tokenIdParam);
+        const body = await req.json().catch(() => ({}));
+        if (body.id == null && body.tokenId == null && !body.address) return Response.json({ error: 'Identity ID or wallet address required' }, { status: 400 });
         const base44 = createClientFromRequest(req);
-        
-        const identities = await base44.asServiceRole.entities.Identity.filter({ token_id: tokenId });
-        const identity = identities[0];
-
-        if (!identity) {
-             // Return a generic placeholder if not found
-             return new Response(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/><text x="50" y="50" text-anchor="middle">?</text></svg>`, {
-                headers: { "Content-Type": "image/svg+xml" }
-            });
-        }
+        const identity = await findPublicIdentity(base44, body);
+        if (!identity) return Response.json({ error: 'Identity not found' }, { status: 404 });
 
         // Generate SVG based on identity data
         const seed = (identity.address || '') + (identity.soul_hash || '');
@@ -82,4 +69,4 @@ Deno.serve(async (req) => {
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
-});
+}

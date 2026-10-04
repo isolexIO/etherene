@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ArrowRight, Clock, CheckCircle2, Boxes } from 'lucide-react';
+import { ArrowRight, Clock, CheckCircle2, Boxes } from 'lucide-react';
 
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';

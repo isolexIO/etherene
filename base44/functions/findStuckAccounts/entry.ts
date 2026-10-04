@@ -1,64 +1,21 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import { Connection, PublicKey } from 'npm:@solana/web3.js@^1.91.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { PublicKey } from 'npm:@solana/web3.js@1.98.4';
+import { solanaConnection, parentDomainKey, NAME_PROGRAM_ID, getDomainKeySync } from '../../shared/solanaIdentity.ts';
 
-Deno.serve(async (req) => {
-    try {
-        const base44 = createClientFromRequest(req);
-        // Parse Body
-        let body;
-        try {
-            body = await req.json();
-        } catch (e) {
-            return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-        }
-        
-        const { userAddress } = body;
-        if (!userAddress) return Response.json({ error: "Address required" }, { status: 400 });
-
-        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-        const NAME_PROGRAM_ID = new PublicKey("namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX");
-        let userKey;
-        try {
-            userKey = new PublicKey(userAddress);
-        } catch(e) {
-            return Response.json({ error: "Invalid address format" }, { status: 400 });
-        }
-
-        // Find all registries owned by user
-        // The NameRegistryState struct starts with parent (32), owner (32), class (32).
-        // Owner is at offset 32.
-        const filters = [
-            {
-                memcmp: {
-                    offset: 32,
-                    bytes: userKey.toBase58()
-                }
-            },
-            {
-                dataSize: 2096 // We allocated 2000 + 96 header in our mint script
-            }
-        ];
-
-        const accounts = await connection.getProgramAccounts(NAME_PROGRAM_ID, { filters });
-        
-        const stuck = [];
-        for (const acc of accounts) {
-            // Check if data is empty (after 96 bytes header)
-            // If the data is all zeros, it means the update instruction failed to write the name
-            const dataSlice = acc.account.data.slice(96);
-            const isZero = dataSlice.every(b => b === 0);
-            
-            if (isZero) {
-                stuck.push({
-                    pubkey: acc.pubkey.toBase58(),
-                    lamports: acc.account.lamports
-                });
-            }
-        }
-
-        return Response.json({ accounts: stuck });
-    } catch (e) {
-        console.error(e);
-        return Response.json({ error: e.message }, { status: 500 });
-    }
-});
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    if (!(await base44.auth.me())) return Response.json({ error: 'Authentication required' }, { status: 401 });
+    const { userAddress } = await req.json();
+    if (!userAddress) return Response.json({ error: 'Wallet address required' }, { status: 400 });
+    let address;
+    try { address = new PublicKey(userAddress).toBase58(); }
+    catch { return Response.json({ error: 'Invalid Solana wallet address' }, { status: 400 }); }
+    const identities = await base44.entities.Identity.filter({ address });
+    const knownKeys = new Set(identities.filter(identity => identity.subdomain).map(identity => getDomainKeySync(identity.subdomain).pubkey.toBase58()));
+    const accounts = await solanaConnection().getProgramAccounts(NAME_PROGRAM_ID, { filters: [{ memcmp: { offset: 0, bytes: parentDomainKey().toBase58() } }, { memcmp: { offset: 32, bytes: address } }] });
+    return Response.json({ accounts: accounts.filter(account => !knownKeys.has(account.pubkey.toBase58()) && account.account.data.length > 96 && account.account.data.subarray(96).every(byte => byte === 0)).map(account => ({ pubkey: account.pubkey.toBase58(), lamports: account.account.lamports })) });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

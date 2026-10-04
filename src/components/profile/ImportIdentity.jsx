@@ -8,6 +8,7 @@ export default function ImportIdentity({ account, onSuccess }) {
     const [domain, setDomain] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationResult, setVerificationResult] = useState(null);
+    const [isImporting, setIsImporting] = useState(false);
 
     const handleVerify = async () => {
         if (!domain.trim()) {
@@ -53,9 +54,11 @@ export default function ImportIdentity({ account, onSuccess }) {
     };
 
     const handleImport = async () => {
-        if (!verificationResult?.success) return;
-
+        if (!verificationResult?.success || isImporting) return;
+        setIsImporting(true);
         try {
+            const existing = await base44.entities.Identity.filter({ address: account });
+            if (existing.length) throw new Error('This wallet already has an identity. Edit or recover it instead of importing a duplicate.');
             await base44.entities.Identity.create({
                 address: account,
                 subdomain: verificationResult.subdomain,
@@ -68,7 +71,9 @@ export default function ImportIdentity({ account, onSuccess }) {
             onSuccess?.();
         } catch (error) {
             console.error(error);
-            toast.error("Failed to import identity");
+            toast.error(error.message || 'Failed to import identity');
+        } finally {
+            setIsImporting(false);
         }
     };
 
@@ -140,9 +145,10 @@ export default function ImportIdentity({ account, onSuccess }) {
                                 </p>
                                 <button
                                     onClick={handleImport}
+                                    disabled={isImporting}
                                     className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
                                 >
-                                    Import This Identity
+                                    {isImporting ? 'Importing...' : 'Import This Identity'}
                                 </button>
                             </div>
                         ) : (

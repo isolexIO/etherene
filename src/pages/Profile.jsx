@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Buffer } from 'buffer';
 import { Link, useSearchParams } from 'react-router-dom';
-import { validateSolanaPK } from '../components/utils/validatePK';
+import submitIdentityTransaction from '@/components/profile/submitIdentityTransaction';
 
 // Polyfill Buffer for Solana web3.js
 if (typeof window !== 'undefined') {
@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 import { useWeb3 } from '../Layout';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-import { Fingerprint, PenTool, Hash, Shield, Loader2, CheckCircle2, Copy, Settings, Globe, MessageSquare, Radio, Hexagon, Save, X, Mail, UserPlus, UserMinus, Users, Trash2 } from 'lucide-react';
+import { PenTool, Hash, Shield, Loader2, CheckCircle2, Globe, MessageSquare, Radio, X, UserPlus, UserMinus, Users, Trash2 } from 'lucide-react';
 import IdentityAvatar from '../components/profile/IdentityAvatar';
 import { createPageUrl } from '../components/utils';
 import { base44 } from '@/api/base44Client';
@@ -25,13 +25,13 @@ import moment from 'moment';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const { account, connectWallet, wallet } = useWeb3();
-  const { signTransaction, sendTransaction } = useWallet();
+  const { account, connectWallet } = useWeb3();
+  const { signTransaction } = useWallet();
   const [searchParams] = useSearchParams();
   const paramAddress = searchParams.get('address');
   
   const viewAddress = paramAddress || account;
-  const isOwner = account && viewAddress && account.toLowerCase() === viewAddress.toLowerCase();
+  const isOwner = account && viewAddress && account === viewAddress;
 
   const [isMinting, setIsMinting] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -138,6 +138,13 @@ export default function Profile() {
   const [isRecovering, setIsRecovering] = useState(false);
   const [foundOnChain, setFoundOnChain] = useState(null);
 
+  useEffect(() => {
+    setFoundOnChain(null);
+    const pending = account ? JSON.parse(sessionStorage.getItem(`etherene_pending_mint_${account}`) || 'null') : null;
+    setRecoverTx(pending?.signature || '');
+    setShowRecover(Boolean(pending));
+  }, [account]);
+
   const [stuckAccounts, setStuckAccounts] = useState([]);
   const [loadingStuck, setLoadingStuck] = useState(false);
   const [closingAccount, setClosingAccount] = useState(null);
@@ -166,17 +173,7 @@ export default function Profile() {
                accountKey, 
                userAddress: account 
            });
-           const { transaction: txBase64 } = res.data;
-
-           const { Transaction, Connection } = await import('@solana/web3.js');
-           const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-           const transactionBuffer = Buffer.from(txBase64, 'base64');
-           const transaction = Transaction.from(transactionBuffer);
-
-           const { solana } = window;
-           const { signature } = await solana.signAndSendTransaction(transaction);
-
-           await connection.confirmTransaction(signature, "confirmed");
+           await submitIdentityTransaction(res.data, signTransaction);
            toast.success("Account closed and SOL reclaimed!");
 
            setStuckAccounts(prev => prev.filter(a => a.pubkey !== accountKey));
@@ -189,7 +186,7 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    if (!account || profileData) return;
+    if (!account || !isOwner || isLoading || profileData) return;
     
     const checkChain = async () => {
         try {
@@ -202,7 +199,7 @@ export default function Profile() {
         } catch(e) { console.error(e); }
     };
     checkChain();
-  }, [account, profileData]);
+  }, [account, profileData, isLoading, isOwner]);
 
   const handleRecover = async () => {
       if (!recoverTx) {
@@ -218,10 +215,11 @@ export default function Profile() {
           const data = response.data;
 
           if (data.success) {
+              sessionStorage.removeItem(`etherene_pending_mint_${account}`);
               toast.success(`Recovered Identity: ${data.subdomain}`);
               window.location.reload();
           } else if (data.reason === 'unknown_name') {
-               toast.warning("Verified transaction, but could not read subdomain name. Please contact support or try minting again.");
+               toast.warning('The name could not be read from this transaction. Use Import Identity with your domain name instead of paying again.');
           } else {
               toast.error(data.error || "Recovery failed");
           }
@@ -234,140 +232,42 @@ export default function Profile() {
   };
 
   const handleMint = async () => {
-    if (!isOwner) return;
-    if (!account) {
-      connectWallet();
-      return;
-    }
-
+    if (!account) { connectWallet(); return; }
+    if (!isOwner || isMinting) return;
+    if (!(await base44.auth.isAuthenticated())) { base44.auth.redirectToLogin(window.location.href); return; }
+    const pendingKey = `etherene_pending_mint_${account}`;
     setIsMinting(true);
     try {
-      toast.info("Preparing your identity mint...", { duration: 4000 });
-
-      // Step 1: Call backend to build the partially-signed mint transaction
-      const mintResponse = await base44.functions.invoke('mintSolanaIdentity', {
-          userAddress: account
-      });
-
-      const mintResult = mintResponse.data;
-      if (!mintResult.success) {
-          throw new Error(mintResult.error || "Failed to prepare mint transaction");
+      let pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null');
+      if (!pending) {
+        toast.info('Preparing your identity mint...');
+        const response = await base44.functions.invoke('mintSolanaIdentity', { userAddress: account });
+        const result = response.data;
+        if (!result.success) throw new Error(result.error || 'Unable to prepare identity mint.');
+        toast.info(result.manualQueue
+          ? `Automatic minting is unavailable. Approving ${result.feeAmount.toFixed(4)} SOL queues a manual mint, not an immediate identity.`
+          : `Approve ${result.feeAmount.toFixed(4)} SOL platform fee + ${result.rentAmount.toFixed(4)} SOL rent and network fees.`, { duration: 10000 });
+        await submitIdentityTransaction(result, signTransaction, (signature) => {
+          pending = { signature, imageUrl: result.imageUrl, lastValidBlockHeight: result.lastValidBlockHeight };
+          sessionStorage.setItem(pendingKey, JSON.stringify(pending));
+          setRecoverTx(signature);
+          toast.info('Transaction submitted. Waiting for confirmation...');
+        });
       }
-
-      const { transaction: txBase64, subdomain, imageUrl, feeAmount, feeAmountUSD } = mintResult;
-
-      toast.info(`Approve transaction: ~${feeAmount?.toFixed(4)} SOL platform fee + rent (~$${feeAmountUSD} USD)`, { duration: 5000 });
-
-      // Step 2: Deserialize the partially-signed transaction
-      const { Transaction, Connection } = await import('@solana/web3.js');
-      const transactionBuffer = Buffer.from(txBase64, 'base64');
-      const transaction = Transaction.from(transactionBuffer);
-
-      // Step 3: User signs the partially-signed (server co-signed) transaction,
-      // then we broadcast it ourselves. signTransaction + sendRawTransaction is
-      // the reliable path for co-signed txs — sendTransaction can fail to fill
-      // the user's signature slot on some wallets ("Missing signature for public key").
-      if (!signTransaction) {
-          throw new Error("Wallet not connected properly. Please reconnect.");
-      }
-      const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-      const signedTransaction = await signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(signedTransaction.serialize(), { skipPreflight: false });
-
-      toast.info("Transaction submitted, confirming...", { duration: 5000 });
-      await connection.confirmTransaction(signature, "confirmed");
-
-      toast.success("Mint successful! Creating your identity record...", { duration: 5000 });
-
-      // Step 4: Create identity record
-      const existing = await base44.entities.Identity.filter({ address: account });
-      if (existing.length > 0) {
-          await base44.entities.Identity.update(existing[0].id, {
-              subdomain,
-              status: 'minted',
-              avatar_url: imageUrl,
-              cover_image: imageUrl,
-              fee_charged: true,
-              network: 'Solana Mainnet'
-          });
+      const response = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: pending.signature, imageUrl: pending.imageUrl, lastValidBlockHeight: pending.lastValidBlockHeight });
+      const result = response.data;
+      if (!result.success) throw new Error(result.error || 'Unable to sync your identity.');
+      sessionStorage.removeItem(pendingKey);
+      setProfileData(result.identity);
+      toast.success(result.status === 'minted' ? `Identity minted and verified: ${result.subdomain}` : 'Payment confirmed. Identity queued for manual minting.', { duration: 10000 });
+    } catch (error) {
+      if (error.transactionFailed || error.response?.data?.transactionFailed || error.response?.data?.transactionExpired) sessionStorage.removeItem(pendingKey);
+      const pending = sessionStorage.getItem(pendingKey);
+      if (pending) {
+        setShowRecover(true);
+        toast.error('Your transaction was submitted but syncing is incomplete. Retry Mint to check the same transaction without another payment, or use its signature to recover.', { duration: 12000 });
       } else {
-          await base44.entities.Identity.create({
-              address: account,
-              subdomain,
-              network: 'Solana Mainnet',
-              status: 'minted',
-              avatar_url: imageUrl,
-              cover_image: imageUrl,
-              fee_charged: true
-          });
-      }
-
-      // Step 5: Record the mint request as completed
-      await base44.functions.invoke('requestMint', {
-          userAddress: account,
-          paymentSignature: signature
-      });
-
-      toast.success(`Identity minted! Subdomain: ${subdomain}`, { duration: 10000 });
-      window.open(`https://explorer.solana.com/tx/${signature}`, '_blank');
-      window.location.reload();
-
-    } catch (err) {
-      console.error("Mint failed:", err);
-      let msg = err.message || "Unknown error";
-      if (err.response?.data?.error) msg = err.response.data.error;
-      
-      // Only fall back to the manual queue when the server cannot mint
-      // subdomains (doesn't own the parent domain). Other backend errors —
-      // e.g. insufficient funds, maintenance mode — must surface directly.
-      if (msg.includes("does not own the parent")) {
-          toast.warning("Auto-mint unavailable. Falling back to manual queue...", { duration: 4000 });
-          try {
-              const settings = await base44.entities.GlobalSettings.list();
-              const { platform_fee_usd, admin_wallet } = settings[0] || {};
-              if (!admin_wallet) throw new Error("Admin wallet not configured");
-
-              const { PublicKey, SystemProgram, Transaction, Connection, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
-              let lamports = Math.round(0.015 * LAMPORTS_PER_SOL);
-              try {
-                  const pr = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-                  const pd = await pr.json();
-                  if (pd.solana?.usd) lamports = Math.round((platform_fee_usd / pd.solana.usd) * LAMPORTS_PER_SOL);
-              } catch(e) {}
-
-              const blockhashRes = await base44.functions.invoke('getSolanaBlockhash');
-              const { blockhash, lastValidBlockHeight } = blockhashRes.data;
-
-              const tx = new Transaction().add(
-                  SystemProgram.transfer({ fromPubkey: new PublicKey(account), toPubkey: new PublicKey(admin_wallet), lamports })
-              );
-              tx.recentBlockhash = blockhash;
-              tx.lastValidBlockHeight = lastValidBlockHeight;
-              tx.feePayer = new PublicKey(account);
-
-              const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-              const sig = await sendTransaction(tx, connection);
-
-              const res = await base44.functions.invoke('requestMint', { userAddress: account, paymentSignature: sig });
-              const r = res.data;
-              if (!r.success) throw new Error(r.error);
-
-              await base44.entities.Identity.create({
-                  address: account, subdomain: r.subdomain, network: 'Solana Mainnet',
-                  status: 'declared', avatar_url: r.imageUrl, cover_image: r.imageUrl, fee_charged: true
-              });
-              toast.success("Queued for manual mint! You'll be notified within 24h.", { duration: 8000 });
-              window.location.reload();
-          } catch (fallbackErr) {
-              toast.error(`Mint failed: ${fallbackErr.message}`, { duration: 10000 });
-          }
-      } else {
-          const cleanMsg = msg.replace(/^Backend Error:\s*/i, '');
-          if (cleanMsg.toLowerCase().includes("insufficient funds")) {
-              toast.error(`${cleanMsg} — please fund your wallet and try again.`, { duration: 10000 });
-          } else {
-              toast.error(`Mint failed: ${cleanMsg}`, { duration: 10000 });
-          }
+        toast.error(error.response?.data?.error || error.message || 'Minting failed.', { duration: 10000 });
       }
     } finally {
       setIsMinting(false);
@@ -453,7 +353,7 @@ export default function Profile() {
                     <IdentityAvatar address={viewAddress} subdomain={profileData?.subdomain} size={160} />
                 )}
              </div>
-             {profileData && (
+             {profileData?.status === 'minted' && (
                  <div className="absolute bottom-2 right-2 bg-green-500 text-white p-1.5 rounded-full border-2 border-white shadow-sm" title="Verified Node">
                      <CheckCircle2 className="w-4 h-4" />
                  </div>
@@ -519,7 +419,7 @@ export default function Profile() {
             )}
             {isOwner && (
                 <>
-                  {!isEditing && (
+                  {!isEditing && profileData && (
                       <div className="flex gap-2 flex-wrap justify-center">
                         <button onClick={() => setIsEditing(true)} className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
                             <PenTool className="w-4 h-4" /> Edit Profile
@@ -540,7 +440,7 @@ export default function Profile() {
                             <div className="w-full space-y-3">
                                 <div className="flex justify-between text-xs text-slate-500 px-4">
                                     <span>Platform Fee</span>
-                                    <span className="font-medium">$3.00 USD</span>
+                                    <span className="font-medium">Shown before approval</span>
                                 </div>
                                 <button 
                                     onClick={handleMint} 
@@ -551,7 +451,7 @@ export default function Profile() {
                                     {isMinting ? "Minting Identity..." : "Mint Identity Token"}
                                 </button>
                                 <p className="text-center text-xs text-slate-400">
-                                    + Network transaction fees (~0.0001 SOL)
+                                    + On-chain storage rent and network fees
                                 </p>
                             </div>
                           ) : (
@@ -736,7 +636,7 @@ export default function Profile() {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">Status</span>
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium text-xs">Verified</span>
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium text-xs">{profileData.status === 'minted' ? 'Verified' : 'Awaiting manual mint'}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-500">Network</span>

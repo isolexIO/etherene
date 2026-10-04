@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Radio, Users, Sparkles, Circle, Globe } from 'lucide-react';
+import { Radio, Users, Circle, Globe } from 'lucide-react';
 import CreateTransmission from '../components/community/CreateTransmission';
 import TransmissionFeed from '../components/community/TransmissionFeed';
 import { useQuery } from '@tanstack/react-query';

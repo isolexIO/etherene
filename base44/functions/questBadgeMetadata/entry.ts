@@ -1,28 +1,25 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import { questConceptName } from '../../shared/badgeArt.ts';
+import { questConceptName, renderQuestBadge } from '../../shared/badgeArt.ts';
 
 export default async function(req) {
   try {
-    const url = new URL(req.url);
-    const questKey = url.searchParams.get('quest') || 'etherene';
-    const origin = url.origin;
+    const body = await req.json().catch(() => ({}));
+    const questKey = typeof body.quest === 'string' ? body.quest : 'etherene';
+    const origin = 'https://etherene.info';
     const concept = questConceptName(questKey);
 
     const metadata = {
       name: `Etherene · ${concept}`,
       description:
-        `A sovereign on-chain credential minted on the Etherene network. ` +
-        `Awarded for the "${concept}" daily quest through a verified, ` +
-        `wallet-signed Solana transaction — permanent, verifiable proof of ` +
-        `participation in the protocol.`,
-      image: `${origin}/functions/questBadgeImage?quest=${encodeURIComponent(questKey)}`,
+        `An Etherene platform badge for the "${concept}" daily quest. ` +
+        `Completion is recorded in the app; this badge is not an on-chain NFT.`,
+      image: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderQuestBadge(questKey).svg)}`,
       external_url: origin,
       attributes: [
         { trait_type: 'Quest', value: questKey },
         { trait_type: 'Concept', value: concept },
-        { trait_type: 'Network', value: 'Solana' },
+        { trait_type: 'Network', value: 'Etherene platform' },
         { trait_type: 'Protocol', value: 'Etherene' },
-        { trait_type: 'Standard', value: 'Metaplex NFT' }
+        { trait_type: 'Standard', value: 'Platform quest badge' }
       ]
     };
 

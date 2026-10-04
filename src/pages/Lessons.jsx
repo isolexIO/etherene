@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Calendar, ChevronRight, Sparkles, Loader2, BrainCircuit, Lightbulb, X } from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight, Sparkles, Loader2, Lightbulb, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import moment from 'moment';
 

@@ -1,267 +1,64 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
-import { Buffer } from "node:buffer";
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { Buffer } from 'node:buffer';
+import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram } from 'npm:@solana/web3.js@1.98.4';
+import { NameRegistryState, createInstruction, updateInstruction, Numberu32, Numberu64 } from 'npm:@bonfida/spl-name-service@2.3.1';
+import { solanaConnection, parentDomainKey, serverKeypair, mintSettings, quoteMintFee, mintMemo, getDomainKeySync, NAME_PROGRAM_ID } from '../../shared/solanaIdentity.ts';
 
-// Polyfill Buffer for Solana web3.js
-if (typeof globalThis.Buffer === 'undefined') {
-  globalThis.Buffer = Buffer;
-}
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Sign in before minting your identity.' }, { status: 401 });
+    const { userAddress } = await req.json();
+    if (typeof userAddress !== 'string' || !userAddress.trim()) return Response.json({ error: 'Solana user address required' }, { status: 400 });
+    let userPublicKey;
+    try { userPublicKey = new PublicKey(userAddress.trim()); }
+    catch { return Response.json({ error: 'Invalid Solana wallet address' }, { status: 400 }); }
+    const address = userPublicKey.toBase58();
+    const settings = await mintSettings(base44);
+    if (settings.maintenance_mode) return Response.json({ error: 'Minting disabled for maintenance.' }, { status: 503 });
+    const identity = (await base44.entities.Identity.filter({ address }))[0];
+    if (identity?.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
+    if (identity?.status === 'minted') return Response.json({ error: 'This wallet already has an identity. Use recovery instead of paying again.' }, { status: 409 });
+    if (identity && identity.created_by_id !== user.id && user.role !== 'admin') return Response.json({ error: 'This identity belongs to another app account.' }, { status: 403 });
 
-import { 
-  Connection, 
-  Keypair, 
-  PublicKey, 
-  Transaction, 
-  SystemProgram, 
-  LAMPORTS_PER_SOL,
-  ComputeBudgetProgram,
-  TransactionInstruction
-  } from 'npm:@solana/web3.js@^1.91.0';
-import { 
-  getDomainKey, 
-  NameRegistryState
-} from 'npm:@bonfida/spl-name-service@^2.3.1';
-import bs58 from 'npm:bs58@5.0.0';
+    const connection = solanaConnection();
+    const authority = serverKeypair();
+    const parent = parentDomainKey();
+    const parentState = await NameRegistryState.retrieve(connection, parent);
+    if (!parentState.registry?.owner) throw new Error('The etherene.sol parent domain is not registered.');
+    const manualQueue = !parentState.registry.owner.equals(authority.publicKey);
+    const label = `node-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    const subdomain = `${label}.etherene.sol`;
+    const { lamports, feeUSD } = await quoteMintFee(settings);
+    const space = 1000;
+    const rentLamports = manualQueue ? 0 : await connection.getMinimumBalanceForRentExemption(space + 96);
+    const balance = await connection.getBalance(userPublicKey);
+    const requiredFunds = lamports + rentLamports + 10000;
+    if (balance < requiredFunds) return Response.json({ error: `Insufficient funds. Need ${(requiredFunds / LAMPORTS_PER_SOL).toFixed(4)} SOL (${(lamports / LAMPORTS_PER_SOL).toFixed(4)} platform fee + ${(rentLamports / LAMPORTS_PER_SOL).toFixed(4)} rent + network fees), but have ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL.` }, { status: 400 });
 
-Deno.serve(async (req) => {
-    try {
-        const base44 = createClientFromRequest(req);
-        const NAME_PROGRAM_ID = new PublicKey("namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX");
-        
-        // Parse Body
-        const body = await req.json();
-        let { userAddress } = body;
-        console.log("Mint request payload:", JSON.stringify(body));
-
-        // Strict Validation
-        if (!userAddress || typeof userAddress !== 'string') {
-            return Response.json({ error: 'Solana user address required' }, { status: 400 });
-        }
-
-        userAddress = userAddress.trim();
-        let userPublicKey;
-        try {
-            userPublicKey = new PublicKey(userAddress);
-        } catch (e) {
-            return Response.json({ error: `Invalid public key: ${userAddress}` }, { status: 400 });
-        }
-
-        // 1. Load Server Key
-        console.log("Loading server key...");
-        const privateKeyString = Deno.env.get("SOLANA_PAYER_PRIVATE_KEY");
-        if (!privateKeyString) throw new Error("Missing SOLANA_PAYER_PRIVATE_KEY");
-        
-        let serverKeypair;
-        try {
-            const secretKey = privateKeyString.trim().startsWith('[') 
-                ? Uint8Array.from(JSON.parse(privateKeyString))
-                : bs58.decode(privateKeyString.trim());
-            serverKeypair = Keypair.fromSecretKey(secretKey);
-        } catch (e) {
-            throw new Error(`Key parse failed: ${e.message}`);
-        }
-
-        // 2. Fetch User Context for AI
-        const ethAddress = userAddress; 
-        let identities = [], transmissions = [], settingsList = [];
-        try {
-            [identities, transmissions, settingsList] = await Promise.all([
-                 base44.asServiceRole.entities.Identity.filter({ address: ethAddress }),
-                 base44.asServiceRole.entities.Transmission.filter({ author_address: ethAddress }),
-                 base44.asServiceRole.entities.GlobalSettings.list()
-            ]);
-        } catch (e) { console.error(e); }
-
-        // Check Maintenance
-        if (settingsList[0]?.maintenance_mode) {
-            return Response.json({ error: 'Minting disabled for maintenance.' }, { status: 503 });
-        }
-
-        if (identities[0]?.banned) {
-            return Response.json({ error: 'Identity suspended.' }, { status: 403 });
-        }
-
-        // 3. Generate Subdomain Name
-        // We generate a subdomain under 'etherene'
-        const randomSuffix = Math.random().toString(36).substring(2, 10);
-        const subdomain = `node-${randomSuffix}`; 
-        // The full name will be node-xyz.etherene
-
-        // 4. Generate AI Image (Avatar)
-        const bio = identities[0]?.bio || `Etherene Node ${subdomain}`;
-        const prompt = `Abstract spiritual digital art, sacred geometry, node ${subdomain}, ${bio}. Cyberpunk, 8k, blue purple.`;
-        
-        let imageRes;
-        try {
-            imageRes = await base44.asServiceRole.integrations.Core.GenerateImage({ prompt });
-        } catch (e) {
-             imageRes = { url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" };
-        }
-
-        // 5. Setup Transaction
-        console.log("Connecting to Solana...");
-        const connection = new Connection("https://solana-rpc.publicnode.com", "confirmed");
-        const transaction = new Transaction();
-
-        // Add Compute Budget (Priority Fee might be needed, but standard limit helps)
-        transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
-
-        // Calculate Fee ($3)
-        let lamportsForFee = 20_000_000;
-        let feeInSol = 0.02;
-        try {
-            const priceReq = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-            const data = await priceReq.json();
-            if (data.solana?.usd) {
-                lamportsForFee = Math.round((3 / data.solana.usd) * LAMPORTS_PER_SOL);
-                feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
-            }
-        } catch (e) {
-            feeInSol = lamportsForFee / LAMPORTS_PER_SOL;
-        }
-
-        console.log(`Platform fee: ${feeInSol.toFixed(4)} SOL (~$3 USD)`);
-
-        // A. Fee Transfer (FIRST - before minting)
-        const feeInstruction = SystemProgram.transfer({
-            fromPubkey: userPublicKey,
-            toPubkey: serverKeypair.publicKey,
-            lamports: lamportsForFee
-        });
-        transaction.add(feeInstruction);
-
-        // B. SNS Subdomain Minting
-         console.log("Deriving parent key...");
-         const SOL_TLD = new PublicKey("58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9ZP11");
-         let parentNameKey;
-         try {
-             const result = await getDomainKey("etherene", SOL_TLD);
-             parentNameKey = result.pubkey;
-         } catch (e) {
-             throw new Error(`Failed to derive parent domain key: ${e.message}`);
-         }
-         console.log("Parent key derived:", parentNameKey.toBase58());
-
-         // 1. Verify Parent Ownership
-         try {
-             // bonfida's retrieve() returns { registry, nftOwner }; the owner
-             // lives on registry.owner (a PublicKey).
-             const parentState = await NameRegistryState.retrieve(connection, parentNameKey);
-             const parentOwner = parentState?.registry?.owner;
-             if (!parentOwner) {
-                 throw new Error("Parent domain 'etherene.sol' is not registered on-chain.");
-             }
-             if (!parentOwner.equals(serverKeypair.publicKey)) {
-                 console.error(`Parent owner mismatch. Expected: ${parentOwner.toBase58()}, Server: ${serverKeypair.publicKey.toBase58()}`);
-                 throw new Error("Server key does not own the parent 'etherene.sol' domain. Cannot mint subdomain.");
-             }
-         } catch (e) {
-             console.error("Parent verification failed:", e.message);
-             throw new Error(`Failed to verify parent domain 'etherene.sol': ${e.message}`);
-         }
-
-        // Check Balance
-        const balance = await connection.getBalance(serverKeypair.publicKey);
-        if (balance < 0.001 * LAMPORTS_PER_SOL) {
-             console.warn(`Server balance low: ${balance / LAMPORTS_PER_SOL} SOL`);
-        }
-
-
-
-        console.log("Creating subdomain...");
-
-        // 1. Calculate Space & Rent
-        const space = 1000;
-        const rentLamports = await connection.getMinimumBalanceForRentExemption(space + 96);
-
-        // 2. Check User Balance (rent + platform fee + tx fees)
-        const userBalance = await connection.getBalance(userPublicKey);
-        const estimatedTxFee = 10000;
-        const requiredFunds = rentLamports + lamportsForFee + estimatedTxFee;
-
-        if (userBalance < requiredFunds) {
-            const missing = (requiredFunds - userBalance) / LAMPORTS_PER_SOL;
-            throw new Error(`Insufficient funds. Need ${(requiredFunds/LAMPORTS_PER_SOL).toFixed(4)} SOL (${(lamportsForFee/LAMPORTS_PER_SOL).toFixed(4)} platform fee + ${(rentLamports/LAMPORTS_PER_SOL).toFixed(4)} rent + fees) but have ${(userBalance/LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
-        }
-
-        // 3. Create subdomain instruction using the official Bonfida SNS builder.
-        //    getDomainKeySync derives the correct subdomain PDA + hashed name
-        //    (subdomains are prefixed with a null byte in SNS) and the parent key.
-        //    createInstruction builds the correct wire format + account layout
-        //    (7 accounts incl. name_class default and name_parent_owner signer).
-        const { getDomainKeySync, createInstruction: buildCreateInstruction, Numberu32, Numberu64 } = await import('npm:@bonfida/spl-name-service@^2.3.1');
-
-        let hashedName, subdomainKey;
-        try {
-            const result = getDomainKeySync(`${subdomain}.etherene.sol`);
-            subdomainKey = result.pubkey;
-            hashedName = result.hashed;
-            // Sanity: parent derived from the full domain must match our verified parent
-            if (result.parent && !result.parent.equals(parentNameKey)) {
-                throw new Error(`Parent key mismatch: ${result.parent.toBase58()} != ${parentNameKey.toBase58()}`);
-            }
-        } catch (e) {
-            throw new Error(`Failed to derive subdomain key: ${e.message}`);
-        }
-
-        console.log("Subdomain account:", subdomainKey.toBase58());
-
-        const createIx = buildCreateInstruction(
-            NAME_PROGRAM_ID,
-            SystemProgram.programId,
-            subdomainKey,                        // nameKey (subdomain account)
-            userPublicKey,                       // nameOwnerKey (user owns the subdomain)
-            userPublicKey,                       // payerKey (user pays rent)
-            hashedName,                          // hashed_name (null-byte prefixed)
-            new Numberu64(BigInt(rentLamports)), // lamports
-            new Numberu32(space),               // space (body, excluding 96-byte header)
-            undefined,                           // nameClassKey (defaults to zero-pubkey)
-            parentNameKey,                       // nameParent
-            serverKeypair.publicKey              // nameParentOwner (signer — server owns etherene.sol)
-        );
-
-        transaction.add(createIx);
-
-        // 6. Finalize
-        transaction.feePayer = userPublicKey;
-        // Get fresh blockhash
-        let blockhash;
-        try {
-            const latestBlock = await connection.getLatestBlockhash('confirmed');
-            blockhash = latestBlock.blockhash;
-            transaction.recentBlockhash = blockhash;
-            transaction.lastValidBlockHeight = latestBlock.lastValidBlockHeight;
-        } catch (e) {
-            throw new Error(`Failed to get blockhash: ${e.message}`);
-        }
-
-        // Server signs as the parent domain owner (authority for subdomain creation)
-        try {
-            transaction.partialSign(serverKeypair);
-        } catch (e) {
-            throw new Error(`Failed to sign transaction: ${e.message}`);
-        }
-
-        let serializedTransaction;
-        try {
-            serializedTransaction = transaction.serialize({
-                requireAllSignatures: false,
-                verifySignatures: false
-            });
-        } catch (e) {
-            throw new Error(`Failed to serialize transaction: ${e.message}`);
-        }
-
-        return Response.json({ 
-            success: true, 
-            transaction: Buffer.from(serializedTransaction).toString('base64'),
-            subdomain: `${subdomain}.etherene.sol`,
-            imageUrl: imageRes.url,
-            feeAmount: feeInSol,
-            feeAmountUSD: 3
-        });
-
-    } catch (error) {
-        console.error("Mint setup error:", error);
-        return Response.json({ error: `Backend Error: ${error.message} - ${error.stack}` }, { status: 500 });
+    const transaction = new Transaction();
+    transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200000 }));
+    if (lamports > 0) transaction.add(SystemProgram.transfer({ fromPubkey: userPublicKey, toPubkey: new PublicKey(settings.admin_wallet), lamports }));
+    transaction.add(mintMemo(user.id, subdomain, lamports));
+    if (!manualQueue) {
+      const { pubkey, hashed } = getDomainKeySync(subdomain);
+      transaction.add(createInstruction(NAME_PROGRAM_ID, SystemProgram.programId, pubkey, userPublicKey, userPublicKey, hashed, new Numberu64(rentLamports), new Numberu32(space), undefined, parent, authority.publicKey));
+      transaction.add(updateInstruction(NAME_PROGRAM_ID, pubkey, new Numberu32(0), Buffer.from(label), userPublicKey));
     }
-});
+    let imageUrl;
+    try {
+      imageUrl = (await base44.integrations.Core.GenerateImage({ prompt: `Abstract spiritual digital art, sacred geometry, Etherene node ${label}. Blue and purple cyberpunk mandala, no text.` })).url;
+    } catch {
+      imageUrl = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=800&auto=format&fit=crop';
+    }
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    transaction.feePayer = userPublicKey;
+    transaction.recentBlockhash = blockhash;
+    if (!manualQueue) transaction.partialSign(authority);
+    return Response.json({ success: true, transaction: transaction.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64'), blockhash, lastValidBlockHeight, subdomain, imageUrl, manualQueue, feeAmount: lamports / LAMPORTS_PER_SOL, feeAmountUSD: feeUSD, rentAmount: rentLamports / LAMPORTS_PER_SOL });
+  } catch (error) {
+    console.error('Mint preparation failed:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
