@@ -1,6 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 
-Deno.serve(async (req) => {
+export default async function(req) {
     try {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
         
         // Use Pinata for IPFS pinning
         // Requires PINATA_JWT to be set in secrets
-        const pinataJwt = Deno.env.get("PINATA_JWT");
+        const pinataJwt = process.env.PINATA_JWT;
         
         if (!pinataJwt) {
             // Fallback for demo if no key set, return a mock CID if we can't upload
@@ -80,4 +80,4 @@ Deno.serve(async (req) => {
         console.error("IPFS Upload Error:", error);
         return Response.json({ error: error.message }, { status: 500 });
     }
-});
+}
