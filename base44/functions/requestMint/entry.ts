@@ -16,6 +16,11 @@ export default async function(req) {
     let address;
     try { address = new PublicKey(userAddress).toBase58(); }
     catch { return Response.json({ error: 'Invalid Solana wallet address' }, { status: 400 }); }
+    // Require authentication — anonymous callers must not replay public
+    // on-chain payments to spend server funds or modify another member's Identity.
+    let callerUserId = null;
+    try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
+    if (!callerUserId) return Response.json({ error: 'Authentication required to mint an identity.' }, { status: 401 });
     const connection = solanaConnection();
     const tx = await connection.getParsedTransaction(paymentSignature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
     if (!tx?.meta) {
@@ -30,8 +35,13 @@ export default async function(req) {
     if (!receipt) return Response.json({ error: 'This transaction is not a mint payment for your wallet.' }, { status: 403 });
     const existingRequest = (await base44.asServiceRole.entities.MintRequest.filter({ payment_signature: paymentSignature }))[0];
     if (existingRequest && (existingRequest.user_address !== address || existingRequest.subdomain !== receipt.subdomain)) return Response.json({ error: 'This payment belongs to a different mint request.' }, { status: 409 });
+    // Idempotent no-op: a payment whose request is already minted should not
+    // re-run the pipeline (which spends server SOL and image-generation credits).
+    if (existingRequest?.status === 'minted') return Response.json({ success: true, status: 'already_minted', subdomain: existingRequest.subdomain, requestId: existingRequest.id, message: 'This payment has already been used to mint an identity.' });
     const existingIdentity = (await base44.entities.Identity.filter({ address }))[0];
     if (existingIdentity?.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
+    // If an Identity already exists for this address, the caller must own it.
+    if (existingIdentity && existingIdentity.created_by_id !== callerUserId) return Response.json({ error: 'You do not own this identity.' }, { status: 403 });
     if (existingIdentity?.nft_mint_address && existingIdentity.subdomain !== receipt.subdomain) return Response.json({ error: 'This wallet already has a completed identity. Sync its original payment instead of another mint.' }, { status: 409 });
     const settings = await mintSettings(base44);
     const paid = tx.transaction.message.instructions.filter(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === address && ix.parsed.info.destination === settings.admin_wallet).reduce((sum, ix) => sum + Number(ix.parsed.info.lamports), 0);

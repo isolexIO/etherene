@@ -137,12 +137,15 @@ export default function AdminPage() {
 
     const toggleBanMutation = useMutation({
         mutationFn: async ({ id, banned }) => {
-            return base44.entities.Identity.update(id, { banned });
+            const res = await base44.functions.invoke('adminAction', { action: 'toggleBan', payload: { identityId: id, banned } });
+            if (!res.data?.success) throw new Error(res.data?.error || 'Failed to update user status.');
+            return res.data;
         },
         onSuccess: () => {
             refetchUsers();
             toast.success("User status updated");
-        }
+        },
+        onError: error => toast.error(error.message || 'Failed to update user status.')
     });
 
     // --- Mint Requests ---
@@ -153,22 +156,16 @@ export default function AdminPage() {
 
     const updateMintStatusMutation = useMutation({
         mutationFn: async ({ id, status }) => {
-            if (status === 'minted') {
-                const request = mintRequests.find(item => item.id === id);
-                const response = await base44.functions.invoke('verifyIdentity', { domain: request.subdomain, userAddress: request.user_address });
-                if (!response.data.success) throw new Error(response.data.error || 'Mint is not confirmed on-chain.');
-                const identities = await base44.entities.Identity.filter({ address: request.user_address });
-                if (!identities[0]) throw new Error('The request has no associated identity to update.');
-                await base44.entities.Identity.update(identities[0].id, { status: 'minted', subdomain: request.subdomain, network: 'Solana Mainnet' });
-            }
-            return base44.entities.MintRequest.update(id, { status });
+            const res = await base44.functions.invoke('adminAction', { action: 'updateMintStatus', payload: { requestId: id, status } });
+            if (!res.data?.success) throw new Error(res.data?.error || 'Could not update mint request.');
+            return res.data;
         },
         onSuccess: () => {
             refetchMintRequests();
             refetchUsers();
             toast.success("Mint request updated");
         },
-        onError: error => toast.error(error.response?.data?.error || error.message || 'Could not update mint request.')
+        onError: error => toast.error(error.message || 'Could not update mint request.')
     });
 
     const pendingRequests = mintRequests?.filter(r => r.status === 'pending' || r.status === 'processing') || [];

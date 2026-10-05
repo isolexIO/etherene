@@ -27,6 +27,23 @@ export default async function(req) {
         // Use Service Role to ensure access to DB and Integrations regardless of auth status
         const admin = base44.asServiceRole;
 
+        // Require authentication for non-greeting Oracle calls to prevent
+        // anonymous credit exhaustion via scripted LLM invocations, and rate
+        // limit per caller so authenticated users cannot drain credits either.
+        let callerUserId = null;
+        try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
+        if (mode !== 'greeting') {
+            if (!callerUserId) return Response.json({ error: 'Authentication required to chat with the Oracle.' }, { status: 401 });
+            try {
+                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+                const recent = await admin.entities.OracleInteraction.filter(
+                    { created_by_id: callerUserId, created_date: { $gte: oneHourAgo } },
+                    '-created_date', 20
+                );
+                if (recent.length >= 15) return Response.json({ error: 'Oracle rate limit reached. Please wait a moment before asking again.' }, { status: 429 });
+            } catch (rlErr) { /* rate limit check failed — proceed */ }
+        }
+
         let userContext = "User is anonymous/not connected.";
         let identityData = null;
 
