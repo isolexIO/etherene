@@ -148,7 +148,7 @@ export default function Agora() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors min-h-11 flex items-center">
-                                        {identity.display_name || 'Anonymous Node'}
+                                        {identity.display_name || identity.subdomain || 'Anonymous Node'}
                                     </p>
                                     <p className="text-xs text-slate-400 font-mono truncate min-h-11 flex items-center">
                                         {identity.address.slice(0, 6)}...{identity.address.slice(-4)}

@@ -384,7 +384,7 @@ export default function Profile() {
           ) : (
               <>
                   <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                      {profileData?.display_name || 'Anonymous Node'}
+                      {profileData?.display_name || profileData?.subdomain || 'Anonymous Node'}
                   </h1>
                   <div className="flex items-center gap-2 text-slate-500 font-mono text-sm bg-slate-100 px-3 py-1 rounded-full mb-4">
                       <Hash className="w-3 h-3" />

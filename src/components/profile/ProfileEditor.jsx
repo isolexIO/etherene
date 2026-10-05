@@ -13,7 +13,7 @@ const SOCIAL_PLATFORMS = [
 
 export default function ProfileEditor({ profileData, onSave, onCancel }) {
     const [formData, setFormData] = useState({
-        display_name: profileData?.display_name || '',
+        display_name: profileData?.display_name || profileData?.subdomain || '',
         bio: profileData?.bio || '',
         cover_image: profileData?.cover_image || '',
         avatar_url: profileData?.avatar_url || '',

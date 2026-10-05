@@ -55,7 +55,7 @@ export default function IdentityList({ searchTerm }) {
           <div className="space-y-4">
             <div>
               <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Soul Name</label>
-              <div className="text-lg font-bold text-slate-900">{identity.display_name || 'Anonymous Node'}</div>
+              <div className="text-lg font-bold text-slate-900">{identity.display_name || identity.subdomain || 'Anonymous Node'}</div>
             </div>
             
             <div>
