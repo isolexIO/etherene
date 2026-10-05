@@ -80,7 +80,7 @@ export default async function(req) {
       const motifs = ['sacred geometry mandala', 'fractal lotus bloom', 'cyberpunk sigil circle', 'neural constellation map', 'crystalline ether lattice', 'orbital node diagram'];
       const motif = motifs[addrHash % motifs.length];
       const palette = `dominant hue ${hueA}° with complementary ${hueB}°`;
-      image = (await base44.integrations.Core.GenerateImage({
+      image = (await base44.asServiceRole.integrations.Core.GenerateImage({
         prompt: `Abstract spiritual digital art, ${motif}, unique Etherene identity node ${receipt.subdomain} for wallet ${address.slice(0, 6)}…${address.slice(-4)}. ${palette}, deep cosmic background, intricate symmetric sacred geometry, luminous energy, no text, no letters, no words.`
       })).url;
       await base44.asServiceRole.entities.MintRequest.update(mintRequest.id, { image_url: image });

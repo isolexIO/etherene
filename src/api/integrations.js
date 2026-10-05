@@ -1,24 +1,9 @@
 import { base44 } from './base44Client';
 
-
-
-
-export const Core = base44.integrations.Core;
-
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
-
-export const SendEmail = base44.integrations.Core.SendEmail;
-
-export const SendSMS = base44.integrations.Core.SendSMS;
-
-export const UploadFile = base44.integrations.Core.UploadFile;
-
-export const GenerateImage = base44.integrations.Core.GenerateImage;
-
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
-
-
-
-
-
-
+// Only file-upload integrations are exposed to client code — they do not
+// consume integration credits. All restricted integrations (InvokeLLM,
+// GenerateImage, GenerateSpeech, SendEmail, etc.) are called exclusively
+// from backend functions via base44.asServiceRole.integrations.Core to
+// protect integration credits from client-side abuse.
+export const UploadPublicFile = base44.integrations.Core.UploadPublicFile;
+export const UploadPrivateFile = base44.integrations.Core.UploadPrivateFile;
