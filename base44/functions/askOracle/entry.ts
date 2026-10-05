@@ -32,8 +32,8 @@ export default async function(req) {
         // limit per caller so authenticated users cannot drain credits either.
         let callerUserId = null;
         try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
-        if (mode !== 'greeting' && !callerUserId) {
-            return Response.json({ error: 'Authentication required to chat with the Oracle.' }, { status: 401 });
+        if (!callerUserId) {
+            return Response.json({ error: 'Authentication required to consult the Oracle.' }, { status: 401 });
         }
         // Rate limit ALL calls (greeting and non-greeting) for authenticated
         // callers so neither path can be scripted to drain LLM credits.

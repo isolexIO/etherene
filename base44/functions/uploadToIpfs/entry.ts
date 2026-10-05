@@ -1,5 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB — caps per-file pinning cost
+const MAX_UPLOADS_PER_HOUR = 10;       // per-user rate limit
+
+// Best-effort in-memory rate limiter. Persists only within a warm function
+// instance; provides protection against rapid scripted abuse.
+const uploadTimestamps = new Map();
+
+function checkUploadRateLimit(userId) {
+    const now = Date.now();
+    const oneHourAgo = now - 60 * 60 * 1000;
+    const recent = (uploadTimestamps.get(userId) || []).filter(t => t > oneHourAgo);
+    if (recent.length >= MAX_UPLOADS_PER_HOUR) return false;
+    recent.push(now);
+    uploadTimestamps.set(userId, recent);
+    return true;
+}
+
 export default async function(req) {
     try {
         const base44 = createClientFromRequest(req);
@@ -8,8 +25,14 @@ export default async function(req) {
 
         // Require authentication — anonymous callers must not pin arbitrary
         // content to the app's paid Pinata account.
-        try { await base44.auth.me(); } catch {
+        let callerUserId = null;
+        try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch {
             return Response.json({ error: 'Authentication required to upload to IPFS.' }, { status: 401 });
+        }
+
+        // Per-user rate limit — bound how many files one account can pin per hour.
+        if (callerUserId && !checkUploadRateLimit(callerUserId)) {
+            return Response.json({ error: 'Upload rate limit reached. Please wait before uploading again.' }, { status: 429 });
         }
 
         // Use Pinata for IPFS pinning
@@ -52,7 +75,17 @@ export default async function(req) {
                 return Response.json({ error: 'Redirects are not allowed for file uploads.' }, { status: 400 });
             }
             if (!fileRes.ok) throw new Error("Failed to fetch source file");
+            // Enforce maximum file size — reject before pinning if the source
+            // reports a Content-Length beyond the cap, or if the actual blob
+            // exceeds it (handles missing/spoofed Content-Length headers).
+            const contentLength = parseInt(fileRes.headers.get('Content-Length') || '0', 10);
+            if (contentLength && contentLength > MAX_FILE_SIZE) {
+                return Response.json({ error: 'File exceeds maximum allowed size (5 MB).' }, { status: 413 });
+            }
             const blob = await fileRes.blob();
+            if (blob.size > MAX_FILE_SIZE) {
+                return Response.json({ error: 'File exceeds maximum allowed size (5 MB).' }, { status: 413 });
+            }
             formData.append('file', blob, 'avatar.png');
         } else if (type === 'json' && textContent) {
            // Upload Text/JSON — cap size to prevent quota abuse.
