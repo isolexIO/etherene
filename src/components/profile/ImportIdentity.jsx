@@ -57,15 +57,11 @@ export default function ImportIdentity({ account, onSuccess }) {
         if (!verificationResult?.success || isImporting) return;
         setIsImporting(true);
         try {
-            const existing = await base44.entities.Identity.filter({ address: account });
-            if (existing.length) throw new Error('This wallet already has an identity. Edit or recover it instead of importing a duplicate.');
-            await base44.entities.Identity.create({
-                address: account,
-                subdomain: verificationResult.subdomain,
-                network: 'Solana Mainnet',
-                status: 'minted',
-                bio: `Imported Solana identity: ${verificationResult.subdomain}`
+            const response = await base44.functions.invoke('importIdentity', {
+                domain: verificationResult.subdomain,
+                userAddress: account
             });
+            if (!response.data?.success) throw new Error(response.data?.error || 'Failed to import identity.');
 
             toast.success("Identity imported successfully!");
             onSuccess?.();

@@ -33,9 +33,9 @@ export default async function(req) {
     let callerUserId = null;
     try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
     const identities = await base44.entities.Identity.filter({ address });
-    const ownsAddress = Boolean(callerUserId) && Array.isArray(identities) && identities.some(i => i.created_by_id === callerUserId);
+    const ownsAddress = Boolean(callerUserId) && Array.isArray(identities) && identities.some(i => i.created_by_id === callerUserId && i.status === 'minted' && !i.banned);
     if (!ownsAddress) {
-      return Response.json({ error: 'You must own an identity for this wallet to record quest completions.' }, { status: 403 });
+      return Response.json({ error: 'You must own a minted identity for this wallet to record quest completions.' }, { status: 403 });
     }
 
     // 1. Record the quest badge.
@@ -49,7 +49,7 @@ export default async function(req) {
     // 2. Broadcast a public Transmission — ownership already verified above.
     let transmission_id = null;
     try {
-      const transmission = await base44.entities.Transmission.create({
+      const transmission = await base44.asServiceRole.entities.Transmission.create({
         content: `⚔️ Daily quest complete: "${title}". Earned the ${concept} badge on the Etherene network.`,
         author_address: address,
         type: 'insight',

@@ -32,15 +32,19 @@ export default async function(req) {
         // limit per caller so authenticated users cannot drain credits either.
         let callerUserId = null;
         try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
-        if (mode !== 'greeting') {
-            if (!callerUserId) return Response.json({ error: 'Authentication required to chat with the Oracle.' }, { status: 401 });
+        if (mode !== 'greeting' && !callerUserId) {
+            return Response.json({ error: 'Authentication required to chat with the Oracle.' }, { status: 401 });
+        }
+        // Rate limit ALL calls (greeting and non-greeting) for authenticated
+        // callers so neither path can be scripted to drain LLM credits.
+        if (callerUserId) {
             try {
                 const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
                 const recent = await admin.entities.OracleInteraction.filter(
                     { created_by_id: callerUserId, created_date: { $gte: oneHourAgo } },
-                    '-created_date', 20
+                    '-created_date', 30
                 );
-                if (recent.length >= 15) return Response.json({ error: 'Oracle rate limit reached. Please wait a moment before asking again.' }, { status: 429 });
+                if (recent.length >= 20) return Response.json({ error: 'Oracle rate limit reached. Please wait a moment before asking again.' }, { status: 429 });
             } catch (rlErr) { /* rate limit check failed — proceed */ }
         }
 
@@ -149,24 +153,24 @@ export default async function(req) {
             prompt: systemPrompt
         });
 
-        // Record Interaction — only when the caller owns an Identity for this
-        // wallet address, to prevent forging activity entries on another member's
-        // public profile. Anonymous callers skip recording entirely.
-        if (address && mode !== 'greeting') {
+        // Record Interaction — always create for non-greeting calls so the
+        // rate-limit counter increments regardless of whether an owned address
+        // was supplied. Use the supplied address only if the caller owns an
+        // Identity for it; otherwise use 'unknown' to avoid forging activity
+        // on another member's profile.
+        if (mode !== 'greeting' && callerUserId) {
             try {
-                let callerUserId = null;
-                try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
-                if (callerUserId) {
+                let recordAddress = 'unknown';
+                if (address) {
                     const identities = await base44.entities.Identity.filter({ address });
                     const ownsAddress = identities.some(i => i.created_by_id === callerUserId);
-                    if (ownsAddress) {
-                        await base44.entities.OracleInteraction.create({
-                            user_address: address,
-                            topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-                            type: 'chat'
-                        });
-                    }
+                    if (ownsAddress) recordAddress = address;
                 }
+                await base44.entities.OracleInteraction.create({
+                    user_address: recordAddress,
+                    topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+                    type: 'chat'
+                });
             } catch (e) {
                  // ignore
             }

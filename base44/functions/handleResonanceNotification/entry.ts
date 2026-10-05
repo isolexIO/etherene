@@ -38,12 +38,20 @@ export default async function(req) {
       return Response.json({ ok: true, skipped: 'preference_off' });
     }
 
+    // Idempotency — skip if a notification already exists for this resonance record.
+    const existingResonanceNotif = await base44.asServiceRole.entities.Notification.filter({
+      source_id: data.id,
+      type: 'new_reply'
+    });
+    if (existingResonanceNotif.length > 0) return Response.json({ ok: true, skipped: 'duplicate' });
+
     await base44.asServiceRole.entities.Notification.create({
       recipient_address,
       type: 'new_reply',
       actor_address: author_address,
       transmission_id,
       transmission_preview: (content || '').slice(0, 100),
+      source_id: data.id,
       read: false
     });
 

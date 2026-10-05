@@ -19,7 +19,10 @@ export default async function(req) {
     if (!settings?.admin_wallet) return Response.json({ error: 'Admin wallet not configured.' }, { status: 500 });
 
     const adminIdentities = await base44.entities.Identity.filter({ address: settings.admin_wallet });
-    const ownsAdminWallet = adminIdentities.some(i => i.created_by_id === caller.id);
+    // With Identity creation restricted to admin/service-role, created_by_id
+    // genuinely proves the caller went through the mint flow. Require a minted,
+    // non-banned identity so a partially-created record cannot be used to escalate.
+    const ownsAdminWallet = adminIdentities.some(i => i.created_by_id === caller.id && i.status === 'minted' && !i.banned);
     const isBase44Admin = caller.role === 'admin';
 
     if (!ownsAdminWallet && !isBase44Admin) {

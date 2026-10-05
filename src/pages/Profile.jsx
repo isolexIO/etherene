@@ -293,19 +293,16 @@ export default function Profile() {
   const handleFollow = async () => {
       if (!account) return;
       try {
+          const res = await base44.functions.invoke('communityAction', {
+              action: isFollowing ? 'deleteFollow' : 'createFollow',
+              payload: { following_address: viewAddress, address: account }
+          });
+          if (!res.data?.success) throw new Error(res.data?.error || 'Failed to update follow status.');
           if (isFollowing) {
-              const records = await base44.entities.Follow.filter({ follower_address: account, following_address: viewAddress });
-              if (records.length > 0) {
-                  await base44.entities.Follow.delete(records[0].id);
-                  setIsFollowing(false);
-                  setFollowersCount(prev => Math.max(0, prev - 1));
-                  toast.success("Unfollowed successfully");
-              }
+              setIsFollowing(false);
+              setFollowersCount(prev => Math.max(0, prev - 1));
+              toast.success("Unfollowed successfully");
           } else {
-              await base44.entities.Follow.create({
-                  follower_address: account,
-                  following_address: viewAddress
-              });
               setIsFollowing(true);
               setFollowersCount(prev => prev + 1);
               toast.success("Following user");

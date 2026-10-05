@@ -60,7 +60,12 @@ export default function TransmissionItem({ transmission }) {
 
   const commentMutation = useMutation({
     mutationFn: async (newComment) => {
-      return await base44.entities.Resonance.create(newComment);
+      const res = await base44.functions.invoke('communityAction', {
+        action: 'createResonance',
+        payload: { content: newComment.content, transmission_id: newComment.transmission_id, address: newComment.author_address }
+      });
+      if (!res.data?.success) throw new Error(res.data?.error || 'Failed to create resonance.');
+      return res.data.resonance;
     },
     onMutate: async (newComment) => {
       await queryClient.cancelQueries({ queryKey: ['resonances', transmission.id] });

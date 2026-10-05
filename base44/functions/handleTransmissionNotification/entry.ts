@@ -32,12 +32,22 @@ export default async function(req) {
       const pref = prefs[0];
       if (pref && pref.following_transmission === false) return;
 
+      // Idempotency — skip if a notification already exists for this transmission
+      // and recipient.
+      const existingTxNotif = await base44.asServiceRole.entities.Notification.filter({
+        source_id: data.id,
+        type: 'following_transmission',
+        recipient_address
+      });
+      if (existingTxNotif.length > 0) return;
+
       await base44.asServiceRole.entities.Notification.create({
         recipient_address,
         type: 'following_transmission',
         actor_address: author_address,
         transmission_id: data.id,
         transmission_preview: (content || '').slice(0, 100),
+        source_id: data.id,
         read: false
       });
     }));

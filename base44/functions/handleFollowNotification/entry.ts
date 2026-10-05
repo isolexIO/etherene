@@ -29,11 +29,19 @@ export default async function(req) {
       return Response.json({ ok: true, skipped: 'preference_off' });
     }
 
+    // Idempotency — skip if a notification already exists for this follow record.
+    const existingFollowNotif = await base44.asServiceRole.entities.Notification.filter({
+      source_id: data.id,
+      type: 'new_follower'
+    });
+    if (existingFollowNotif.length > 0) return Response.json({ ok: true, skipped: 'duplicate' });
+
     // Create notification
     await base44.asServiceRole.entities.Notification.create({
       recipient_address: following_address,
       type: 'new_follower',
       actor_address: follower_address,
+      source_id: data.id,
       read: false
     });
 

@@ -130,7 +130,12 @@ export async function ensureSubdomainLabel(connection, authority, subdomain) {
 }
 
 export async function saveIdentity(base44, address, data) {
-  const existing = (await base44.entities.Identity.filter({ address }))[0];
+  // Use service role so Identity creation bypasses the admin-only create RLS.
+  // This is safe because saveIdentity is only called from authenticated backend
+  // functions (requestMint, recoverIdentity, importIdentity) that have already
+  // verified wallet ownership via on-chain payment signatures or domain ownership.
+  const admin = base44.asServiceRole;
+  const existing = (await admin.entities.Identity.filter({ address }))[0];
   if (existing?.banned) throw new Error('Identity suspended.');
-  return existing ? await base44.entities.Identity.update(existing.id, data) : await base44.entities.Identity.create({ address, ...data });
+  return existing ? await admin.entities.Identity.update(existing.id, data) : await admin.entities.Identity.create({ address, ...data });
 }

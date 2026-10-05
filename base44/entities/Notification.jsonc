@@ -27,6 +27,10 @@
       "type": "string",
       "description": "Preview of the transmission content"
     },
+    "source_id": {
+      "type": "string",
+      "description": "ID of the source record that triggered this notification (for deduplication)"
+    },
     "read": {
       "type": "boolean",
       "default": false,

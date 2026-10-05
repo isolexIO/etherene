@@ -20,7 +20,8 @@
         "minted",
         "declared"
       ],
-      "default": "minted"
+      "default": "minted",
+      "description": "If true, the user is banned from the platform"
     },
     "banned": {
       "type": "boolean",
@@ -75,7 +76,11 @@
     "subdomain"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": null,
     "update": null,
     "delete": {

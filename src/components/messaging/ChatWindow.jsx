@@ -46,12 +46,12 @@ export default function ChatWindow({ account, otherUserAddress }) {
 
     const sendMessageMutation = useMutation({
         mutationFn: async (content) => {
-            return await base44.entities.Message.create({
-                sender_address: account,
-                recipient_address: otherUserAddress,
-                content: content,
-                read: false
+            const res = await base44.functions.invoke('communityAction', {
+                action: 'sendMessage',
+                payload: { recipient_address: otherUserAddress, content, address: account }
             });
+            if (!res.data?.success) throw new Error(res.data?.error || 'Failed to send message.');
+            return res.data.message;
         },
         onSuccess: () => {
             setNewMessage('');

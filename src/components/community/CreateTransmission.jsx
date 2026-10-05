@@ -13,7 +13,12 @@ export default function CreateTransmission() {
 
   const createMutation = useMutation({
     mutationFn: async (newTransmission) => {
-      return await base44.entities.Transmission.create(newTransmission);
+      const res = await base44.functions.invoke('communityAction', {
+        action: 'createTransmission',
+        payload: { content: newTransmission.content, type: newTransmission.type, address: newTransmission.author_address }
+      });
+      if (!res.data?.success) throw new Error(res.data?.error || 'Failed to create transmission.');
+      return res.data.transmission;
     },
     onMutate: async (newTransmission) => {
       await queryClient.cancelQueries({ queryKey: ['transmissions'] });

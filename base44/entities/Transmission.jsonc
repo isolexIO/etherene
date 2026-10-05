@@ -33,7 +33,11 @@
     "author_address"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": null,
     "update": null,
     "delete": {
