@@ -1,5 +1,7 @@
 import React from 'react';
 
+// Solana-inspired mark: three parallel diagonal bars with the signature
+// purple-to-green gradient, framed as an "E" (Etherene) node.
 export default function Logo({ className = "w-8 h-8" }) {
   return (
     <svg
@@ -9,65 +11,24 @@ export default function Logo({ className = "w-8 h-8" }) {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+        <linearGradient id="solGradient" x1="0" y1="100" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#9945FF" />
+          <stop offset="1" stopColor="#14F195" />
+        </linearGradient>
+        <filter id="solGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
 
-      {/* 4D Cube Structure - 8 vertices */}
-      <g filter="url(#glow)">
-        {/* Front face cube - bright cyan */}
-        
-        {/* Front bottom-left */}
-        <circle cx="25" cy="65" r="4.5" fill="#00FFFF" />
-        {/* Front bottom-right */}
-        <circle cx="75" cy="65" r="4.5" fill="#00FFFF" />
-        {/* Front top-right */}
-        <circle cx="75" cy="35" r="4.5" fill="#00FFFF" />
-        {/* Front top-left */}
-        <circle cx="25" cy="35" r="4.5" fill="#00FFFF" />
-
-        {/* Back face cube - magenta */}
-        
-        {/* Back bottom-left */}
-        <circle cx="35" cy="75" r="4.5" fill="#FF00FF" />
-        {/* Back bottom-right */}
-        <circle cx="85" cy="75" r="4.5" fill="#FF00FF" />
-        {/* Back top-right */}
-        <circle cx="85" cy="45" r="4.5" fill="#FF00FF" />
-        {/* Back top-left */}
-        <circle cx="35" cy="45" r="4.5" fill="#FF00FF" />
-
-        {/* Front face edges - cyan */}
-        <line x1="25" y1="65" x2="75" y2="65" stroke="#00FFFF" strokeWidth="2" opacity="0.9" />
-        <line x1="75" y1="65" x2="75" y2="35" stroke="#00FFFF" strokeWidth="2" opacity="0.9" />
-        <line x1="75" y1="35" x2="25" y2="35" stroke="#00FFFF" strokeWidth="2" opacity="0.9" />
-        <line x1="25" y1="35" x2="25" y2="65" stroke="#00FFFF" strokeWidth="2" opacity="0.9" />
-
-        {/* Back face edges - magenta */}
-        <line x1="35" y1="75" x2="85" y2="75" stroke="#FF00FF" strokeWidth="2" opacity="0.9" />
-        <line x1="85" y1="75" x2="85" y2="45" stroke="#FF00FF" strokeWidth="2" opacity="0.9" />
-        <line x1="85" y1="45" x2="35" y2="45" stroke="#FF00FF" strokeWidth="2" opacity="0.9" />
-        <line x1="35" y1="45" x2="35" y2="75" stroke="#FF00FF" strokeWidth="2" opacity="0.9" />
-
-        {/* Depth connecting edges - gradient cyan to magenta */}
-        <line x1="25" y1="65" x2="35" y2="75" stroke="#00CCFF" strokeWidth="2" opacity="0.85" />
-        <line x1="75" y1="65" x2="85" y2="75" stroke="#CC00FF" strokeWidth="2" opacity="0.85" />
-        <line x1="75" y1="35" x2="85" y2="45" stroke="#CC00FF" strokeWidth="2" opacity="0.85" />
-        <line x1="25" y1="35" x2="35" y2="45" stroke="#00CCFF" strokeWidth="2" opacity="0.85" />
-
-        {/* Center point - extra dimensional */}
-        <circle cx="50" cy="50" r="3.5" fill="#00FFFF" opacity="0.7" />
-        
-        {/* Lines to center from all vertices - 4D perspective */}
-        <line x1="25" y1="65" x2="50" y2="50" stroke="#FF00FF" strokeWidth="1.5" opacity="0.5" />
-        <line x1="75" y1="65" x2="50" y2="50" stroke="#00FFFF" strokeWidth="1.5" opacity="0.5" />
-        <line x1="75" y1="35" x2="50" y2="50" stroke="#FF00FF" strokeWidth="1.5" opacity="0.5" />
-        <line x1="25" y1="35" x2="50" y2="50" stroke="#00FFFF" strokeWidth="1.5" opacity="0.5" />
+      <g filter="url(#solGlow)" transform="rotate(-45 50 50)">
+        {/* Three Solana-style parallel bars */}
+        <rect x="22" y="30" width="56" height="9" rx="4.5" fill="url(#solGradient)" />
+        <rect x="22" y="45.5" width="56" height="9" rx="4.5" fill="url(#solGradient)" />
+        <rect x="22" y="61" width="56" height="9" rx="4.5" fill="url(#solGradient)" />
       </g>
     </svg>
   );
