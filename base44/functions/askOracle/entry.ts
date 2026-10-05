@@ -132,14 +132,24 @@ export default async function(req) {
             prompt: systemPrompt
         });
 
-        // Record Interaction
+        // Record Interaction — only when the caller owns an Identity for this
+        // wallet address, to prevent forging activity entries on another member's
+        // public profile. Anonymous callers skip recording entirely.
         if (address && mode !== 'greeting') {
             try {
-                await base44.entities.OracleInteraction.create({
-                    user_address: address,
-                    topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-                    type: 'chat'
-                });
+                let callerUserId = null;
+                try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
+                if (callerUserId) {
+                    const identities = await base44.entities.Identity.filter({ address });
+                    const ownsAddress = identities.some(i => i.created_by_id === callerUserId);
+                    if (ownsAddress) {
+                        await base44.entities.OracleInteraction.create({
+                            user_address: address,
+                            topic: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+                            type: 'chat'
+                        });
+                    }
+                }
             } catch (e) {
                  // ignore
             }

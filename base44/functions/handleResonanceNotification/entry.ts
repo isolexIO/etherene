@@ -6,11 +6,17 @@ export default async function(req) {
     const body = await req.json();
     const { event, data } = body;
 
-    if (event?.type !== 'create' || !data) {
+    if (event?.type !== 'create' || !data?.id) {
       return Response.json({ ok: true });
     }
 
-    const { transmission_id, author_address, content } = data;
+    // Re-read the Resonance record from the database to verify the event is genuine
+    // and derive fields from the stored record — never trust the caller payload.
+    const resonances = await base44.asServiceRole.entities.Resonance.filter({ id: data.id });
+    const resonance = resonances[0];
+    if (!resonance) return Response.json({ ok: true });
+
+    const { transmission_id, author_address, content } = resonance;
     if (!transmission_id || !author_address) {
       return Response.json({ ok: true });
     }

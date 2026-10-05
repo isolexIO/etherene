@@ -6,11 +6,17 @@ export default async function(req) {
     const body = await req.json();
     const { event, data } = body;
 
-    if (event?.type !== 'create' || !data) {
+    if (event?.type !== 'create' || !data?.id) {
       return Response.json({ ok: true });
     }
 
-    const { author_address, content } = data;
+    // Re-read the Transmission record from the database to verify the event is
+    // genuine and derive fields from the stored record — never trust the caller.
+    const transmissions = await base44.asServiceRole.entities.Transmission.filter({ id: data.id });
+    const transmission = transmissions[0];
+    if (!transmission) return Response.json({ ok: true });
+
+    const { author_address, content } = transmission;
     if (!author_address) return Response.json({ ok: true });
 
     // Find all followers of the author

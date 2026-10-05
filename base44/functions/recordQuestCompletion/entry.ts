@@ -25,8 +25,20 @@ export default async function(req) {
       );
     }
 
-    // 1. Record the private quest badge. User-scoped write sets created_by_id to
-    //    the caller, matching the owner-scoped RLS on QuestProgress.
+    // Verify the caller actually owns an Identity for this wallet address.
+    // Without this, any caller could broadcast public posts or fabricate quest
+    // badges under another member's address. We bind to the authenticated
+    // platform user's own Identity (created_by_id match) — anonymous callers
+    // cannot prove ownership and are rejected.
+    let callerUserId = null;
+    try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
+    const identities = await base44.entities.Identity.filter({ address });
+    const ownsAddress = Boolean(callerUserId) && Array.isArray(identities) && identities.some(i => i.created_by_id === callerUserId);
+    if (!ownsAddress) {
+      return Response.json({ error: 'You must own an identity for this wallet to record quest completions.' }, { status: 403 });
+    }
+
+    // 1. Record the quest badge.
     const progress = await base44.entities.QuestProgress.create({
       address,
       date,
@@ -34,22 +46,17 @@ export default async function(req) {
       completed: true,
     });
 
-    // 2. Broadcast a public Transmission only if the caller owns an Identity for
-    //    this wallet address — prevents impersonating another node in the Agora.
+    // 2. Broadcast a public Transmission — ownership already verified above.
     let transmission_id = null;
-    const identities = await base44.entities.Identity.filter({ address });
-    const ownsAddress = Array.isArray(identities) && identities.length > 0;
-    if (ownsAddress) {
-      try {
-        const transmission = await base44.entities.Transmission.create({
-          content: `⚔️ Daily quest complete: "${title}". Earned the ${concept} badge on the Etherene network.`,
-          author_address: address,
-          type: 'insight',
-        });
-        transmission_id = transmission && transmission.id;
-      } catch (postErr) {
-        console.error('Quest broadcast post failed', String(postErr));
-      }
+    try {
+      const transmission = await base44.entities.Transmission.create({
+        content: `⚔️ Daily quest complete: "${title}". Earned the ${concept} badge on the Etherene network.`,
+        author_address: address,
+        type: 'insight',
+      });
+      transmission_id = transmission && transmission.id;
+    } catch (postErr) {
+      console.error('Quest broadcast post failed', String(postErr));
     }
 
     return Response.json({

@@ -81,10 +81,14 @@ export async function mintReadiness(connection, authority, needsSubdomain = true
   const parent = await readRegistry(connection, SNS_PARENT_DOMAIN);
   const balance = await connection.getBalance(authority.publicKey, 'confirmed');
   const requiredSol = needsSubdomain ? 0.04 : 0.03;
+  // User-facing reason strings are intentionally generic — they must not leak
+  // the server signer's address or balance to anonymous callers. The detailed
+  // fields below are kept for server-side diagnostics only, never returned to
+  // regular callers.
   const reason = !parent.owner.equals(authority.publicKey)
-    ? `Automatic minting requires the server signer to own ${SNS_PARENT_DOMAIN}. Parent owner: ${parent.owner.toBase58()}; server signer: ${authority.publicKey.toBase58()}. No new payment will be requested.`
+    ? 'Automatic minting is not available right now. Please try again later.'
     : balance < requiredSol * LAMPORTS_PER_SOL
-      ? `Server mint wallet ${authority.publicKey.toBase58()} has ${(balance / LAMPORTS_PER_SOL).toFixed(5)} SOL. Fund it to at least ${requiredSol} SOL for subdomain registration and NFT rent. Do not pay the platform fee again.`
+      ? 'The mint service is temporarily underfunded. Please try again later.'
       : null;
   return { ready: !reason, reason, authorityAddress: authority.publicKey.toBase58(), parentOwner: parent.owner.toBase58(), balanceSol: balance / LAMPORTS_PER_SOL, requiredSol };
 }

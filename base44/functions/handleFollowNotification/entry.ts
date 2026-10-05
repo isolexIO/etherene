@@ -7,11 +7,17 @@ export default async function(req) {
     const { event, data } = body;
 
     // Only handle create events
-    if (event?.type !== 'create' || !data) {
+    if (event?.type !== 'create' || !data?.id) {
       return Response.json({ ok: true });
     }
 
-    const { follower_address, following_address } = data;
+    // Re-read the Follow record from the database to verify the event is genuine
+    // and derive addresses from the stored record — never trust the caller payload.
+    const follows = await base44.asServiceRole.entities.Follow.filter({ id: data.id });
+    const follow = follows[0];
+    if (!follow) return Response.json({ ok: true });
+
+    const { follower_address, following_address } = follow;
     if (!follower_address || !following_address) {
       return Response.json({ ok: true });
     }

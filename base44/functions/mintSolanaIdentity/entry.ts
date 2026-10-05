@@ -16,7 +16,7 @@ export default async function(req) {
     const connection = solanaConnection();
     const authority = serverKeypair();
     const readiness = await mintReadiness(connection, authority);
-    if (checkOnly) return Response.json({ success: true, ...readiness, maintenance: Boolean(settings.maintenance_mode) });
+    if (checkOnly) return Response.json({ success: true, ready: readiness.ready, reason: readiness.reason, maintenance: Boolean(settings.maintenance_mode) });
     if (settings.maintenance_mode) return Response.json({ error: 'Minting disabled for maintenance.' }, { status: 503 });
     if (!readiness.ready) return Response.json({ error: readiness.reason, readiness }, { status: 503 });
     const identity = (await base44.entities.Identity.filter({ address }))[0];
