@@ -3,12 +3,14 @@ import { motion } from 'framer-motion';
 import { Shield, Loader2, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export default function ImportIdentity({ account, onSuccess }) {
     const [domain, setDomain] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationResult, setVerificationResult] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
+    const { signMessage } = useWallet();
 
     const handleVerify = async () => {
         if (!domain.trim()) {
@@ -55,11 +57,22 @@ export default function ImportIdentity({ account, onSuccess }) {
 
     const handleImport = async () => {
         if (!verificationResult?.success || isImporting) return;
+        if (!signMessage) {
+            toast.error("Your wallet does not support message signing. Please use a compatible wallet.");
+            return;
+        }
         setIsImporting(true);
         try {
+            const timestamp = Date.now();
+            const message = `etherene:import:${verificationResult.subdomain}:${timestamp}`;
+            const signatureBytes = await signMessage(new TextEncoder().encode(message));
+            const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+
             const response = await base44.functions.invoke('importIdentity', {
                 domain: verificationResult.subdomain,
-                userAddress: account
+                userAddress: account,
+                timestamp,
+                signature
             });
             if (!response.data?.success) throw new Error(response.data?.error || 'Failed to import identity.');
 
