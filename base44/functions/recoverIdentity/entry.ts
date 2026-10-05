@@ -7,9 +7,19 @@ export default async function(req) {
     const base44 = createClientFromRequest(req);
     const { txHash, userAddress } = await req.json();
     if (!txHash || !userAddress) return Response.json({ error: 'Transaction signature and wallet address required' }, { status: 400 });
+    // Require authentication — anonymous callers must not replay public
+    // on-chain transactions to create or modify another member's Identity.
+    let callerUserId = null;
+    try { const me = await base44.auth.me(); callerUserId = me?.id || null; } catch { /* anonymous */ }
+    if (!callerUserId) return Response.json({ error: 'Authentication required to recover an identity.' }, { status: 401 });
     let address;
     try { address = new PublicKey(userAddress).toBase58(); }
     catch { return Response.json({ error: 'Invalid Solana wallet address' }, { status: 400 }); }
+    // If an Identity already exists for this address, the caller must own it.
+    const existingIdentity = (await base44.entities.Identity.filter({ address }))[0];
+    if (existingIdentity && existingIdentity.created_by_id !== callerUserId) {
+      return Response.json({ error: 'You do not own this identity.' }, { status: 403 });
+    }
     const connection = solanaConnection();
     const tx = await connection.getParsedTransaction(txHash, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' });
     if (!tx?.meta) return Response.json({ error: 'Transaction not found or not confirmed yet' }, { status: 404 });

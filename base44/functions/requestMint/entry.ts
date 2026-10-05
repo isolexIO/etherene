@@ -11,7 +11,7 @@ export default async function(req) {
   let stage = 'payment';
   try {
     base44 = createClientFromRequest(req);
-    const { userAddress, paymentSignature, imageUrl, paymentBlockhash } = await req.json();
+    const { userAddress, paymentSignature, paymentBlockhash } = await req.json();
     if (!userAddress || !paymentSignature) return Response.json({ error: 'Missing wallet or transaction signature' }, { status: 400 });
     let address;
     try { address = new PublicKey(userAddress).toBase58(); }
@@ -40,7 +40,11 @@ export default async function(req) {
     // fee — always derive it from the server-side settings quote.
     const expected = (await quoteMintFee(settings)).lamports;
     if (paid < expected * 0.95 || (Number(settings.platform_fee_usd) > 0 && paid <= 0)) return Response.json({ error: 'The required platform payment is missing.' }, { status: 400 });
-    let image = existingRequest?.image_url || (existingIdentity?.subdomain === receipt.subdomain ? existingIdentity.avatar_url : null) || imageUrl;
+    // Never accept a caller-supplied image URL — an attacker replaying a public
+    // on-chain payment could inject an arbitrary image into the victim's profile.
+    // The image is always sourced from an existing request/identity or generated
+    // server-side after payment confirmation.
+    let image = existingRequest?.image_url || (existingIdentity?.subdomain === receipt.subdomain ? existingIdentity.avatar_url : null) || null;
     const requestData = { user_address: address, subdomain: receipt.subdomain, payment_signature: paymentSignature, amount_paid_sol: paid / LAMPORTS_PER_SOL, status: 'processing', image_url: typeof image === 'string' ? image : '', bio: existingIdentity?.bio || '' };
     // Persist the paid request before the subdomain/NFT steps; all retries resume it.
     mintRequest = existingRequest ? await base44.asServiceRole.entities.MintRequest.update(existingRequest.id, requestData) : await base44.asServiceRole.entities.MintRequest.create(requestData);
