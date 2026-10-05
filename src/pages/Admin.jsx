@@ -116,7 +116,7 @@ export default function AdminPage() {
             setGenesisDate(settings.genesis_date || '2024-01-01');
             setMaintenanceMode(settings.maintenance_mode || false);
             setPlatformFee(settings.platform_fee_usd || 3);
-            setAdminWallet(settings.admin_wallet || '5PvZDRRtdcnLwCRNYY1VKs8y6CSFfy9PmMJ3cRjhgWK8');
+            setAdminWallet(settings.admin_wallet || '');
         }
     }, [settings]);
 
