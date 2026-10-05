@@ -10,8 +10,13 @@ export default function usePullToRefresh(onRefresh) {
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // The ref div isn't the scroll container — the window scrolls. So we
+    // check the actual page scroll position to decide whether a downward
+    // swipe is a pull-to-refresh (page at top) or normal scrolling.
+    const isAtTop = () => (container.scrollTop || window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+
     const handleTouchStart = (e) => {
-      if (container.scrollTop === 0) {
+      if (isAtTop()) {
         startYRef.current = e.touches[0].clientY;
       }
     };
@@ -22,7 +27,7 @@ export default function usePullToRefresh(onRefresh) {
       const currentY = e.touches[0].clientY;
       const distance = Math.max(0, currentY - startYRef.current);
 
-      if (distance > 0 && container.scrollTop === 0) {
+      if (distance > 0 && isAtTop()) {
         e.preventDefault();
         setPullDistance(Math.min(distance, 120));
       }
