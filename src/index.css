@@ -157,6 +157,18 @@ button:focus-visible {
   }
 }
 
+/* Safe-area padding for bottom tab navigation — pushes touch targets above
+   the iOS home indicator to prevent system gesture collisions. */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@layer components {
+  button, nav, a[role="button"], [role="menuitem"] {
+    @apply select-none;
+  }
+}
+
 /* Force the Solana wallet picker visible on mobile — the library's opacity
    fade-in relies on a zero-timeout state update that some mobile browsers
    drop, leaving the modal at opacity:0 (invisible but present). */

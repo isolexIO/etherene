@@ -163,24 +163,35 @@ function LayoutContent({ children, currentPageName }) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
       <Toaster position="top-center" richColors />
 
       {/* Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-slate-100" />
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-slate-100 dark:bg-slate-800" />
 
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg border-b border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             
-            {/* Logo */}
-            <Link to={createPageUrl('Home')} className="flex items-center gap-3 group">
-              <Logo className="w-8 h-8 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" />
-              <span className="text-xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-sm">
-                ETHERENE
-              </span>
-            </Link>
+            {/* Left: Back button (mobile) + Logo */}
+            <div className="flex items-center gap-1">
+              {canGoBack && (
+                <button
+                  onClick={() => window.history.back()}
+                  className="md:hidden p-2 -ml-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-300"
+                  title="Go back"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              )}
+              <Link to={createPageUrl('Home')} className="flex items-center gap-3 group">
+                <Logo className="w-8 h-8 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" />
+                <span className="text-xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-fuchsia-500 drop-shadow-sm">
+                  ETHERENE
+                </span>
+              </Link>
+            </div>
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-8">
@@ -296,15 +307,6 @@ function LayoutContent({ children, currentPageName }) {
       {/* Mobile Bottom Navigation with Back Button */}
       <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-gradient-to-t from-slate-950/95 to-slate-900/90 backdrop-blur-lg border-t border-fuchsia-500/30 safe-area-bottom shadow-lg shadow-fuchsia-500/20">
         <div className="flex items-center justify-around h-16">
-          {canGoBack && (
-            <button
-              onClick={() => window.history.back()}
-              className="flex flex-col items-center justify-center flex-1 h-full text-slate-400 hover:text-cyan-300 transition-all min-h-11"
-              title="Go back"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
           <Link to={createPageUrl('Home')} className={`flex flex-col items-center justify-center flex-1 h-full transition-all min-h-11 ${currentPageName === 'Home' ? 'text-cyan-400 drop-shadow-lg' : 'text-slate-400 hover:text-fuchsia-400'}`}>
             <Home className="w-6 h-6" />
           </Link>
