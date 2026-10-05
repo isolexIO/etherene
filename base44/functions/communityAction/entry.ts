@@ -75,6 +75,18 @@ export default async function(req) {
       return Response.json({ success: true, follow });
     }
 
+    if (action === 'updateProfile') {
+      const { display_name, bio, avatar_url, cover_image, socials } = payload;
+      const updated = await admin.entities.Identity.update(identity.id, {
+        ...(display_name !== undefined ? { display_name } : {}),
+        ...(bio !== undefined ? { bio } : {}),
+        ...(avatar_url !== undefined ? { avatar_url } : {}),
+        ...(cover_image !== undefined ? { cover_image } : {}),
+        ...(socials !== undefined ? { socials } : {})
+      });
+      return Response.json({ success: true, identity: updated });
+    }
+
     if (action === 'deleteFollow') {
       const { following_address } = payload;
       if (!following_address) return Response.json({ error: 'Following address is required.' }, { status: 400 });

@@ -59,19 +59,25 @@ export default function ProfileEditor({ profileData, onSave, onCancel }) {
         setIsSaving(true);
 
         try {
-            await base44.entities.Identity.update(profileData.id, {
-                display_name: formData.display_name,
-                bio: formData.bio,
-                avatar_url: formData.avatar_url,
-                cover_image: formData.cover_image,
-                socials: JSON.stringify(formData.socials)
+            const res = await base44.functions.invoke('communityAction', {
+                action: 'updateProfile',
+                payload: {
+                    address: profileData.address,
+                    display_name: formData.display_name,
+                    bio: formData.bio,
+                    avatar_url: formData.avatar_url,
+                    cover_image: formData.cover_image,
+                    socials: JSON.stringify(formData.socials)
+                }
             });
+            if (!res.data?.success) throw new Error(res.data?.error || 'Failed to update profile');
+            const updated = res.data.identity;
 
             toast.success("Profile updated successfully");
-            onSave({ ...profileData, ...formData, socials: JSON.stringify(formData.socials) });
+            onSave({ ...profileData, ...updated, ...formData, socials: JSON.stringify(formData.socials) });
         } catch (error) {
             console.error(error);
-            toast.error("Failed to update profile");
+            toast.error(error.message || "Failed to update profile");
         } finally {
             setIsSaving(false);
         }
