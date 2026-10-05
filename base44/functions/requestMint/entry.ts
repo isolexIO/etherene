@@ -36,12 +36,14 @@ export default async function(req) {
     const settings = await mintSettings(base44);
     const paid = tx.transaction.message.instructions.filter(ix => ix.program === 'system' && ix.parsed?.type === 'transfer' && ix.parsed.info.source === address && ix.parsed.info.destination === settings.admin_wallet).reduce((sum, ix) => sum + Number(ix.parsed.info.lamports), 0);
     // Verify payment BEFORE spending server funds or creating any blockchain accounts.
-    const expected = existingRequest ? receipt.feeLamports : (await quoteMintFee(settings)).lamports;
-    if (paid < expected * 0.95 || paid < receipt.feeLamports || (Number(settings.platform_fee_usd) > 0 && receipt.feeLamports <= 0)) return Response.json({ error: 'The required platform payment is missing.' }, { status: 400 });
+    // Never trust the client-controlled memo (receipt.feeLamports) for the expected
+    // fee — always derive it from the server-side settings quote.
+    const expected = (await quoteMintFee(settings)).lamports;
+    if (paid < expected * 0.95 || (Number(settings.platform_fee_usd) > 0 && paid <= 0)) return Response.json({ error: 'The required platform payment is missing.' }, { status: 400 });
     let image = existingRequest?.image_url || (existingIdentity?.subdomain === receipt.subdomain ? existingIdentity.avatar_url : null) || imageUrl;
     const requestData = { user_address: address, subdomain: receipt.subdomain, payment_signature: paymentSignature, amount_paid_sol: paid / LAMPORTS_PER_SOL, status: 'processing', image_url: typeof image === 'string' ? image : '', bio: existingIdentity?.bio || '' };
     // Persist the paid request before the subdomain/NFT steps; all retries resume it.
-    mintRequest = existingRequest ? await base44.asServiceRole.entities.MintRequest.update(existingRequest.id, requestData) : await base44.entities.MintRequest.create(requestData);
+    mintRequest = existingRequest ? await base44.asServiceRole.entities.MintRequest.update(existingRequest.id, requestData) : await base44.asServiceRole.entities.MintRequest.create(requestData);
     const authority = serverKeypair();
     const registry = await connection.getAccountInfo(getDomainKeySync(receipt.subdomain).pubkey);
     const savedNft = existingIdentity?.subdomain === receipt.subdomain ? existingIdentity.nft_mint_address : null;
@@ -56,7 +58,17 @@ export default async function(req) {
     const reverse = await ensureSubdomainLabel(connection, authority, receipt.subdomain);
     serverMintSignature ||= reverse.signature || null;
     if (typeof image !== 'string' || !image.startsWith('https://')) {
-      image = (await base44.integrations.Core.GenerateImage({ prompt: `Abstract sacred geometry identity art for Etherene ${receipt.subdomain}, a blue and purple luminous mandala, no text.` })).url;
+      // Derive a unique palette + motif from the wallet address so every
+      // identity image is visually distinct (no two wallets share a look).
+      const addrHash = Array.from(address).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
+      const hueA = addrHash % 360;
+      const hueB = (hueA + 120 + (addrHash >> 8) % 120) % 360;
+      const motifs = ['sacred geometry mandala', 'fractal lotus bloom', 'cyberpunk sigil circle', 'neural constellation map', 'crystalline ether lattice', 'orbital node diagram'];
+      const motif = motifs[addrHash % motifs.length];
+      const palette = `dominant hue ${hueA}° with complementary ${hueB}°`;
+      image = (await base44.integrations.Core.GenerateImage({
+        prompt: `Abstract spiritual digital art, ${motif}, unique Etherene identity node ${receipt.subdomain} for wallet ${address.slice(0, 6)}…${address.slice(-4)}. ${palette}, deep cosmic background, intricate symmetric sacred geometry, luminous energy, no text, no letters, no words.`
+      })).url;
       await base44.asServiceRole.entities.MintRequest.update(mintRequest.id, { image_url: image });
     }
     identity = await saveIdentity(base44, address, { subdomain: receipt.subdomain, network: 'Solana Mainnet', status: 'minted', fee_charged: true, avatar_url: image, cover_image: image });

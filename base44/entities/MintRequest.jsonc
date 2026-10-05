@@ -44,7 +44,11 @@
     "payment_signature"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": true,
     "update": {
       "user_condition": {

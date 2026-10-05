@@ -37,22 +37,9 @@ export default async function(req) {
     transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200000 }));
     if (lamports > 0) transaction.add(SystemProgram.transfer({ fromPubkey: userPublicKey, toPubkey: new PublicKey(settings.admin_wallet), lamports }));
     transaction.add(mintMemo(address, subdomain, lamports));
-    // Derive a unique palette + motif from the wallet address so every
-    // identity image is visually distinct (no two wallets share a look).
-    const addrHash = Array.from(address).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
-    const hueA = addrHash % 360;
-    const hueB = (hueA + 120 + (addrHash >> 8) % 120) % 360;
-    const motifs = ['sacred geometry mandala', 'fractal lotus bloom', 'cyberpunk sigil circle', 'neural constellation map', 'crystalline ether lattice', 'orbital node diagram'];
-    const motif = motifs[addrHash % motifs.length];
-    const palette = `dominant hue ${hueA}° with complementary ${hueB}°`;
-    let imageUrl;
-    try {
-      imageUrl = (await base44.integrations.Core.GenerateImage({
-        prompt: `Abstract spiritual digital art, ${motif}, unique Etherene identity node ${label} for wallet ${address.slice(0, 6)}…${address.slice(-4)}. ${palette}, deep cosmic background, intricate symmetric sacred geometry, luminous energy, no text, no letters, no words.`
-      })).url;
-    } catch {
-      imageUrl = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=800&auto=format&fit=crop';
-    }
+    // Image generation is deferred to requestMint (after payment confirmation) to
+    // prevent anonymous callers from draining paid image-generation credits.
+    const imageUrl = null;
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
     transaction.feePayer = userPublicKey;
     transaction.recentBlockhash = blockhash;
