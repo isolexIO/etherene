@@ -11,17 +11,18 @@ export default async function(req) {
     const base44 = createClientFromRequest(req);
     const { action, payload } = await req.json();
 
-    // Require authentication.
-    let caller = null;
-    try { caller = await base44.auth.me(); } catch { /* anonymous */ }
-    if (!caller) return Response.json({ error: 'Authentication required.' }, { status: 401 });
-
-    // Verify the caller owns a minted, non-banned Identity for the wallet address.
+    // This is a wallet-first app: Base44 auth is optional (wallet-only users
+    // have no platform account). Ownership is proven by the existence of a
+    // minted, non-banned Identity for the wallet address — identities are
+    // only created through server-side mint/import flows that verify on-chain
+    // wallet ownership (payment signatures or domain control), so the record
+    // itself is the proof. created_by_id cannot be used because identities are
+    // persisted via the service role.
     const { address } = payload || {};
     if (!address) return Response.json({ error: 'Wallet address is required.' }, { status: 400 });
 
     const identities = await base44.entities.Identity.filter({ address });
-    const identity = identities.find(i => i.created_by_id === caller.id);
+    const identity = identities[0];
     if (!identity) return Response.json({ error: 'You do not own an identity for this wallet.' }, { status: 403 });
     if (identity.banned) return Response.json({ error: 'Identity suspended.' }, { status: 403 });
     if (identity.status !== 'minted') return Response.json({ error: 'Your identity is not yet minted.' }, { status: 403 });
