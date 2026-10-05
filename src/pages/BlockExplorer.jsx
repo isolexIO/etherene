@@ -169,7 +169,7 @@ export default function BlockExplorer() {
 
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:overflow-hidden" ref={scrollContainerRef} style={{ overscrollBehavior: 'contain' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" ref={scrollContainerRef}>
         <PullToRefreshIndicator distance={pullDistance} isRefreshing={isRefreshing} />
         {/* Header & Search */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">

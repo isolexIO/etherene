@@ -35,7 +35,7 @@ export default function Agora() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 md:overflow-hidden" ref={scrollContainerRef} style={{ overscrollBehavior: 'contain' }}>
+    <div className="min-h-screen bg-slate-50/50" ref={scrollContainerRef}>
       
       {/* Header */}
       <div className="bg-white border-b border-slate-100 pb-12 pt-16">
