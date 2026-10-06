@@ -198,7 +198,7 @@ function getTodayStr() {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function DailyQuests() {
-  const { publicKey } = useWallet();
+  const { publicKey, signMessage } = useWallet();
   const account = publicKey?.toBase58() || null;
   const today = getTodayStr();
 
@@ -265,16 +265,25 @@ export default function DailyQuests() {
       if (!account) return;
       setToggling(quest.key);
       try {
-        // Record the badge + broadcast via a service-role backend function.
-        // App-user RLS on QuestProgress wasn't reliably allowing the create,
-        // so the write goes through recordQuestCompletion (service role) and
-        // still surfaces as an Agora post + Block Explorer transaction.
+        // Action-verified: sign a challenge binding this quest + date to the
+        // connected wallet so the backend can cryptographically prove ownership.
+        if (!signMessage) {
+          toast.error('Your wallet does not support message signing. Please use a compatible wallet.');
+          return;
+        }
+        const timestamp = Date.now();
+        const message = `etherene:quest:${quest.key}:${today}:${timestamp}`;
+        const signatureBytes = await signMessage(new TextEncoder().encode(message));
+        const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+
         await base44.functions.invoke('recordQuestCompletion', {
           address: account,
           date: today,
           quest_key: quest.key,
           title: quest.title,
           concept: quest.concept,
+          timestamp,
+          signature,
         });
 
         setCompletedKeys((prev) => new Set(prev).add(quest.key));
