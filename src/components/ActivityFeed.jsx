@@ -77,23 +77,23 @@ export default function ActivityFeed() {
   };
 
   const getText = (item) => {
-    if (item.type === 'block') return <span className="font-bold text-blue-600">Mined Block {item.hash}</span>;
+    if (item.type === 'block') return <span className="font-bold text-blue-600 dark:text-blue-400">Mined Block {item.hash}</span>;
     if (item.type === 'transmission') return 'broadcasted a signal';
     if (item.type === 'mint') return 'minted Identity';
     return 'active';
   };
 
   return (
-    <div className="w-full max-w-md bg-white/50 backdrop-blur-sm border border-white/50 rounded-2xl p-6 shadow-sm">
+    <div className="w-full max-w-md bg-white/50 dark:bg-slate-800/60 backdrop-blur-sm border border-white/50 dark:border-slate-700/50 rounded-2xl p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-6">
-        <Activity className="w-5 h-5 text-indigo-600" />
-        <h3 className="font-bold text-slate-900">Network Consensus</h3>
+        <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+        <h3 className="font-bold text-slate-900 dark:text-white">Network Consensus</h3>
       </div>
       
       <div className="space-y-4">
         <AnimatePresence initial={false}>
           {activities.length === 0 ? (
-              <div className="text-sm text-slate-500 text-center py-4">Waiting for network activity...</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Waiting for network activity...</div>
           ) : (
             activities.map((item) => (
                 <motion.div
@@ -101,17 +101,17 @@ export default function ActivityFeed() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, height: 0 }}
-                className={`flex items-center gap-3 text-sm ${item.type === 'block' ? 'bg-blue-50/50 p-2 rounded-lg -mx-2' : ''}`}
+                className={`flex items-center gap-3 text-sm ${item.type === 'block' ? 'bg-blue-50/50 dark:bg-blue-950/40 p-2 rounded-lg -mx-2' : ''}`}
                 >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.type === 'block' ? 'bg-blue-100' : 'bg-slate-100'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.type === 'block' ? 'bg-blue-100 dark:bg-blue-950' : 'bg-slate-100 dark:bg-slate-700'}`}>
                     {getIcon(item.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-slate-900 truncate">
+                    <p className="text-slate-900 dark:text-slate-100 truncate">
                     <span className="font-mono text-xs">{item.address === 'Network' ? 'Network' : `${item.address.slice(0,6)}...`}</span>
-                    <span className="text-slate-500"> {getText(item)}</span>
+                    <span className="text-slate-500 dark:text-slate-400"> {getText(item)}</span>
                     </p>
-                    <p className="text-xs text-slate-400">{moment(item.created_date).fromNow()}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{moment(item.created_date).fromNow()}</p>
                 </div>
                 </motion.div>
             ))

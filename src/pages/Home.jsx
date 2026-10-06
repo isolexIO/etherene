@@ -49,7 +49,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-6"
+          className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-white mb-6"
         >
           The Future is <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Immutable</span>
         </motion.h1>
@@ -58,7 +58,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-xl text-slate-600 max-w-2xl mb-10"
+          className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mb-10"
         >
           Etherene is a decentralized spiritual-tech protocol designed to empower self-sovereign individuals through cryptographically verifiable truth.
         </motion.p>
@@ -72,7 +72,7 @@ export default function Home() {
           {!account ? (
             <button
               onClick={connectWallet}
-              className="px-8 py-4 rounded-full bg-slate-900 text-white font-medium hover:bg-slate-800 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
+              className="px-8 py-4 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-medium hover:bg-slate-800 dark:hover:bg-slate-100 transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
             >
               Connect Wallet <ArrowRight className="w-4 h-4" />
             </button>
@@ -86,7 +86,7 @@ export default function Home() {
           )}
           <Link
             to={createPageUrl('Whitepaper')}
-            className="px-8 py-4 rounded-full bg-white text-slate-900 border border-slate-200 font-medium hover:bg-slate-50 transition-all hover:border-slate-300 flex items-center justify-center"
+            className="px-8 py-4 rounded-full bg-white text-slate-900 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:border-slate-300 dark:hover:border-slate-600 flex items-center justify-center"
           >
             Read White Paper
           </Link>
@@ -106,13 +106,13 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.2 }}
-              className="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-3xl border border-white/50 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm p-6 md:p-8 rounded-3xl border border-white/50 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
-                <feature.icon className="w-6 h-6 text-indigo-600" />
+              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center mb-6">
+                <feature.icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
-              <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
           </div>
