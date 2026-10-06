@@ -1,3 +1,43 @@
+/* Dark-mode overrides for legacy light-only utility classes.
+   Placed in @layer utilities BEFORE @tailwind utilities so:
+   - Higher specificity (.dark .text-slate-900 = 0,2,0) beats the base utility
+     (.text-slate-900 = 0,1,0) → applies in dark mode.
+   - Explicit dark: variants (e.g. .dark .dark\:text-white = 0,2,0) have the same
+     specificity but come LATER in source order → they win, so pages that
+     already declare dark: variants are unaffected. */
+@layer utilities {
+  .dark .text-slate-900 { color: #f1f5f9; }
+  .dark .text-slate-800 { color: #e2e8f0; }
+  .dark .text-slate-700 { color: #cbd5e1; }
+  .dark .text-slate-600 { color: #cbd5e1; }
+  .dark .text-slate-500 { color: #94a3b8; }
+
+  .dark .bg-white { background-color: #1e293b; }
+  .dark .bg-slate-50 { background-color: #1e293b; }
+  .dark .bg-slate-100 { background-color: #1e293b; }
+  .dark .bg-slate-200 { background-color: #334155; }
+  .dark .bg-white\/50 { background-color: rgba(30, 41, 59, 0.5); }
+  .dark .bg-white\/60 { background-color: rgba(30, 41, 59, 0.6); }
+  .dark .bg-white\/70 { background-color: rgba(30, 41, 59, 0.7); }
+  .dark .bg-white\/80 { background-color: rgba(30, 41, 59, 0.8); }
+  .dark .bg-white\/90 { background-color: rgba(30, 41, 59, 0.9); }
+  .dark .bg-white\/10 { background-color: rgba(30, 41, 59, 0.1); }
+  .dark .bg-white\/20 { background-color: rgba(30, 41, 59, 0.2); }
+
+  .dark .bg-indigo-50 { background-color: rgba(49, 46, 129, 0.3); }
+  .dark .bg-green-50 { background-color: rgba(20, 83, 45, 0.3); }
+  .dark .bg-blue-50 { background-color: rgba(30, 58, 138, 0.3); }
+  .dark .bg-blue-100 { background-color: rgba(30, 58, 138, 0.4); }
+
+  .dark .border-slate-100 { border-color: #334155; }
+  .dark .border-slate-200 { border-color: #334155; }
+  .dark .border-slate-300 { border-color: #475569; }
+  .dark .border-white { border-color: rgba(148, 163, 184, 0.3); }
+  .dark .border-white\/50 { border-color: rgba(148, 163, 184, 0.3); }
+  .dark .border-white\/60 { border-color: rgba(148, 163, 184, 0.3); }
+  .dark .border-white\/10 { border-color: rgba(148, 163, 184, 0.15); }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
