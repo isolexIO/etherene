@@ -38,7 +38,6 @@ export const useWeb3 = () => {
 function LayoutContent({ children, currentPageName }) {
   const { publicKey } = useWallet();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
   const location = useLocation();
 
   // Dynamically detect if we can go back based on history depth
@@ -77,25 +76,9 @@ function LayoutContent({ children, currentPageName }) {
 
   const account = publicKey?.toBase58() || null;
 
-  // Dark mode sync with system preferences
+  // Keep the app in light mode regardless of device preferences.
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      setIsDark(e.matches);
-      if (e.matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-    
-    setIsDark(mediaQuery.matches);
-    if (mediaQuery.matches) {
-      document.documentElement.classList.add('dark');
-    }
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    document.documentElement.classList.remove('dark');
   }, []);
 
   // Google Analytics
