@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useWalletModalOpen } from './wallet/WalletModalContext';
 import { Wallet, LogOut, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 // inside overflow-hidden containers like the mobile nav menu.
 export default function WalletButton({ fullWidth = false, onOpen }) {
   const { publicKey, connected, disconnect } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { openModal } = useWalletModalOpen();
   const [copied, setCopied] = useState(false);
 
   const widthClass = fullWidth ? 'w-full' : '';
@@ -17,7 +17,7 @@ export default function WalletButton({ fullWidth = false, onOpen }) {
   if (!connected || !publicKey) {
     return (
       <button
-        onClick={() => { onOpen?.(); setVisible(true); }}
+        onClick={() => { onOpen?.(); openModal(); }}
         className={`flex items-center justify-center gap-2 bg-slate-800 rounded-lg px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700 transition-colors ${widthClass}`}
       >
         <Wallet className="w-4 h-4" />

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useWeb3 } from '../Layout';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import WalletButton from '../components/WalletButton';
 import { 
     Shield, 
     Settings, 
@@ -215,7 +215,7 @@ export default function AdminPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
                     <p className="text-slate-500 mb-8">Connect your wallet to access the admin dashboard.</p>
-                    <WalletMultiButton className="!bg-gradient-to-r !from-cyan-600 !to-fuchsia-600 !rounded-xl !h-12 !text-sm !font-bold" />
+                    <WalletButton fullWidth />
                 </div>
             </div>
         );

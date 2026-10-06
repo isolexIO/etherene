@@ -7,7 +7,7 @@ import { createPageUrl } from './components/utils';
 import Logo from './components/Logo';
 import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet, ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { WalletModalProvider, useWalletModalOpen } from './components/wallet/WalletModalContext';
 import WalletButton from './components/WalletButton';
 import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter, LedgerWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
@@ -22,8 +22,8 @@ const SOLANA_ENDPOINT = 'https://solana-rpc.publicnode.com';
 
 export const useWeb3 = () => {
   const wallet = useWallet();
-  const { setVisible } = useWalletModal();
-  const connectWallet = () => setVisible(true);
+  const { openModal } = useWalletModalOpen();
+  const connectWallet = () => openModal();
   return {
     account: wallet.publicKey?.toBase58() || null,
     connectWallet,
@@ -325,7 +325,7 @@ function WalletProviderWrapper({ children, currentPageName }) {
         addressSelector: createDefaultAddressSelector(),
         appIdentity: {
           name: 'Etherene',
-          uri: 'https://etherene.com',
+          uri: 'https://etherene.info',
         },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
         cluster: WalletAdapterNetwork.Mainnet,
@@ -337,7 +337,7 @@ function WalletProviderWrapper({ children, currentPageName }) {
 
   return (
     <ConnectionProvider endpoint={SOLANA_ENDPOINT}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets}>
         <WalletModalProvider>
           <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
         </WalletModalProvider>

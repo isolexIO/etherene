@@ -170,13 +170,6 @@ button:focus-visible {
   }
 }
 
-/* Force the Solana wallet picker visible on mobile — the library's opacity
-   fade-in relies on a zero-timeout state update that some mobile browsers
-   drop, leaving the modal at opacity:0 (invisible but present). */
-.wallet-adapter-modal {
-  opacity: 1 !important;
-  z-index: 9999 !important;
-}
-.wallet-adapter-modal-wrapper {
-  z-index: 10000 !important;
-}
+/* Wallet connection is now handled by a custom in-app modal
+   (src/components/wallet/WalletConnectModal.jsx) so the stock
+   @solana/wallet-adapter-react-ui modal overrides are no longer needed. */
