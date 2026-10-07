@@ -146,7 +146,7 @@ function LayoutContent({ children, currentPageName }) {
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-slate-100 dark:bg-slate-800" />
 
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg border-b border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20">
+      <nav className="fixed top-0 w-full z-50 pt-[env(safe-area-inset-top)] bg-gradient-to-r from-slate-950/90 via-slate-900/90 to-slate-950/90 backdrop-blur-lg border-b border-fuchsia-500/30 shadow-lg shadow-fuchsia-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             
@@ -247,7 +247,7 @@ function LayoutContent({ children, currentPageName }) {
       </nav>
 
       {/* Main Content */}
-      <main className="relative z-10 pt-16 min-h-[calc(100vh-4rem)] md:pb-0 pb-20">
+      <main className="relative z-10 pt-[calc(4rem+env(safe-area-inset-top))] min-h-[calc(100vh-4rem)] md:pb-0 pb-20">
         <motion.div
           key={currentPageName}
           initial={{ opacity: 0, y: 10 }}
