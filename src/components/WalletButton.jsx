@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 // inside overflow-hidden containers like the mobile nav menu.
 export default function WalletButton({ fullWidth = false, onOpen }) {
   const { publicKey, connected, disconnect } = useWallet();
-  const { openModal } = useWalletModalOpen();
+  const { openModal, connecting } = useWalletModalOpen();
   const [copied, setCopied] = useState(false);
 
   const widthClass = fullWidth ? 'w-full' : '';
@@ -18,10 +18,12 @@ export default function WalletButton({ fullWidth = false, onOpen }) {
     return (
       <button
         onClick={() => { onOpen?.(); openModal(); }}
+        disabled={connecting}
+        aria-busy={connecting}
         className={`flex items-center justify-center gap-2 bg-slate-800 rounded-lg px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700 transition-colors ${widthClass}`}
       >
         <Wallet className="w-4 h-4" />
-        Connect Wallet
+        {connecting ? 'Connecting…' : 'Connect Wallet'}
       </button>
     );
   }

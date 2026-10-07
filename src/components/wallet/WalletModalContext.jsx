@@ -1,25 +1,42 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import WalletConnectModal from './WalletConnectModal';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { toast } from 'sonner';
 
-// Replaces @solana/wallet-adapter-react-ui's modal with a custom connect sheet
-// that handles Mobile Wallet Adapter (MWA) properly and provides a clear
-// "wallet unavailable" fallback state (Solana dApp Store WAL-002 / WAL-003).
 const WalletModalContext = createContext(null);
 
 export function WalletModalProvider({ children }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const openModal = useCallback(() => setIsOpen(true), []);
-  const closeModal = useCallback(() => setIsOpen(false), []);
+  const { wallets, select } = useWallet();
+  const [connecting, setConnecting] = useState(false);
+  const adapter = wallets.find(item => item.adapter.name === 'Etherene Wallet')?.adapter;
+
+  // Selection does not authorize or connect. Only a user tap calls connect().
+  useEffect(() => {
+    if (adapter) select(adapter.name);
+  }, [adapter, select]);
+
+  const openModal = useCallback(async () => {
+    if (!adapter || adapter.connecting) return;
+    setConnecting(true);
+    try {
+      select(adapter.name);
+      await adapter.connect();
+    } catch (error) {
+      if (error.error?.name !== 'WalletConnectionCancelled') {
+        toast.error(error.message || 'Could not connect your wallet. Please try again.');
+      }
+    } finally {
+      setConnecting(false);
+    }
+  }, [adapter, select]);
+
+  const closeModal = useCallback(() => adapter?.closeModal(), [adapter]);
   return (
-    <WalletModalContext.Provider value={{ openModal, closeModal }}>
+    <WalletModalContext.Provider value={{ openModal, closeModal, connecting }}>
       {children}
-      <WalletConnectModal open={isOpen} onClose={closeModal} />
     </WalletModalContext.Provider>
   );
 }
 
 export function useWalletModalOpen() {
-  const ctx = useContext(WalletModalContext);
-  if (!ctx) return { openModal: () => {}, closeModal: () => {} };
-  return ctx;
+  return useContext(WalletModalContext) || { openModal: () => {}, closeModal: () => {}, connecting: false };
 }

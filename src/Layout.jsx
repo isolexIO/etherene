@@ -9,26 +9,19 @@ import NotificationBell from './components/notifications/NotificationBell';
 import { useWallet, ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, useWalletModalOpen } from './components/wallet/WalletModalContext';
 import WalletButton from './components/WalletButton';
-import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter, LedgerWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import {
-  SolanaMobileWalletAdapter,
-  createDefaultAddressSelector,
-  createDefaultAuthorizationResultCache,
-  createDefaultWalletNotFoundHandler,
-} from '@solana-mobile/wallet-adapter-mobile';
+import ReownWalletAdapter from '@/components/wallet/ReownWalletAdapter';
 
 const SOLANA_ENDPOINT = 'https://solana-rpc.publicnode.com';
 
 export const useWeb3 = () => {
   const wallet = useWallet();
-  const { openModal } = useWalletModalOpen();
+  const { openModal, connecting } = useWalletModalOpen();
   const connectWallet = () => openModal();
   return {
     account: wallet.publicKey?.toBase58() || null,
     connectWallet,
     disconnectWallet: wallet.disconnect,
-    isConnecting: wallet.connecting,
+    isConnecting: wallet.connecting || connecting,
     wallet: wallet.wallet,
     connected: wallet.connected,
     error: null
@@ -315,29 +308,11 @@ function LayoutContent({ children, currentPageName }) {
 }
 
 function WalletProviderWrapper({ children, currentPageName }) {
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new TorusWalletAdapter(),
-      new LedgerWalletAdapter(),
-      new SolanaMobileWalletAdapter({
-        addressSelector: createDefaultAddressSelector(),
-        appIdentity: {
-          name: 'Etherene',
-          uri: 'https://etherene.info',
-        },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: WalletAdapterNetwork.Mainnet,
-        onWalletNotFound: createDefaultWalletNotFoundHandler(),
-      }),
-    ],
-    []
-  );
+  const wallets = useMemo(() => [new ReownWalletAdapter()], []);
 
   return (
     <ConnectionProvider endpoint={SOLANA_ENDPOINT}>
-      <WalletProvider wallets={wallets}>
+      <WalletProvider wallets={wallets} autoConnect={false} localStorageKey="etherene_reown_wallet">
         <WalletModalProvider>
           <LayoutContent currentPageName={currentPageName}>{children}</LayoutContent>
         </WalletModalProvider>
